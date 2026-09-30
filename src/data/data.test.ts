@@ -154,3 +154,62 @@ describe('WriteQueue', () => {
     expect(last).toBe('error')
   })
 })
+
+// --- Two devices sharing one (fake) cloud ---------------------------------------------------------
+import type { RemoteApi } from './remote'
+import type { Team } from '../types'
+
+function fakeCloud() {
+  const teams = new Map<string, Team>()
+  const games = new Map<string, any>()
+  const events = new Map<string, any>()
+  const api = (): RemoteApi => ({
+    userId: async () => 'u',
+    myTeam: async () => null,
+    createTeam: async (name) => { const t = { id: crypto.randomUUID(), name, joinCode: 'JOIN22' }; teams.set(t.id, t); return t },
+    joinTeam: async (code) => {
+      const t = [...teams.values()].find((x) => x.joinCode === code)
+      if (!t) throw new Error('No team found with that code')
+      return t
+    },
+    saveBranding: async (id, branding) => { const t = { ...teams.get(id)!, branding }; teams.set(id, t); return t },
+    push: async (op) => {
+      const row = op.row as any
+      const teamId = row.teamId
+      if (!teams.has(teamId)) throw Object.assign(new Error('fk violation'), { permanent: true })
+      ;(op.table === 'games' ? games : events).set(row.id, { ...row, teamId })
+    },
+    pull: async (teamId) => ({
+      games: [...games.values()].filter((g) => g.teamId === teamId),
+      events: [...events.values()].filter((e) => e.teamId === teamId),
+    }),
+    watch: () => () => {},
+  })
+  return { api, games, events }
+}
+
+describe('cloud sync across devices', () => {
+  it('a second device joining by code sees the games and stats, including ones recorded before linking to the cloud', async () => {
+    const cloud = fakeCloud()
+
+    // Device A first used the app on this phone without a cloud connection (demo mode)...
+    const demo = new LocalRepository({ dbName: 'devA' })
+    await demo.createTeam('Old demo team')
+    const early = await demo.saveGame(gameInput)
+    await demo.addEvent(early.id, { gameId: early.id, category: 'duel', outcome: 'won', period: 1 } as any)
+
+    // ...then the cloud was switched on and the team was created for real.
+    const a = new LocalRepository({ dbName: 'devA', remote: cloud.api(), baseDelayMs: 1 })
+    const team = await a.createTeam('BVB Fans')
+    const later = await a.saveGame({ ...gameInput, opponent: 'Bayern' })
+    await a.addEvent(later.id, { gameId: later.id, category: 'box_entry', outcome: 'shot', period: 1 } as any)
+
+    await vi.waitFor(() => { expect(cloud.games.size).toBe(2); expect(cloud.events.size).toBe(2) })
+
+    // Device B joins with the team code.
+    const b = new LocalRepository({ dbName: 'devB', remote: cloud.api(), baseDelayMs: 1 })
+    await b.joinTeam(team.joinCode)
+    await vi.waitFor(async () => expect((await b.listGames()).map((g) => g.opponent).sort()).toEqual(['Bayern', 'Hawks']))
+    expect(await b.listAllEvents()).toHaveLength(2)
+  })
+})

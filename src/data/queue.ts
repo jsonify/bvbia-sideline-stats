@@ -45,8 +45,9 @@ export class WriteQueue {
       maxDelayMs: 60_000,
       setTimer: (fn, ms) => setTimeout(fn, ms),
       clearTimer: (t) => clearTimeout(t as ReturnType<typeof setTimeout>),
-      ...opts,
-    }
+      // Ignore explicitly-undefined options so they can't clobber the defaults above.
+      ...Object.fromEntries(Object.entries(opts).filter(([, v]) => v !== undefined)),
+    } as typeof this.o
   }
 
   onState(cb: (s: SyncState, pending: number) => void): () => void {
