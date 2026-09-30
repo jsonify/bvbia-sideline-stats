@@ -3,6 +3,8 @@ import { useRepo } from '../../data/context'
 import type { SyncState } from '../../data/repository'
 import { JoinCodeCard } from './JoinCodeCard'
 import { useTeam } from './useTeam'
+import { BrandingSettings } from '../branding/BrandingSettings'
+import { TeamLogo } from '../branding/BrandingProvider'
 
 const syncLabel: Record<SyncState, string> = {
   synced: 'All saved', syncing: 'Syncing…', offline: 'Offline — saving on this phone', error: 'Sync problem — will retry',
@@ -28,11 +30,17 @@ export default function TeamPage() {
       {team && (
         <>
           <section className="ss-card ss-team-head">
-            <div className="ss-eyebrow">Your team</div>
-            <div className="ss-team-name">{team.name}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <TeamLogo size={64} />
+              <div>
+                <div className="ss-eyebrow">Your team</div>
+                <div className="ss-team-name">{team.name}</div>
+              </div>
+            </div>
             <SyncChip />
           </section>
           <JoinCodeCard teamName={team.name} code={team.joinCode} />
+          <BrandingSettings />
         </>
       )}
     </main>

@@ -1,6 +1,6 @@
 // Local-first Repository. Always reads/writes IndexedDB; if a `remote` is supplied,
 // writes are also queued for cloud upsert and remote changes are pulled into the cache.
-import type { Game, NewStatEvent, StatEvent, Team, Uuid } from '../types'
+import type { Game, NewStatEvent, StatEvent, Team, TeamBranding, Uuid } from '../types'
 import type { Repository, SyncState } from './repository'
 import { openLocalDB, idbQueueStore, uuid, type GameRec, type LocalDB } from './db'
 import { WriteQueue, type QueueStore } from './queue'
@@ -55,7 +55,7 @@ export class LocalRepository implements Repository {
     })
     this.queue.onState((s, n) => { this.lastState = [s, n] })
     if (typeof window !== 'undefined') {
-      window.addEventListener('online', () => { this.queue?.kick(); void this.pull() })
+      window.addEventListener('online', () => { this.queue?.kick(); void this.pull(); void this.refreshTeam() })
       window.addEventListener('offline', () => void this.queue?.init())
     }
     await this.queue.init()
@@ -67,8 +67,9 @@ export class LocalRepository implements Repository {
     if (!this.remote || this.watchedTeam === team.id) return
     this.unwatch?.()
     this.watchedTeam = team.id
-    this.unwatch = this.remote.watch(team.id, () => void this.pull())
+    this.unwatch = this.remote.watch(team.id, () => void this.pull(), () => void this.refreshTeam())
     void this.pull()
+    void this.refreshTeam()
   }
 
   /** Merge remote state into cache. Safe to call anytime; failures are silent (we're offline). */
@@ -97,6 +98,31 @@ export class LocalRepository implements Repository {
       } catch { /* offline: cache stays as-is */ } finally { this.pulling = null }
     })()
     return this.pulling
+  }
+
+  /** Pick up team name/branding changes made on another phone. */
+  private async refreshTeam() {
+    if (!this.remote) return
+    try {
+      const fresh = await this.remote.myTeam()
+      const db = await this.dbp
+      const cur = (await db.get('kv', 'team')) as Team | undefined
+      if (!fresh || !cur || fresh.id !== cur.id) return
+      if (fresh.name !== cur.name || JSON.stringify(fresh.branding ?? null) !== JSON.stringify(cur.branding ?? null)) {
+        await db.put('kv', fresh, 'team')
+        this.emit()
+      }
+    } catch { /* offline */ }
+  }
+
+  async saveBranding(branding: TeamBranding): Promise<Team> {
+    await this.ready
+    const cur = await this.requireTeam()
+    const team: Team = this.remote ? await this.remote.saveBranding(cur.id, branding) : { ...cur, branding }
+    const db = await this.dbp
+    await db.put('kv', team, 'team')
+    this.emit()
+    return team
   }
 
   private emit() { this.listeners.forEach((l) => l()) }

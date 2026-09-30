@@ -1,3 +1,5 @@
+import { TeamLogo } from '../branding/BrandingProvider'
+import '../branding/branding.css'
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useRepo } from '../../data/context'
@@ -87,7 +89,7 @@ export default function GamesPage() {
 
   return (
     <main className="ss-page" onClick={(e) => { if (menu && !(e.target as HTMLElement).closest('.gm-menu,.ss-icon-btn')) setMenu(null) }}>
-      <h1 className="ss-h1">Games</h1>
+      <div className="bd-head"><TeamLogo size={44} /><h1 className="ss-h1">Games</h1></div>
       {games.length === 0 && (
         <section className="gm-empty">
           <EmptyArt />

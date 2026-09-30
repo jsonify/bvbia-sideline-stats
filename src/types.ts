@@ -2,10 +2,18 @@
 
 export type Uuid = string
 
+/** Shared by everyone on the team (stored on the team row). */
+export interface TeamBranding {
+  accent: string // hex, e.g. '#FDE100'
+  appearance: 'system' | 'light' | 'dark'
+  logo?: string | null // small PNG/WebP data URL (resized client-side)
+}
+
 export interface Team {
   id: Uuid
   name: string
   joinCode: string // short code parents use to join the team's data
+  branding?: TeamBranding
 }
 
 export interface Game {

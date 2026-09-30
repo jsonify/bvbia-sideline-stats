@@ -1,8 +1,9 @@
 .tk{--tk-good:#15803d;--tk-good-bg:#dcfce7;--tk-bad:#b91c1c;--tk-bad-bg:#fee2e2;
   max-width:560px;margin:0 auto;padding:0 14px calc(120px + env(safe-area-inset-bottom));touch-action:manipulation;-webkit-user-select:none;user-select:none;overscroll-behavior-y:contain}
-@media (prefers-color-scheme:dark){.tk{--tk-good:#4ade80;--tk-good-bg:#0f3d22;--tk-bad:#fca5a5;--tk-bad-bg:#4a1717}}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .tk{--tk-good:#4ade80;--tk-good-bg:#0f3d22;--tk-bad:#fca5a5;--tk-bad-bg:#4a1717}}
+:root[data-theme=dark] .tk{--tk-good:#4ade80;--tk-good-bg:#0f3d22;--tk-bad:#fca5a5;--tk-bad-bg:#4a1717}
 .tk button{font:inherit;color:inherit;touch-action:manipulation;cursor:pointer}
-.tk button:focus-visible,.tk a:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.tk button:focus-visible,.tk a:focus-visible{outline:3px solid var(--ring);outline-offset:2px}
 .tk-top{position:sticky;top:0;z-index:20;background:var(--bg);padding:calc(10px + env(safe-area-inset-top)) 0 8px;border-bottom:1px solid var(--border);margin:0 -14px 12px;padding-left:14px;padding-right:14px}
 .tk-top-row{display:flex;align-items:center;gap:10px}
 .tk-back{font-size:32px;line-height:1;text-decoration:none;color:var(--text);width:40px;height:44px;display:grid;place-items:center}
