@@ -68,7 +68,7 @@ export class LocalRepository implements Repository {
     this.unwatch?.()
     this.watchedTeam = team.id
     this.unwatch = this.remote.watch(team.id, () => void this.pull(), () => void this.refreshTeam())
-    void this.pull()
+    void this.backfill(team).then(() => this.pull())
     void this.refreshTeam()
   }
 
@@ -98,6 +98,30 @@ export class LocalRepository implements Repository {
       } catch { /* offline: cache stays as-is */ } finally { this.pulling = null }
     })()
     return this.pulling
+  }
+
+  /**
+   * One-time upload of games/stats that already existed on this device before it was linked to the cloud team
+   * (e.g. tracked in demo mode, or while offline before first sync). Upserts are idempotent, so re-running is safe.
+   * Records from another/older team id are re-homed onto the current team.
+   */
+  async backfill(team: Team): Promise<void> {
+    if (!this.remote) return
+    try {
+      await this.ready
+      const db = await this.dbp
+      const flag = `backfill:${team.id}`
+      if (await db.get('kv', flag)) return
+      const games = await db.getAll('games')
+      const events = await db.getAll('events')
+      for (const g of games) {
+        const row = g.teamId === team.id ? g : { ...g, teamId: team.id }
+        if (row !== g) await db.put('games', row)
+        await this.queue?.enqueue({ table: 'games', row: { ...row } })
+      }
+      for (const e of events) await this.queue?.enqueue({ table: 'stat_events', row: { ...e, teamId: team.id } })
+      await db.put('kv', true, flag)
+    } catch { /* retried next launch: the flag is only set after everything was queued */ }
   }
 
   /** Pick up team name/branding changes made on another phone. */

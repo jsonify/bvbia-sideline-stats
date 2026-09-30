@@ -45,6 +45,8 @@ export function toEventRow(e: StatEvent & { teamId?: string }) {
   }
 }
 
+const PAGE = 500
+
 function wrap(error: { code?: string; message: string } | null) {
   if (!error) return
   // Postgres integrity/permission errors will never succeed on retry.
@@ -100,11 +102,18 @@ export function createSupabaseRemote(url: string, key: string): RemoteApi {
     },
     async pull(teamId) {
       await userId()
-      const g = await sb.from('games').select('*').eq('team_id', teamId)
-      wrap(g.error)
-      const e = await sb.from('stat_events').select('*').eq('team_id', teamId).limit(50000)
-      wrap(e.error)
-      return { games: (g.data ?? []).map(gameFromRow), events: (e.data ?? []).map(eventFromRow) }
+      // PostgREST caps a response at ~1000 rows, so page through everything.
+      const all = async (table: string, order: string) => {
+        const rows: any[] = []
+        for (let from = 0; ; from += PAGE) {
+          const r = await sb.from(table).select('*').eq('team_id', teamId).order(order).order('id').range(from, from + PAGE - 1)
+          wrap(r.error)
+          rows.push(...(r.data ?? []))
+          if ((r.data ?? []).length < PAGE) return rows
+        }
+      }
+      const [g, e] = [await all('games', 'created_at'), await all('stat_events', 'created_at')]
+      return { games: g.map(gameFromRow), events: e.map(eventFromRow) }
     },
     watch(teamId, onChange, onTeamChange) {
       const ch = sb.channel(`team-${teamId}`)
