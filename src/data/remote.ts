@@ -84,7 +84,7 @@ export function createSupabaseRemote(url: string, key: string): RemoteApi {
     },
     async push(op) {
       await userId()
-      const row = op.table === 'games' ? toGameRow(op.row as any) : toEventRow(op.row as any)
+      const row: Record<string, unknown> = op.table === 'games' ? toGameRow(op.row as any) : toEventRow(op.row as any)
       const { error } = await sb.from(op.table).upsert(row, { onConflict: 'id' })
       wrap(error)
     },

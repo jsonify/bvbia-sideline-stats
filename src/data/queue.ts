@@ -31,9 +31,10 @@ export class WriteQueue {
   private listeners = new Set<(s: SyncState, pending: number) => void>()
   private state: SyncState = 'synced'
   private pending = 0
-  private running = false
+  private run: Promise<void> | null = null
   private again = false
   private failures = 0
+  private dropped = false
   private timer: unknown = null
   private o: Required<Omit<QueueOptions, 'store' | 'send'>> & QueueOptions
 
@@ -62,6 +63,7 @@ export class WriteQueue {
 
   async enqueue(op: QueueOp): Promise<void> {
     await this.o.store.add(op)
+    this.dropped = false
     this.emit(this.state, this.pending + 1)
     void this.flush()
   }
@@ -80,26 +82,27 @@ export class WriteQueue {
     void this.flush()
   }
 
-  async flush(): Promise<void> {
-    if (this.running) { this.again = true; return }
-    this.running = true
-    try {
-      do {
-        this.again = false
-        await this.pass()
-      } while (this.again)
-    } finally {
-      this.running = false
-    }
+  flush(): Promise<void> {
+    if (this.run) { this.again = true; return this.run }
+    this.run = (async () => {
+      try {
+        do {
+          this.again = false
+          await this.pass()
+        } while (this.again)
+      } finally {
+        this.run = null
+      }
+    })()
+    return this.run
   }
 
   private async pass(): Promise<void> {
     const items = await this.o.store.all()
-    if (items.length === 0) { this.failures = 0; this.emit('synced', 0); return }
+    if (items.length === 0) { this.failures = 0; this.emit(this.dropped ? 'error' : 'synced', 0); return }
     if (!this.o.isOnline()) { this.emit('offline', items.length); return }
     this.emit('syncing', items.length)
     let left = items.length
-    let hadPermanent = false
     for (const { key, op } of items) {
       try {
         await this.o.send(op)
@@ -110,17 +113,18 @@ export class WriteQueue {
         if ((err as { permanent?: boolean }).permanent) {
           await this.o.store.remove(key) // will never succeed; drop so it can't block the queue
           left--
-          hadPermanent = true
+          this.dropped = true
           continue
         }
         this.failures++
         this.emit(this.o.isOnline() ? 'error' : 'offline', left)
         this.schedule()
+        this.again = false
         return
       }
     }
     this.failures = 0
-    this.emit(hadPermanent ? 'error' : 'synced', left)
+    this.emit(this.dropped ? 'error' : 'synced', left)
   }
 
   private schedule() {

@@ -1,0 +1,143 @@
+import 'fake-indexeddb/auto'
+import { describe, it, expect, vi } from 'vitest'
+import { LocalRepository } from './localRepository'
+import { WriteQueue, PermanentError, type QueueOp, type QueueStore } from './queue'
+import { summarize } from '../lib/summary'
+
+let n = 0
+const repo = () => new LocalRepository({ dbName: `t${n++}` })
+const gameInput = { opponent: 'Hawks', date: '2026-09-01', home: true, periods: 2 as const, status: 'live' as const }
+
+describe('LocalRepository (demo mode)', () => {
+  it('creates and joins a team', async () => {
+    const r = repo()
+    expect(await r.getTeam()).toBeNull()
+    const t = await r.createTeam(' Lions ')
+    expect(t.name).toBe('Lions')
+    expect(t.joinCode).toMatch(/^[A-Z0-9]{6}$/)
+    expect((await r.getTeam())?.id).toBe(t.id)
+    expect((await r.joinTeam(t.joinCode.toLowerCase())).id).toBe(t.id)
+    await expect(r.joinTeam('NOPE22')).rejects.toThrow()
+  })
+
+  it('requires a team to save games', async () => {
+    await expect(repo().saveGame(gameInput)).rejects.toThrow()
+  })
+
+  it('saves, updates and deletes games', async () => {
+    const r = repo()
+    const t = await r.createTeam('A')
+    const g = await r.saveGame(gameInput)
+    expect(g.teamId).toBe(t.id)
+    const g2 = await r.saveGame({ ...gameInput, id: g.id, status: 'final' })
+    expect(g2.createdAt).toBe(g.createdAt)
+    expect((await r.getGame(g.id))?.status).toBe('final')
+    expect(await r.listGames()).toHaveLength(1)
+    await r.deleteGame(g.id)
+    expect(await r.listGames()).toHaveLength(0)
+    expect(await r.getGame(g.id)).toBeNull()
+  })
+
+  it('adds events, undoes them, and feeds summarize', async () => {
+    const r = repo()
+    await r.createTeam('A')
+    const g = await r.saveGame(gameInput)
+    const cb = vi.fn()
+    r.subscribe(cb)
+    await r.addEvent(g.id, { gameId: g.id, category: 'duel', outcome: 'won', period: 1 })
+    const lost = await r.addEvent(g.id, { gameId: g.id, category: 'duel', outcome: 'lost', period: 1 })
+    await r.addEvent(g.id, { gameId: g.id, category: 'first_contact', outcome: 'clean', ballType: 'long_ball', period: 2 })
+    expect(cb).toHaveBeenCalledTimes(3)
+    expect(summarize(await r.listEvents(g.id)).duels.total).toBe(2)
+    await r.undoEvent(lost.id)
+    const s = summarize(await r.listAllEvents())
+    expect(s.duels).toMatchObject({ won: 1, lost: 0 })
+    expect(s.firstContact.longBall.clean).toBe(1)
+  })
+
+  it('reports synced sync state', async () => {
+    const r = repo()
+    const cb = vi.fn()
+    r.onSyncState(cb)
+    expect(cb).toHaveBeenCalledWith('synced', 0)
+  })
+})
+
+function memStore(): QueueStore & { items: Map<number, QueueOp> } {
+  let k = 0
+  const items = new Map<number, QueueOp>()
+  return {
+    items,
+    async all() { return [...items].map(([key, op]) => ({ key, op })) },
+    async add(op) { items.set(++k, op) },
+    async remove(key) { items.delete(key) },
+  }
+}
+const op = (id: string): QueueOp => ({ table: 'stat_events', row: { id } })
+
+describe('WriteQueue', () => {
+  it('flushes in order and reports synced', async () => {
+    const store = memStore()
+    const sent: string[] = []
+    const q = new WriteQueue({ store, send: async (o) => { sent.push(o.row.id as string) }, isOnline: () => true })
+    const states: string[] = []
+    q.onState((s) => states.push(s))
+    await q.enqueue(op('a')); await q.enqueue(op('b'))
+    await q.flush()
+    expect(sent).toEqual(['a', 'b'])
+    expect(store.items.size).toBe(0)
+    expect(states.at(-1)).toBe('synced')
+  })
+
+  it('stays offline without sending, then flushes on kick', async () => {
+    const store = memStore()
+    let online = false
+    const send = vi.fn(async () => {})
+    const q = new WriteQueue({ store, send, isOnline: () => online })
+    let last: [string, number] = ['', -1]
+    q.onState((s, p) => (last = [s, p]))
+    await q.enqueue(op('a')); await q.flush()
+    expect(send).not.toHaveBeenCalled()
+    expect(last).toEqual(['offline', 1])
+    online = true
+    q.kick(); await q.flush()
+    expect(send).toHaveBeenCalledTimes(1)
+    expect(last).toEqual(['synced', 0])
+  })
+
+  it('retries with exponential backoff', async () => {
+    const store = memStore()
+    const delays: number[] = []
+    let timerFn: (() => void) | null = null
+    let fails = 2
+    const send = vi.fn(async () => { if (fails-- > 0) throw new Error('net') })
+    const q = new WriteQueue({
+      store, send, isOnline: () => true, baseDelayMs: 100,
+      setTimer: (fn, ms) => { delays.push(ms); timerFn = fn; return 1 },
+    })
+    let last = ''
+    q.onState((s) => (last = s))
+    await q.enqueue(op('a')); await q.flush()
+    expect(last).toBe('error'); expect(store.items.size).toBe(1)
+    timerFn!(); await q.flush()
+    timerFn!(); await q.flush()
+    expect(delays).toEqual([100, 200])
+    expect(store.items.size).toBe(0)
+    expect(last).toBe('synced')
+  })
+
+  it('drops permanently failing ops so they do not block the queue', async () => {
+    const store = memStore()
+    const sent: string[] = []
+    const q = new WriteQueue({
+      store, isOnline: () => true,
+      send: async (o) => { if (o.row.id === 'bad') throw new PermanentError('rls'); sent.push(o.row.id as string) },
+    })
+    let last = ''
+    q.onState((s) => (last = s))
+    await q.enqueue(op('bad')); await q.enqueue(op('good')); await q.flush()
+    expect(sent).toEqual(['good'])
+    expect(store.items.size).toBe(0)
+    expect(last).toBe('error')
+  })
+})
