@@ -17,3 +17,10 @@ The app runs without any backend (demo mode: data stays in this browser's Indexe
 - Every write goes to IndexedDB first, then into a persistent queue that upserts to Supabase (client-generated UUIDs, so retries are idempotent), with exponential backoff (1s to 60s) and an automatic flush on reconnect. Undo is a soft delete (`deleted_at`).
 - Realtime subscriptions on `games` and `stat_events` trigger a merge-pull into the local cache so two parents tracking simultaneously see each other's taps.
 - Caveat: an anonymous identity lives in the browser. Clearing site data loses membership; re-join with the code (data is safe in the cloud).
+
+## Team branding (logo + colors) — run `0002_branding.sql`
+
+After `0001_init.sql`, open **SQL Editor → New query**, paste `supabase/migrations/0002_branding.sql` and **Run**.
+It adds a `branding` column to `teams` and a `set_team_branding` function, so the logo and accent color saved in
+**Team → Team look** are shared with every parent on the team. Without it, saving the team look shows an error.
+The logo is resized to at most 256px in the browser and stored inline (no Storage bucket needed).

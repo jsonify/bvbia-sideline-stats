@@ -13,8 +13,8 @@ export default defineConfig({
         name: 'Sideline Stats',
         short_name: 'Sideline',
         description: 'Live team stats for soccer parent volunteers.',
-        theme_color: '#0f766e',
-        background_color: '#0f766e',
+        theme_color: '#000000',
+        background_color: '#000000',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/',
@@ -33,5 +33,5 @@ export default defineConfig({
       },
     }),
   ],
-  test: { environment: 'jsdom', globals: true },
+  test: { environment: 'jsdom', globals: true, exclude: ['e2e/**', 'node_modules/**'] },
 })

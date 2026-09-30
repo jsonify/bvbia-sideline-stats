@@ -28,7 +28,7 @@
 .gm-sheet h2{margin:0 0 6px}
 .gm-actions{position:sticky;bottom:0;background:linear-gradient(transparent,var(--bg) 24%);padding:24px 0 calc(12px + env(safe-area-inset-bottom));display:grid;gap:10px}
 .gm-topbar{display:flex;align-items:center;gap:8px}
-.gm-back{color:var(--brand);font-weight:700;text-decoration:none;min-height:44px;display:inline-flex;align-items:center}
+.gm-back{color:var(--brand-text);font-weight:700;text-decoration:none;min-height:44px;display:inline-flex;align-items:center}
 .gm-welcome{min-height:100dvh;display:flex;flex-direction:column;justify-content:center;max-width:520px;margin:0 auto;padding:24px 16px}
 .gm-welcome h1{font-size:34px;line-height:1.1;margin:8px 0;letter-spacing:-.02em}
 .gm-welcome p.lead{color:var(--muted);font-size:17px;margin:0 0 24px}

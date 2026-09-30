@@ -20,6 +20,19 @@ describe('LocalRepository (demo mode)', () => {
     await expect(r.joinTeam('NOPE22')).rejects.toThrow()
   })
 
+  it('saves team branding and notifies subscribers', async () => {
+    const r = repo()
+    await expect(r.saveBranding({ accent: '#FDE100', appearance: 'dark' })).rejects.toThrow()
+    await r.createTeam('BVB Fans')
+    const cb = vi.fn()
+    r.subscribe(cb)
+    const b = { accent: '#E11D2A', appearance: 'light' as const, logo: 'data:image/png;base64,AAAA' }
+    const t = await r.saveBranding(b)
+    expect(t.branding).toEqual(b)
+    expect((await r.getTeam())?.branding).toEqual(b)
+    expect(cb).toHaveBeenCalled()
+  })
+
   it('requires a team to save games', async () => {
     await expect(repo().saveGame(gameInput)).rejects.toThrow()
   })

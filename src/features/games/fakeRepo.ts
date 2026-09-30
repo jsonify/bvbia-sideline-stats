@@ -9,6 +9,7 @@ export function makeFakeRepo(team: Team | null = null): Repository & { games: Ga
     getTeam: async () => team,
     createTeam: async (name) => (team = { id: 't1', name, joinCode: 'ABC123' }),
     joinTeam: async (code) => (team = { id: 't1', name: 'Joined', joinCode: code }),
+    saveBranding: async (branding) => (team = { ...(team as Team), branding }),
     listGames: async () => games,
     getGame: async (id) => games.find((g) => g.id === id) ?? null,
     saveGame: async (g) => {

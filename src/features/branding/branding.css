@@ -1,0 +1,25 @@
+.bd-logo{border-radius:12px;object-fit:contain;flex:none}
+.bd-logo-default{display:inline-grid;place-items:center;background:var(--brand);color:var(--brand-ink)}
+.bd-settings{margin-top:16px;padding:18px 16px}
+.bd-h{margin:0;font-size:20px;font-weight:800}.bd-sub{margin:4px 0 4px;color:var(--muted);font-size:14px}
+.bd-block{margin-top:18px}.bd-label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:700;color:var(--muted);margin-bottom:8px}
+.bd-logo-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.bd-logo-preview{width:88px;height:88px;border-radius:16px;object-fit:contain;background:var(--surface-2);border:1px solid var(--border)}
+.bd-logo-empty{display:grid;place-items:center;color:var(--muted);font-size:12px}
+.bd-logo-actions{display:flex;gap:8px;flex-wrap:wrap}
+.bd-ghost{background:transparent!important;border-color:var(--border)!important;color:var(--text)!important}
+.bd-swatches{display:flex;gap:10px;flex-wrap:wrap}
+.bd-swatch{width:44px;height:44px;border-radius:50%;border:2px solid var(--border);cursor:pointer;padding:0}
+.bd-swatch[aria-checked=true]{outline:3px solid var(--text);outline-offset:2px}
+.bd-custom{display:flex;gap:10px;align-items:center;margin-top:12px}
+.bd-custom input[type=color]{width:52px;height:44px;padding:2px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.bd-custom .ss-input{max-width:140px;font-family:ui-monospace,Menlo,monospace;text-transform:uppercase}
+.bd-seg{display:inline-flex;background:var(--surface-2);border-radius:12px;padding:3px;gap:3px}
+.bd-seg button{min-height:44px;padding:0 20px;border:0;border-radius:10px;background:transparent;color:var(--muted);font-weight:700;font-size:15px;cursor:pointer}
+.bd-seg button[aria-checked=true]{background:var(--brand);color:var(--brand-ink)}
+.bd-hint{margin-top:6px;font-size:13px;color:var(--muted)}
+.bd-err{margin-top:10px;color:var(--bad);font-size:14px;font-weight:600}
+.bd-actions{display:flex;flex-direction:column;gap:10px;margin-top:22px}
+.bd-actions .ss-btn{width:100%}
+.bd-head{display:flex;align-items:center;gap:12px}
+.bd-head .ss-h1{margin:8px 0 16px}

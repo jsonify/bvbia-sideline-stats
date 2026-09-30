@@ -5,8 +5,10 @@
 .ss-no-nav .ss-content{padding-bottom:0}
 .ss-nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--surface);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom);z-index:20}
 .ss-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 0 8px;min-height:56px;color:var(--muted);text-decoration:none;font-size:12px;font-weight:600}
-.ss-tab.active{color:var(--brand)}
-.ss-tab:focus-visible,.ss-btn:focus-visible,.ss-fab:focus-visible,.ss-input:focus-visible,.ss-card-link:focus-visible,.ss-icon-btn:focus-visible,.ss-seg label:has(input:focus-visible){outline:3px solid var(--brand);outline-offset:2px}
+.ss-tab{position:relative}
+.ss-tab.active{color:var(--text)}
+.ss-tab.active::before{content:'';position:absolute;top:0;left:28%;right:28%;height:3px;border-radius:0 0 3px 3px;background:var(--brand)}
+.ss-tab:focus-visible,.ss-btn:focus-visible,.ss-fab:focus-visible,.ss-input:focus-visible,.ss-card-link:focus-visible,.ss-icon-btn:focus-visible,.ss-seg label:has(input:focus-visible){outline:3px solid var(--ring);outline-offset:2px}
 .ss-page{max-width:640px;margin:0 auto;padding:16px 16px 24px;padding-top:calc(16px + env(safe-area-inset-top))}
 .ss-h1{font-size:28px;line-height:1.15;margin:8px 0 16px;font-weight:800;letter-spacing:-.02em}
 .ss-h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:24px 0 8px;font-weight:700}
@@ -34,6 +36,6 @@ textarea.ss-input{padding:12px 14px;min-height:88px;resize:vertical}
 .ss-dot{width:8px;height:8px;border-radius:50%;background:var(--good)}
 .ss-sync-syncing .ss-dot{background:var(--warn)}.ss-sync-offline .ss-dot{background:var(--muted)}.ss-sync-error .ss-dot{background:var(--bad)}
 .ss-code-card{margin-top:16px;text-align:center;background:var(--surface);border:2px dashed var(--brand);border-radius:var(--radius);padding:20px 16px}
-.ss-code{font-family:ui-monospace,Menlo,monospace;font-size:44px;font-weight:800;letter-spacing:.14em;margin:6px 0 14px;color:var(--brand);word-break:break-all}
+.ss-code{font-family:ui-monospace,Menlo,monospace;font-size:44px;font-weight:800;letter-spacing:.14em;margin:6px 0 14px;color:var(--text);word-break:break-all}
 .ss-team-name{font-size:24px;font-weight:800;margin:4px 0 10px}
 .ss-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}

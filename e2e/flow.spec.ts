@@ -80,3 +80,39 @@ test('dark theme screenshot', async ({ browser }) => {
   await shot(page, '11-welcome-dark')
   await ctx.close()
 })
+
+test('team look: black/white/yellow default, upload logo, change accent, persists', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: /Create my team/ }).click()
+  await page.getByLabel('Team name').fill('BVB Fans')
+  await page.getByRole('button', { name: 'Create team' }).click()
+  await page.getByRole('button', { name: /Let's go/ }).click()
+  await page.getByRole('link', { name: 'Team' }).click()
+
+  const brand = () => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--brand').trim().toLowerCase())
+  expect(await brand()).toBe('#fde100')
+  await page.emulateMedia({ colorScheme: 'light' })
+  await page.getByRole('radio', { name: 'Light' }).click()
+  await page.screenshot({ path: 'e2e/screenshots/12-team-look-light.png', fullPage: true })
+
+  // 1x1 red PNG as the "logo"
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==', 'base64')
+  await page.getByLabel('Upload team logo').setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: png })
+  await expect(page.getByAltText('Team logo preview')).toBeVisible()
+  await page.getByRole('radio', { name: 'Red' }).click()
+  expect(await brand()).toBe('#e11d2a')
+  await page.getByRole('radio', { name: 'Dark' }).click()
+  await page.getByRole('button', { name: 'Save team look' }).click()
+  await expect(page.getByRole('button', { name: 'Save team look' })).toBeDisabled()
+
+  await page.reload()
+  expect(await brand()).toBe('#e11d2a')
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await expect(page.getByAltText('BVB Fans logo').first()).toBeVisible()
+  await page.screenshot({ path: 'e2e/screenshots/13-team-look-saved.png', fullPage: true })
+
+  await page.getByRole('button', { name: /Reset to black/ }).click()
+  await page.getByRole('button', { name: 'Save team look' }).click()
+  await page.getByRole('radio', { name: 'Dark' }).click()
+  expect(await brand()).toBe('#fde100')
+})
