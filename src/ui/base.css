@@ -1,0 +1,9 @@
+/* Design tokens + base. Owned by the design/polish agent; keep token names stable. */
+:root {
+  --bg:#f4f7f6; --surface:#fff; --text:#0f1f1c; --muted:#5b6b67; --border:#dfe7e4;
+  --brand:#0f766e; --brand-ink:#fff; --good:#16a34a; --bad:#dc2626; --warn:#d97706;
+  --radius:16px; --shadow:0 1px 2px rgba(0,0,0,.06),0 6px 20px rgba(15,31,28,.06);
+  --font:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root{--bg:#0b1412;--surface:#13201d;--text:#eaf2f0;--muted:#9bb0aa;--border:#22332f;--brand:#2dd4bf;--brand-ink:#04211d;--shadow:none}}
+*{box-sizing:border-box} html,body{margin:0} body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-tap-highlight-color:transparent}
