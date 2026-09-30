@@ -47,7 +47,7 @@ export default function TrackerPage() {
         <div className="tk-periods" role="group" aria-label="Period">
           {Array.from({ length: game.periods }, (_, i) => i + 1).map((n) => (
             <button key={n} type="button" aria-pressed={t.period === n} onClick={() => t.setPeriod(n)}>
-              {game.periods === 2 ? (n === 1 ? '1st half' : '2nd half') : `Q${n}`}
+              {n === 1 ? '1st half' : '2nd half'}
             </button>
           ))}
         </div>
