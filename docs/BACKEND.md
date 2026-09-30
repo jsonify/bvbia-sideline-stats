@@ -18,12 +18,11 @@ The app runs without any backend (demo mode: data stays in this browser's Indexe
 - Realtime subscriptions on `games` and `stat_events` trigger a merge-pull into the local cache so parents watching a game see the tracker's taps as they happen.
 - Caveat: an anonymous identity lives in the browser. Clearing site data loses membership; re-join with the code (data is safe in the cloud).
 
-## Team branding (logo + colors) — run `0002_branding.sql`
+## Team branding — `0002_branding.sql` is no longer needed
 
-After `0001_init.sql`, open **SQL Editor → New query**, paste `supabase/migrations/0002_branding.sql` and **Run**.
-It adds a `branding` column to `teams` and a `set_team_branding` function, so the logo and accent color saved in
-**Team → Team look** are shared with every parent on the team. Without it, saving the team look shows an error.
-The logo is resized to at most 256px in the browser and stored inline (no Storage bucket needed).
+The app's look is fixed: BVB yellow accent and the official BVB crest (`public/Borussia_Dortmund_logo.svg`). There is no "Team look" screen any more,
+so the UI ignores any `branding` saved on a team. You can skip `0002_branding.sql` (the app reads teams with `select *` and
+tolerates the column being absent); if you already ran it, leave it in place. It is harmless, and any look saved earlier is simply ignored.
 
 ## One tracker per game — run `0003_game_tracker.sql`
 

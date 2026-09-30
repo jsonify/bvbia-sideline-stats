@@ -41,7 +41,7 @@ export default function OnboardingPage() {
         <>
           {adding && <Link to="/teams" className="gm-back">‹ Back to teams</Link>}
           <div className="ss-eyebrow">{adding ? 'Add a team' : 'Sideline Stats'}</div>
-          <h1>{adding ? 'Create or join another team' : 'Track the game. Cheer louder.'}</h1>
+          <h1>{adding ? 'Create or join another team' : <>Track the game. <mark>Cheer louder.</mark></>}</h1>
           <p className="lead">{adding ? 'Each team keeps its own games and season stats. You can switch between them any time from the Teams tab.' : 'Tally duels, first touches and box entries for the whole team in one tap, right from the sideline. Every parent sees the same numbers.'}</p>
           <div className="gm-paths">
             <button className="ss-card gm-path" onClick={() => setStep('create')}><strong>Create my team</strong><span>I'm the first parent here. Set up our team.</span></button>

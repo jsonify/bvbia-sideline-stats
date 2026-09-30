@@ -1,16 +1,16 @@
-.gm-live{background:linear-gradient(135deg,var(--brand),color-mix(in srgb,var(--brand) 70%,#000));color:var(--brand-ink);border-radius:22px;padding:20px;box-shadow:var(--shadow);margin-bottom:8px}
+.gm-live{background:var(--brand);color:var(--brand-ink);border-radius:22px;padding:20px;margin-bottom:8px}
 .gm-live .ss-eyebrow{color:inherit;opacity:.85;display:flex;align-items:center;gap:8px}
 .gm-pulse{width:10px;height:10px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 0 rgba(239,68,68,.7);animation:gm-pulse 1.6s infinite}
 @keyframes gm-pulse{70%{box-shadow:0 0 0 10px rgba(239,68,68,0)}100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}}
 @media (prefers-reduced-motion:reduce){.gm-pulse{animation:none}}
-.gm-live-title{font-size:26px;font-weight:800;margin:6px 0 2px}
+.gm-live-title{font-family:var(--font-display);text-transform:uppercase;font-size:36px;line-height:1;font-weight:800;letter-spacing:.01em;margin:8px 0 4px}
 .gm-live-sub{opacity:.85;margin-bottom:16px}
 .gm-live .ss-btn{background:var(--brand-ink);color:var(--brand);width:100%;border:0}
 .gm-list{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 .gm-card{position:relative;display:flex;align-items:stretch}
 .gm-card .ss-card{flex:1;padding:0;display:flex;align-items:center}
 .ss-card-link{flex:1;display:block;padding:14px 16px;padding-right:8px;color:inherit;text-decoration:none;border-radius:var(--radius);min-width:0}
-.gm-opp{font-size:18px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gm-opp{font-family:var(--font-display);text-transform:uppercase;font-size:24px;line-height:1.1;letter-spacing:.01em;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .gm-meta{color:var(--muted);font-size:14px;margin-top:2px}
 .gm-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .gm-stat{font-size:12px;font-weight:700;padding:3px 8px;border-radius:8px;background:var(--bg);border:1px solid var(--border)}
@@ -30,7 +30,11 @@
 .gm-topbar{display:flex;align-items:center;gap:8px}
 .gm-back{color:var(--brand-text);font-weight:700;text-decoration:none;min-height:44px;display:inline-flex;align-items:center}
 .gm-welcome{min-height:100dvh;display:flex;flex-direction:column;justify-content:center;max-width:520px;margin:0 auto;padding:24px 16px}
-.gm-welcome h1{font-size:34px;line-height:1.1;margin:8px 0;letter-spacing:-.02em}
+.gm-welcome h1{font-family:var(--font-display);text-transform:uppercase;font-size:48px;line-height:1.05;font-weight:800;margin:10px 0 14px;letter-spacing:.005em}
+/* the one highlighted phrase: black on brand, like a kit number */
+.gm-welcome h1 mark{background:var(--brand);color:var(--brand-ink);padding:0 .12em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.gm-welcome>.ss-eyebrow{display:flex;align-items:center;gap:8px}
+.gm-welcome>.ss-eyebrow::before{content:'';flex:none;width:14px;height:4px;background:var(--brand)}
 .gm-welcome p.lead{color:var(--muted);font-size:17px;margin:0 0 24px}
 .gm-paths{display:grid;gap:12px}
 .gm-path{text-align:left;padding:18px;display:block;width:100%;font:inherit;color:inherit;cursor:pointer}

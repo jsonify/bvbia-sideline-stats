@@ -77,44 +77,38 @@ test('dark theme screenshot', async ({ browser }) => {
   const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 412, height: 915 } })
   const page = await ctx.newPage()
   await page.goto('/welcome')
+  await expect(page.getByRole('heading', { name: /Track the game/ })).toBeVisible()
   await shot(page, '11-welcome-dark')
   await ctx.close()
 })
 
-test('team look: black/white/yellow default, upload logo, change accent, persists', async ({ page }) => {
+test('branding is fixed: BVB yellow and the crest, no Team look section, old custom looks ignored', async ({ page }) => {
+  // A custom look saved on this device by an earlier version must not come back.
+  await page.addInitScript(() => localStorage.setItem('ss-branding', JSON.stringify({ accent: '#E11D2A', appearance: 'dark', logo: null })))
   await page.goto('/')
   await page.getByRole('button', { name: /Create my team/ }).click()
   await page.getByLabel('Team name').fill('BVB Fans')
   await page.getByRole('button', { name: 'Create team' }).click()
   await page.getByRole('button', { name: /Let's go/ }).click()
+
+  // The crest is in the team bar and actually loaded
+  const crest = page.locator('.bd-teambar img[src="/Borussia_Dortmund_logo.svg"]')
+  await expect(crest).toBeVisible()
+  // decode() rejects for a missing or broken file (naturalWidth is 0 for a viewBox-only SVG, so it can't be used)
+  await expect.poll(() => crest.evaluate((el) => (el as HTMLImageElement).decode().then(() => true, () => false))).toBe(true)
+
   await page.getByRole('link', { name: 'Settings' }).click()
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
+  await expect(page.getByText('Team code').first()).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Team look' })).toHaveCount(0)
+  await expect(page.getByLabel('Upload team logo')).toHaveCount(0)
+  await expect(page.getByRole('radio', { name: 'Red' })).toHaveCount(0)
 
-  const brand = () => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--brand').trim().toLowerCase())
-  expect(await brand()).toBe('#fde100')
+  const brand = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--brand').trim().toLowerCase())
+  expect(brand).toBe('#fde100')
+  await expect(page.locator('html')).not.toHaveAttribute('data-theme', /.*/)
   await page.emulateMedia({ colorScheme: 'light' })
-  await page.getByRole('radio', { name: 'Light' }).click()
-  await page.screenshot({ path: 'e2e/screenshots/12-team-look-light.png', fullPage: true })
-
-  // 1x1 red PNG as the "logo"
-  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==', 'base64')
-  await page.getByLabel('Upload team logo').setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: png })
-  await expect(page.getByAltText('Team logo preview')).toBeVisible()
-  await page.getByRole('radio', { name: 'Red' }).click()
-  expect(await brand()).toBe('#e11d2a')
-  await page.getByRole('radio', { name: 'Dark' }).click()
-  await page.getByRole('button', { name: 'Save team look' }).click()
-  await expect(page.getByRole('button', { name: 'Save team look' })).toBeDisabled()
-
-  await page.reload()
-  expect(await brand()).toBe('#e11d2a')
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
-  await expect(page.getByAltText('BVB Fans logo').first()).toBeVisible()
-  await page.screenshot({ path: 'e2e/screenshots/13-team-look-saved.png', fullPage: true })
-
-  await page.getByRole('button', { name: /Reset to black/ }).click()
-  await page.getByRole('button', { name: 'Save team look' }).click()
-  await page.getByRole('radio', { name: 'Dark' }).click()
-  expect(await brand()).toBe('#fde100')
+  await page.screenshot({ path: 'e2e/screenshots/12-settings.png', fullPage: true })
 })
 
 test('multiple teams: add, switch, keep games + season stats separate, remove', async ({ page }) => {
@@ -171,7 +165,7 @@ test('multiple teams: add, switch, keep games + season stats separate, remove', 
 
   // Settings tab holds the admin work
   await nav('Settings').click()
-  await expect(page.getByRole('heading', { name: 'Team look' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
   await expect(page.getByText('Team code').first()).toBeVisible()
   expect(errors).toEqual([])
 })

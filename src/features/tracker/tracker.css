@@ -7,7 +7,7 @@
 .tk-top{position:sticky;top:0;z-index:20;background:var(--bg);padding:calc(10px + env(safe-area-inset-top)) 0 8px;border-bottom:1px solid var(--border);margin:0 -14px 12px;padding-left:14px;padding-right:14px}
 .tk-top-row{display:flex;align-items:center;gap:10px}
 .tk-back{font-size:32px;line-height:1;text-decoration:none;color:var(--text);width:40px;height:44px;display:grid;place-items:center}
-.tk-title{flex:1;min-width:0}.tk-title h1{margin:0;font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tk-title{flex:1;min-width:0}.tk-title h1{margin:0;font-family:var(--font-display);text-transform:uppercase;font-size:28px;line-height:1.05;font-weight:800;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tk-status{font-size:13px;font-weight:700;color:var(--muted)}.tk-status.live{color:var(--tk-bad)}
 .tk-sync{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:6px 10px;border-radius:99px;background:var(--surface);border:1px solid var(--border)}
 .tk-sync i{width:8px;height:8px;border-radius:50%;background:var(--good)}
