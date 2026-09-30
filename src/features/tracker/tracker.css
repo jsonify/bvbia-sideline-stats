@@ -58,5 +58,13 @@
 @keyframes tk-toast{from{opacity:0;transform:translate(-50%,10px)}}
 @media (prefers-reduced-motion:reduce){.tk *{animation:none!important;transition:none!important}}
 
+/* someone else is tracking: view-only banner */
+.tk-watch{margin:0 0 14px;padding:14px;border-radius:18px;background:var(--surface);border:2px solid var(--brand)}
+.tk-watch strong{display:block;font-size:17px}
+.tk-watch p{margin:4px 0 0;color:var(--muted);font-size:14px;line-height:1.4}
+.tk-watch-btn{width:100%;min-height:52px;margin-top:12px;border-radius:14px;border:1px solid var(--border);background:var(--bg);font-weight:800;font-size:16px}
+.tk-watch-btn.primary,.tk-dialog .primary{background:var(--brand);border-color:transparent;color:var(--brand-ink)!important}
+.tk-dialog p{color:var(--muted);line-height:1.4;margin:0}
+
 /* keep last card clear of the fixed Undo bar */
 .tk{padding-bottom:calc(120px + env(safe-area-inset-bottom))}

@@ -3,6 +3,19 @@ import type { Game, NewStatEvent, StatEvent, Team, TeamBranding, Uuid } from '..
 
 export type SyncState = 'synced' | 'syncing' | 'offline' | 'error'
 
+/**
+ * Who is tracking a game right now. Only one parent tracks a game at a time; everyone else watches live.
+ *  me     this phone holds the game
+ *  other  another parent holds it (and checked in `idleSeconds` ago)
+ *  none   nobody does: never claimed, handed off, or the last tracker went quiet for too long
+ */
+export interface GameTracker {
+  holder: 'me' | 'other' | 'none'
+  idleSeconds: number | null
+  /** The tracker's chosen name (from their Settings), if they set one. */
+  name: string | null
+}
+
 export interface Repository {
   /** The active team on this device (null → show onboarding). Games and stats are always scoped to it. */
   getTeam(): Promise<Team | null>
@@ -29,6 +42,22 @@ export interface Repository {
   addEvent(gameId: Uuid, e: NewStatEvent): Promise<StatEvent>
   /** Soft-delete (undo). */
   undoEvent(eventId: Uuid): Promise<void>
+
+  /**
+   * Tracking lease. One parent tracks a game at a time so the same play is never tapped twice.
+   * It only coordinates who the UI lets tap: stat events are never rejected, so taps made offline are never lost.
+   * All three reject when the cloud can't be reached; callers should carry on tracking (offline-first).
+   */
+  getTracker(gameId: Uuid): Promise<GameTracker>
+  /** Start (or keep) tracking. Fails to `other` if someone else holds a live lease, unless `takeOver`. Call every ~15s to stay the tracker. */
+  claimTracker(gameId: Uuid, opts?: { takeOver?: boolean }): Promise<GameTracker>
+  /** This device's "your name", shown to other parents while you track. Empty = not set. */
+  getDisplayName(): Promise<string>
+  setDisplayName(name: string): Promise<void>
+  /** Hand the game back so another parent can start tracking straight away. */
+  releaseTracker(gameId: Uuid): Promise<void>
+  /** Fires when anyone claims or releases a game on the active team (so a takeover shows up immediately). */
+  onTrackerChange(cb: () => void): () => void
 
   /** Subscribe to any change (local or remote) so UIs refresh. Returns unsubscribe. */
   subscribe(cb: () => void): () => void

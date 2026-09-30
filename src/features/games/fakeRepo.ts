@@ -25,6 +25,12 @@ export function makeFakeRepo(team: Team | null = null): Repository & { games: Ga
     listAllEvents: async () => [],
     addEvent: async () => { throw new Error('unused') },
     undoEvent: async () => {},
+    getTracker: async () => ({ holder: 'none', idleSeconds: null, name: null }),
+    claimTracker: async () => ({ holder: 'me', idleSeconds: 0, name: null }),
+    getDisplayName: async () => '',
+    setDisplayName: async () => {},
+    releaseTracker: async () => {},
+    onTrackerChange: () => () => {},
     subscribe: () => () => {},
     onSyncState: () => () => {},
   }

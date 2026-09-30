@@ -164,8 +164,33 @@ function fakeCloud() {
   const games = new Map<string, any>()
   const events = new Map<string, any>()
   let codes = 0
-  const api = (): RemoteApi => ({
-    userId: async () => 'u',
+  // Tracking leases: same rules as supabase/migrations/0003_game_tracker.sql (120 s lease, take over, release).
+  const LEASE = 120
+  const leases = new Map<string, { user: string | null; seenAt: number; name: string | null }>()
+  const trackerWatchers = new Set<() => void>()
+  const clock = { now: 0, down: false }
+  const ping = () => trackerWatchers.forEach((f) => f())
+  const reach = () => { if (clock.down) throw new Error('Failed to fetch') }
+  const view = (gameId: string, me: string) => {
+    const l = leases.get(gameId)
+    if (!l || !l.user) return { holder: 'none' as const, idleSeconds: null, name: null }
+    const idle = clock.now - l.seenAt
+    return { holder: l.user === me ? ('me' as const) : idle > LEASE ? ('none' as const) : ('other' as const), idleSeconds: idle, name: l.name }
+  }
+  const api = (user = 'u'): RemoteApi => ({
+    getTracker: async (id) => { reach(); return view(id, user) },
+    claimTracker: async (id, takeOver, name) => {
+      reach()
+      const l = leases.get(id)
+      if (takeOver || !l || !l.user || l.user === user || clock.now - l.seenAt > LEASE) { leases.set(id, { user, seenAt: clock.now, name: name || null }); ping() }
+      return view(id, user)
+    },
+    releaseTracker: async (id) => {
+      reach()
+      if (leases.get(id)?.user === user) { leases.set(id, { user: null, seenAt: clock.now, name: null }); ping() }
+    },
+    watchTrackers: (_team, cb) => { trackerWatchers.add(cb); return () => { trackerWatchers.delete(cb) } },
+    userId: async () => user,
     myTeams: async () => [...teams.values()],
     createTeam: async (name) => { const t = { id: crypto.randomUUID(), name, joinCode: `CODE${++codes}` }; teams.set(t.id, t); return t },
     joinTeam: async (code) => {
@@ -185,7 +210,7 @@ function fakeCloud() {
     }),
     watch: () => () => {},
   })
-  return { api, games, events, teams }
+  return { api, games, events, teams, clock, trackerWatchers }
 }
 const ev = (gameId: string, category = 'duel', outcome = 'won') => ({ gameId, category, outcome, period: 1 }) as any
 
@@ -283,5 +308,113 @@ describe('multiple teams on one device', () => {
     expect((await r.joinTeam(a.joinCode)).id).toBe(a.id)
     expect((await r.getTeam())?.id).toBe(a.id)
     expect(await r.listTeams()).toHaveLength(2)
+  })
+})
+
+describe('one tracker per game', () => {
+  const setup = async () => {
+    const cloud = fakeCloud()
+    const a = new LocalRepository({ dbName: `lease-a${n++}`, remote: cloud.api('parent-a'), baseDelayMs: 1 })
+    const team = await a.createTeam('Thunder')
+    const game = await a.saveGame(gameInput)
+    const b = new LocalRepository({ dbName: `lease-b${n++}`, remote: cloud.api('parent-b'), baseDelayMs: 1 })
+    await b.joinTeam(team.joinCode)
+    return { cloud, a, b, id: game.id }
+  }
+
+  it('lets the first parent track and makes the second one watch', async () => {
+    const { a, b, id } = await setup()
+    expect(await a.claimTracker(id)).toMatchObject({ holder: 'me' })
+    expect(await b.getTracker(id)).toMatchObject({ holder: 'other' })
+    expect(await b.claimTracker(id)).toMatchObject({ holder: 'other' }) // cannot barge in
+    expect(await a.claimTracker(id)).toMatchObject({ holder: 'me' }) // renewing is fine
+  })
+
+  it('a takeover switches who is tracking, and the old tracker finds out on their next check', async () => {
+    const { a, b, id } = await setup()
+    await a.claimTracker(id)
+    expect(await b.claimTracker(id, { takeOver: true })).toMatchObject({ holder: 'me' })
+    expect(await a.getTracker(id)).toMatchObject({ holder: 'other' })
+    expect(await a.claimTracker(id)).toMatchObject({ holder: 'other' }) // heartbeat cannot steal it back
+  })
+
+  it('handing off frees the game straight away', async () => {
+    const { a, b, id } = await setup()
+    await a.claimTracker(id)
+    await b.releaseTracker(id) // not the tracker: does nothing
+    expect(await a.getTracker(id)).toMatchObject({ holder: 'me' })
+    await a.releaseTracker(id)
+    expect(await b.getTracker(id)).toEqual({ holder: 'none', idleSeconds: null, name: null })
+    expect(await b.claimTracker(id)).toMatchObject({ holder: 'me' })
+  })
+
+  it('a tracker who goes quiet for over 2 minutes loses the game to whoever asks next', async () => {
+    const { cloud, a, b, id } = await setup()
+    await a.claimTracker(id)
+    cloud.clock.now = 100
+    expect(await b.claimTracker(id)).toMatchObject({ holder: 'other', idleSeconds: 100 })
+    cloud.clock.now = 121
+    expect(await b.getTracker(id)).toMatchObject({ holder: 'none' })
+    expect(await a.getTracker(id)).toMatchObject({ holder: 'me' }) // still theirs until someone else takes it
+    expect(await b.claimTracker(id)).toMatchObject({ holder: 'me' })
+    expect(await a.claimTracker(id)).toMatchObject({ holder: 'other' })
+  })
+
+  it('tells the app when someone claims or releases, so a takeover shows up immediately', async () => {
+    const { a, b, id } = await setup()
+    const seen = vi.fn()
+    const off = b.onTrackerChange(seen)
+    await a.claimTracker(id)
+    await a.releaseTracker(id)
+    expect(seen).toHaveBeenCalledTimes(2)
+    off()
+    await a.claimTracker(id)
+    expect(seen).toHaveBeenCalledTimes(2)
+  })
+
+  it('without a connection, claiming fails (so the app carries on tracking) but releasing never throws', async () => {
+    const { cloud, a, id } = await setup()
+    cloud.clock.down = true
+    await expect(a.claimTracker(id)).rejects.toThrow()
+    await expect(a.getTracker(id)).rejects.toThrow()
+    await expect(a.releaseTracker(id)).resolves.toBeUndefined()
+  })
+
+  it("sends this device's name with every claim so the other parent can see who is tracking", async () => {
+    const { a, b, id } = await setup()
+    expect(await a.getDisplayName()).toBe('')
+    await a.setDisplayName('  Sam  ')
+    expect(await a.getDisplayName()).toBe('Sam')
+    await a.claimTracker(id)
+    expect(await b.getTracker(id)).toMatchObject({ holder: 'other', name: 'Sam' })
+    await b.setDisplayName('Priya')
+    expect(await b.claimTracker(id)).toMatchObject({ holder: 'other', name: 'Sam' }) // blocked: Sam still shown
+    expect(await b.claimTracker(id, { takeOver: true })).toMatchObject({ holder: 'me', name: 'Priya' })
+    expect(await a.getTracker(id)).toMatchObject({ holder: 'other', name: 'Priya' })
+    await a.setDisplayName('x'.repeat(50))
+    expect((await a.getDisplayName()).length).toBe(30)
+  })
+
+  it('a parent with no name set shows as unnamed', async () => {
+    const { a, b, id } = await setup()
+    await a.claimTracker(id)
+    expect((await b.getTracker(id)).name).toBeNull()
+  })
+
+  it('demo mode is one device: the game is always yours', async () => {
+    const r = repo()
+    await r.createTeam('A')
+    const g = await r.saveGame(gameInput)
+    expect(await r.claimTracker(g.id)).toMatchObject({ holder: 'me' })
+    expect(await r.getTracker(g.id)).toEqual({ holder: 'none', idleSeconds: null, name: null })
+    await expect(r.releaseTracker(g.id)).resolves.toBeUndefined()
+  })
+
+  it('never blocks stat events: taps a parent made while someone else was tracking still sync', async () => {
+    const { cloud, a, b, id } = await setup()
+    await a.claimTracker(id)
+    await vi.waitFor(async () => expect((await b.listGames()).length).toBe(1))
+    await b.addEvent(id, ev(id)) // b is only watching, but the data layer stays append-only and lossless
+    await vi.waitFor(() => expect(cloud.events.size).toBe(1))
   })
 })

@@ -175,3 +175,69 @@ test('multiple teams: add, switch, keep games + season stats separate, remove', 
   await expect(page.getByText('Team code').first()).toBeVisible()
   expect(errors).toEqual([])
 })
+
+test('invite: Share code sends the app link, the code and the steps; the link opens the join screen with the code filled in', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', (e) => errors.push(e.message))
+  // Stand in for the phone's share sheet so we can read exactly what a parent would send.
+  await page.addInitScript(() => {
+    ;(navigator as any).share = async (data: unknown) => { ;(window as any).__shared = data }
+  })
+
+  await page.goto('/')
+  await page.getByRole('button', { name: /Create my team/ }).click()
+  await page.getByLabel('Team name').fill('U10 Thunder')
+  await page.getByRole('button', { name: 'Create team' }).click()
+  await expect(page.getByRole('heading', { name: /all set/i })).toBeVisible()
+  const code = (await page.locator('.ss-code').innerText()).trim()
+  expect(code).toMatch(/^[A-Z0-9]{6}$/)
+
+  // The card explains the steps on screen too
+  await expect(page.getByText('How other parents join')).toBeVisible()
+  await expect(page.getByLabel('Invite link')).toContainText(`/welcome?code=${code}`)
+  await page.screenshot({ path: 'e2e/screenshots/16-invite-card.png', fullPage: true })
+
+  await page.getByRole('button', { name: 'Share code' }).click()
+  const shared = await page.evaluate(() => (window as any).__shared as { title: string; text: string })
+  const link = `${new URL(page.url()).origin}/welcome?code=${code}`
+  expect(shared.text).toContain('U10 Thunder')
+  expect(shared.text).toContain(link)
+  expect(shared.text).toContain(code)
+  expect(shared.text).toContain('Tap this link to open the app')
+  expect(shared.text).toContain('Tap "Join with team code" and paste this code')
+  expect(shared.text).toContain('Tap "Join team"')
+  expect(shared.text).toContain('One parent tracks each game at a time')
+
+  // Opening the link: straight to the join step, code already in the box
+  await page.goto(link)
+  await expect(page.getByRole('heading', { name: 'Enter your team code' })).toBeVisible()
+  await expect(page.getByLabel('Team code')).toHaveValue(code)
+  await expect(page.getByText(/filled in the code from your invite link/i)).toBeVisible()
+  await page.screenshot({ path: 'e2e/screenshots/17-join-from-link.png' })
+  await page.getByRole('button', { name: 'Join team' }).click()
+  await expect(page.getByRole('heading', { name: 'Games', exact: true })).toBeVisible()
+
+  // Without a link, pasting the code (any case, stray spaces) works too
+  await page.goto('/welcome?add=1')
+  await page.getByRole('button', { name: /Join with team code/ }).click()
+  await expect(page.getByText(/Paste the team code from the invite you were sent/)).toBeVisible()
+  await page.getByLabel('Team code').fill(` ${code.toLowerCase().slice(0, 3)} ${code.toLowerCase().slice(3)} `)
+  await page.getByRole('button', { name: 'Join team' }).click()
+  await expect(page.getByRole('heading', { name: 'Games', exact: true })).toBeVisible()
+  expect(errors).toEqual([])
+})
+
+test('your name: set in Settings, saved on this device', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: /Create my team/ }).click()
+  await page.getByLabel('Team name').fill('U10 Thunder')
+  await page.getByRole('button', { name: 'Create team' }).click()
+  await page.getByRole('button', { name: /Let's go/ }).click()
+  await page.getByRole('link', { name: 'Settings' }).click()
+  await page.getByLabel('Your name').fill('Sam')
+  await page.getByRole('button', { name: 'Save name' }).click()
+  await expect(page.getByText('Saved', { exact: true })).toBeVisible()
+  await page.screenshot({ path: 'e2e/screenshots/18-your-name.png', fullPage: true })
+  await page.reload()
+  await expect(page.getByLabel('Your name')).toHaveValue('Sam')
+})
