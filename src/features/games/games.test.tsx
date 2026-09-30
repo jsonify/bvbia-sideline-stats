@@ -32,6 +32,13 @@ describe('onboarding redirect', () => {
 })
 
 describe('game form validation', () => {
+  it('offers no quarters option: soccer games are always two halves', async () => {
+    wrap(makeFakeRepo({ id: "t1", name: "T", joinCode: "ABC123" }), "/games/new")
+    await screen.findByLabelText(/opponent/i)
+    expect(screen.queryByText(/quarter/i)).toBeNull()
+    expect(screen.queryByText(/game format/i)).toBeNull()
+  })
+
   it('blocks save without an opponent', async () => {
     const repo = makeFakeRepo({ id: 't', name: 'T', joinCode: 'X' })
     wrap(repo, '/games/new')

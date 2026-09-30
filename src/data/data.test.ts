@@ -163,10 +163,11 @@ function fakeCloud() {
   const teams = new Map<string, Team>()
   const games = new Map<string, any>()
   const events = new Map<string, any>()
+  let codes = 0
   const api = (): RemoteApi => ({
     userId: async () => 'u',
-    myTeam: async () => null,
-    createTeam: async (name) => { const t = { id: crypto.randomUUID(), name, joinCode: 'JOIN22' }; teams.set(t.id, t); return t },
+    myTeams: async () => [...teams.values()],
+    createTeam: async (name) => { const t = { id: crypto.randomUUID(), name, joinCode: `CODE${++codes}` }; teams.set(t.id, t); return t },
     joinTeam: async (code) => {
       const t = [...teams.values()].find((x) => x.joinCode === code)
       if (!t) throw new Error('No team found with that code')
@@ -175,9 +176,8 @@ function fakeCloud() {
     saveBranding: async (id, branding) => { const t = { ...teams.get(id)!, branding }; teams.set(id, t); return t },
     push: async (op) => {
       const row = op.row as any
-      const teamId = row.teamId
-      if (!teams.has(teamId)) throw Object.assign(new Error('fk violation'), { permanent: true })
-      ;(op.table === 'games' ? games : events).set(row.id, { ...row, teamId })
+      if (!teams.has(row.teamId)) throw Object.assign(new Error('fk violation'), { permanent: true })
+      ;(op.table === 'games' ? games : events).set(row.id, { ...row })
     },
     pull: async (teamId) => ({
       games: [...games.values()].filter((g) => g.teamId === teamId),
@@ -185,31 +185,103 @@ function fakeCloud() {
     }),
     watch: () => () => {},
   })
-  return { api, games, events }
+  return { api, games, events, teams }
 }
+const ev = (gameId: string, category = 'duel', outcome = 'won') => ({ gameId, category, outcome, period: 1 }) as any
 
 describe('cloud sync across devices', () => {
-  it('a second device joining by code sees the games and stats, including ones recorded before linking to the cloud', async () => {
+  it('a second device joining by code sees the team\'s games and stats', async () => {
     const cloud = fakeCloud()
+    const a = new LocalRepository({ dbName: 'cA', remote: cloud.api(), baseDelayMs: 1 })
+    const team = await a.createTeam('BVB Fans')
+    const g = await a.saveGame({ ...gameInput, opponent: 'Bayern' })
+    await a.addEvent(g.id, ev(g.id, 'box_entry', 'shot'))
+    await vi.waitFor(() => { expect(cloud.games.size).toBe(1); expect(cloud.events.size).toBe(1) })
 
-    // Device A first used the app on this phone without a cloud connection (demo mode)...
-    const demo = new LocalRepository({ dbName: 'devA' })
+    const b = new LocalRepository({ dbName: 'cB', remote: cloud.api(), baseDelayMs: 1 })
+    await b.joinTeam(team.joinCode)
+    await vi.waitFor(async () => expect((await b.listGames()).map((x) => x.opponent)).toEqual(['Bayern']))
+    expect(await b.listAllEvents()).toHaveLength(1)
+  })
+
+  it('moves a team created before the cloud was configured into the cloud, with its games', async () => {
+    const cloud = fakeCloud()
+    const demo = new LocalRepository({ dbName: 'cD' })
     await demo.createTeam('Old demo team')
     const early = await demo.saveGame(gameInput)
-    await demo.addEvent(early.id, { gameId: early.id, category: 'duel', outcome: 'won', period: 1 } as any)
+    await demo.addEvent(early.id, ev(early.id))
 
-    // ...then the cloud was switched on and the team was created for real.
-    const a = new LocalRepository({ dbName: 'devA', remote: cloud.api(), baseDelayMs: 1 })
-    const team = await a.createTeam('BVB Fans')
-    const later = await a.saveGame({ ...gameInput, opponent: 'Bayern' })
-    await a.addEvent(later.id, { gameId: later.id, category: 'box_entry', outcome: 'shot', period: 1 } as any)
+    const linked = new LocalRepository({ dbName: 'cD', remote: cloud.api(), baseDelayMs: 1 })
+    await vi.waitFor(() => { expect(cloud.teams.size).toBe(1); expect(cloud.games.size).toBe(1); expect(cloud.events.size).toBe(1) })
+    const cloudTeam = [...cloud.teams.values()][0]
+    expect(cloudTeam.name).toBe('Old demo team')
+    expect((await linked.listGames()).map((g) => g.id)).toEqual([early.id])
+    expect([...cloud.games.values()][0].teamId).toBe(cloudTeam.id)
+  })
+})
 
-    await vi.waitFor(() => { expect(cloud.games.size).toBe(2); expect(cloud.events.size).toBe(2) })
+describe('multiple teams on one device', () => {
+  it('keeps each team\'s games and season stats separate and switches between them', async () => {
+    const r = repo()
+    const a = await r.createTeam('U10 Thunder')
+    const ga = await r.saveGame({ ...gameInput, opponent: 'Hawks' })
+    await r.addEvent(ga.id, ev(ga.id))
 
-    // Device B joins with the team code.
-    const b = new LocalRepository({ dbName: 'devB', remote: cloud.api(), baseDelayMs: 1 })
-    await b.joinTeam(team.joinCode)
-    await vi.waitFor(async () => expect((await b.listGames()).map((g) => g.opponent).sort()).toEqual(['Bayern', 'Hawks']))
-    expect(await b.listAllEvents()).toHaveLength(2)
+    const b = await r.createTeam('U12 Lightning') // becomes active
+    expect((await r.getTeam())?.id).toBe(b.id)
+    expect(await r.listGames()).toEqual([])
+    expect(await r.listAllEvents()).toEqual([])
+    expect(await r.getGame(ga.id)).toBeNull() // other team's game is not reachable
+    const gb = await r.saveGame({ ...gameInput, opponent: 'Owls' })
+    await r.addEvent(gb.id, ev(gb.id, 'duel', 'lost'))
+    expect((await r.listAllEvents()).map((e) => e.outcome)).toEqual(['lost'])
+
+    expect((await r.listTeams()).map((t) => t.name)).toEqual(['U10 Thunder', 'U12 Lightning'])
+    await r.switchTeam(a.id)
+    expect((await r.listGames()).map((g) => g.opponent)).toEqual(['Hawks'])
+    expect((await r.listAllEvents()).map((e) => e.outcome)).toEqual(['won'])
+    await expect(r.switchTeam('nope')).rejects.toThrow()
+  })
+
+  it('keeps branding per team', async () => {
+    const r = repo()
+    const a = await r.createTeam('A')
+    await r.saveBranding({ accent: '#E11D2A', appearance: 'dark' })
+    const b = await r.createTeam('B')
+    expect((await r.getTeam())?.branding).toBeUndefined()
+    await r.switchTeam(a.id)
+    expect((await r.getTeam())?.branding?.accent).toBe('#E11D2A')
+    expect(b.id).not.toBe(a.id)
+  })
+
+  it('removes a team from the device, falls back to another, and can re-join with the code', async () => {
+    const cloud = fakeCloud()
+    const r = new LocalRepository({ dbName: 'multi', remote: cloud.api(), baseDelayMs: 1 })
+    const a = await r.createTeam('A')
+    const g = await r.saveGame(gameInput)
+    await r.addEvent(g.id, ev(g.id))
+    const b = await r.createTeam('B')
+    await vi.waitFor(() => expect(cloud.games.size).toBe(1))
+    await new Promise((res) => setTimeout(res, 20)) // let the queue drain
+
+    await r.leaveTeam(b.id)
+    expect((await r.listTeams()).map((t) => t.id)).toEqual([a.id])
+    expect((await r.getTeam())?.id).toBe(a.id) // fell back to the remaining team
+    await r.leaveTeam(a.id)
+    expect(await r.getTeam()).toBeNull()
+    expect(await r.listTeams()).toEqual([])
+
+    await r.joinTeam(a.joinCode) // cloud data comes back
+    await vi.waitFor(async () => expect((await r.listGames()).map((x) => x.opponent)).toEqual([gameInput.opponent]))
+    expect(await r.listAllEvents()).toHaveLength(1)
+  })
+
+  it('joining a team you already have just switches to it', async () => {
+    const r = repo()
+    const a = await r.createTeam('A')
+    await r.createTeam('B')
+    expect((await r.joinTeam(a.joinCode)).id).toBe(a.id)
+    expect((await r.getTeam())?.id).toBe(a.id)
+    expect(await r.listTeams()).toHaveLength(2)
   })
 })

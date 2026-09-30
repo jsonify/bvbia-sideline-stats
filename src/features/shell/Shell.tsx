@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useTeam } from './useTeam'
+import { TeamBar } from './TeamBar'
 
 /** Redirects to /welcome when this device has no team yet. */
 export function RequireTeam({ children }: { children: ReactNode }) {
@@ -13,7 +14,8 @@ export function RequireTeam({ children }: { children: ReactNode }) {
 const tabs = [
   { to: '/', label: 'Games', end: true, icon: 'M12 3a9 9 0 100 18 9 9 0 000-18zm0 5l3.5 2.5-1.3 4h-4.4l-1.3-4z' },
   { to: '/season', label: 'Season', end: false, icon: 'M4 20V10m6 10V4m6 16v-7m4 7H2' },
-  { to: '/team', label: 'Team', end: false, icon: 'M16 19v-1a4 4 0 00-4-4H8a4 4 0 00-4 4v1m8-9a3 3 0 100-6 3 3 0 000 6zm8 9v-1a3 3 0 00-2-2.8M17 4.2a3 3 0 010 5.6' },
+  { to: '/teams', label: 'Teams', end: false, icon: 'M16 19v-1a4 4 0 00-4-4H8a4 4 0 00-4 4v1m8-9a3 3 0 100-6 3 3 0 000 6zm8 9v-1a3 3 0 00-2-2.8M17 4.2a3 3 0 010 5.6' },
+  { to: '/settings', label: 'Settings', end: false, icon: 'M12 15a3 3 0 100-6 3 3 0 000 6zm7.4-3a7.4 7.4 0 00-.1-1.2l2-1.6-2-3.4-2.4 1a7.6 7.6 0 00-2-1.2L14.5 3h-4l-.4 2.6a7.6 7.6 0 00-2 1.2l-2.4-1-2 3.4 2 1.6a7.4 7.4 0 000 2.4l-2 1.6 2 3.4 2.4-1a7.6 7.6 0 002 1.2l.4 2.6h4l.4-2.6a7.6 7.6 0 002-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z' },
 ]
 
 export function Shell() {
@@ -22,7 +24,10 @@ export function Shell() {
   return (
     <RequireTeam>
       <div className={'ss-shell' + (hideNav ? ' ss-no-nav' : '')}>
-        <div className="ss-content"><Outlet /></div>
+        <div className="ss-content">
+          {!hideNav && <TeamBar />}
+          <Outlet />
+        </div>
         {!hideNav && (
           <nav className="ss-nav" aria-label="Main">
             {tabs.map((t) => (

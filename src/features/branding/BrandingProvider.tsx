@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useRepo } from '../../data/context'
-import type { TeamBranding } from '../../types'
+import type { Team, TeamBranding } from '../../types'
 import { applyBranding, cacheBranding, DEFAULT_BRANDING, loadCachedBranding, normalize } from './theme'
 
 interface Ctx { branding: TeamBranding; teamName: string | null }
@@ -46,6 +46,17 @@ export function TeamLogo({ size = 40, className = '' }: { size?: number; classNa
   if (branding.logo) return <img className={`bd-logo ${className}`} src={branding.logo} width={size} height={size} alt={teamName ? `${teamName} logo` : 'Team logo'} />
   return (
     <span className={`bd-logo bd-logo-default ${className}`} style={{ width: size, height: size }} aria-hidden="true">
+      <svg viewBox="0 0 24 24" width={size * 0.6} height={size * 0.6} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a9 9 0 100 18 9 9 0 000-18zm0 5l3.5 2.5-1.3 4h-4.4l-1.3-4z" /></svg>
+    </span>
+  )
+}
+
+/** Logo for any team in a list (its own uploaded logo, or the default ball mark). */
+export function TeamLogoFor({ team, size = 40 }: { team: Team; size?: number }) {
+  const logo = team.branding?.logo
+  if (logo) return <img className="bd-logo" src={logo} width={size} height={size} alt="" />
+  return (
+    <span className="bd-logo bd-logo-default" style={{ width: size, height: size }} aria-hidden="true">
       <svg viewBox="0 0 24 24" width={size * 0.6} height={size * 0.6} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a9 9 0 100 18 9 9 0 000-18zm0 5l3.5 2.5-1.3 4h-4.4l-1.3-4z" /></svg>
     </span>
   )

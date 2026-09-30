@@ -4,8 +4,14 @@ import type { Game, NewStatEvent, StatEvent, Team, TeamBranding, Uuid } from '..
 export type SyncState = 'synced' | 'syncing' | 'offline' | 'error'
 
 export interface Repository {
-  /** Team the current device has joined (null → show onboarding). */
+  /** The active team on this device (null → show onboarding). Games and stats are always scoped to it. */
   getTeam(): Promise<Team | null>
+  /** Every team this device has joined. */
+  listTeams(): Promise<Team[]>
+  /** Make another joined team the active one. */
+  switchTeam(id: Uuid): Promise<Team>
+  /** Remove a team from this device (its cloud data stays; re-join with the team code). */
+  leaveTeam(id: Uuid): Promise<void>
   createTeam(name: string): Promise<Team>
   joinTeam(joinCode: string): Promise<Team>
   /** Save the team's logo + colors (shared with every member). Needs a connection in cloud mode. */

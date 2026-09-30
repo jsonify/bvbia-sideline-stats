@@ -81,9 +81,9 @@ export default function GameSummaryPage() {
       </section>
 
       <section className="card" aria-labelledby="per">
-        <h2 id="per">{game.periods === 2 ? 'By half' : 'By quarter'}</h2>
+        <h2 id="per">By half</h2>
         <div className="scroll"><table>
-          <thead><tr><th scope="col">{game.periods === 2 ? 'Half' : 'Quarter'}</th><th scope="col">1v1s won</th><th scope="col">Clean contact</th><th scope="col">Entries w/ shot</th></tr></thead>
+          <thead><tr><th scope="col">Half</th><th scope="col">1v1s won</th><th scope="col">Clean contact</th><th scope="col">Entries w/ shot</th></tr></thead>
           <tbody>
             {periodBreakdown(live, game.periods).map((p) => {
               const ps = summarize(live.filter((e) => e.period === p))

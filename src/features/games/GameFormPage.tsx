@@ -10,7 +10,7 @@ export function todayISO(d = new Date()) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
 
-export interface GameDraft { opponent: string; date: string; home: boolean; location: string; periods: 2 | 4; notes: string }
+export interface GameDraft { opponent: string; date: string; home: boolean; location: string; notes: string }
 export function validateDraft(d: GameDraft): Partial<Record<'opponent' | 'date', string>> {
   const e: Partial<Record<'opponent' | 'date', string>> = {}
   if (!d.opponent.trim()) e.opponent = 'Who are we playing? Enter the opponent.'
@@ -40,7 +40,7 @@ export default function GameFormPage() {
   const repo = useRepo()
   const nav = useNavigate()
   const [existing, setExisting] = useState<Game | null>(null)
-  const [d, setD] = useState<GameDraft>({ opponent: '', date: todayISO(), home: true, location: '', periods: 2, notes: '' })
+  const [d, setD] = useState<GameDraft>({ opponent: '', date: todayISO(), home: true, location: '', notes: '' })
   const [errors, setErrors] = useState<ReturnType<typeof validateDraft>>({})
   const [busy, setBusy] = useState(false)
   const [failure, setFailure] = useState('')
@@ -50,7 +50,7 @@ export default function GameFormPage() {
     repo.getGame(id).then((g) => {
       if (!g) return
       setExisting(g)
-      setD({ opponent: g.opponent, date: g.date, home: g.home, location: g.location ?? '', periods: g.periods, notes: g.notes ?? '' })
+      setD({ opponent: g.opponent, date: g.date, home: g.home, location: g.location ?? '', notes: g.notes ?? '' })
     })
   }, [id, repo])
 
@@ -63,7 +63,7 @@ export default function GameFormPage() {
     setBusy(true); setFailure('')
     try {
       const g = await repo.saveGame({
-        id: existing?.id, opponent: d.opponent.trim(), date: d.date, home: d.home, periods: d.periods,
+        id: existing?.id, opponent: d.opponent.trim(), date: d.date, home: d.home, periods: 2, // soccer: always two halves
         location: d.location.trim() || undefined, notes: d.notes.trim() || undefined,
         status: startTracking && existing?.status !== 'final' ? 'live' : existing?.status ?? 'scheduled',
       })
@@ -100,8 +100,6 @@ export default function GameFormPage() {
           <label className="ss-label" htmlFor="gf-loc">Location <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(optional)</span></label>
           <input id="gf-loc" className="ss-input" value={d.location} onChange={(e) => set('location', e.target.value)} placeholder="Field name or address" autoComplete="off" enterKeyHint="next" />
         </div>
-        <Seg name="periods" legend="Game format" value={d.periods} onChange={(v) => set('periods', v)}
-          options={[{ v: 2 as const, label: '2 halves' }, { v: 4 as const, label: '4 quarters' }]} />
         <div className="ss-field">
           <label className="ss-label" htmlFor="gf-notes">Notes <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(optional)</span></label>
           <textarea id="gf-notes" className="ss-input" value={d.notes} onChange={(e) => set('notes', e.target.value)} />

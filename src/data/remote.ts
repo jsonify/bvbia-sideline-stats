@@ -6,7 +6,7 @@ import { PermanentError, type QueueOp } from './queue'
 
 export interface RemoteApi {
   userId(): Promise<string>
-  myTeam(): Promise<Team | null>
+  myTeams(): Promise<Team[]>
   createTeam(name: string): Promise<Team>
   joinTeam(code: string): Promise<Team>
   saveBranding(teamId: string, branding: TeamBranding): Promise<Team>
@@ -70,11 +70,11 @@ export function createSupabaseRemote(url: string, key: string): RemoteApi {
 
   return {
     userId,
-    async myTeam() {
+    async myTeams() {
       await userId()
-      const { data, error } = await sb.from('teams').select('*').limit(1)
+      const { data, error } = await sb.from('teams').select('*').order('created_at')
       wrap(error)
-      return data && data[0] ? teamFromRow(data[0]) : null
+      return (data ?? []).map(teamFromRow)
     },
     async createTeam(name) {
       await userId()
