@@ -1,4 +1,4 @@
-/** The team logo: always the BVB crest (public/bvb-crest.png). Decorative — it sits next to the team name. */
+/** The team logo: always the official BVB crest (public/Borussia_Dortmund_logo.svg). Decorative — it sits next to the team name. */
 export function TeamLogo({ size = 40 }: { size?: number }) {
-  return <img className="bd-logo" src="/bvb-crest.png" width={size} height={size} alt="" />
+  return <img className="bd-logo" src="/Borussia_Dortmund_logo.svg" width={size} height={size} alt="" />
 }

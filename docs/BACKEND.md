@@ -20,7 +20,7 @@ The app runs without any backend (demo mode: data stays in this browser's Indexe
 
 ## Team branding — `0002_branding.sql` is no longer needed
 
-The app's look is fixed: BVB yellow accent and the BVB crest (`public/bvb-crest.png`). There is no "Team look" screen any more,
+The app's look is fixed: BVB yellow accent and the official BVB crest (`public/Borussia_Dortmund_logo.svg`). There is no "Team look" screen any more,
 so the UI ignores any `branding` saved on a team. You can skip `0002_branding.sql` (the app reads teams with `select *` and
 tolerates the column being absent); if you already ran it, leave it in place. It is harmless, and any look saved earlier is simply ignored.
 

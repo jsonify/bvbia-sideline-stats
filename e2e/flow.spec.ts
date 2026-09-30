@@ -92,9 +92,10 @@ test('branding is fixed: BVB yellow and the crest, no Team look section, old cus
   await page.getByRole('button', { name: /Let's go/ }).click()
 
   // The crest is in the team bar and actually loaded
-  const crest = page.locator('.bd-teambar img[src="/bvb-crest.png"]')
+  const crest = page.locator('.bd-teambar img[src="/Borussia_Dortmund_logo.svg"]')
   await expect(crest).toBeVisible()
-  await expect.poll(() => crest.evaluate((el) => (el as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
+  // decode() rejects for a missing or broken file (naturalWidth is 0 for a viewBox-only SVG, so it can't be used)
+  await expect.poll(() => crest.evaluate((el) => (el as HTMLImageElement).decode().then(() => true, () => false))).toBe(true)
 
   await page.getByRole('link', { name: 'Settings' }).click()
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
