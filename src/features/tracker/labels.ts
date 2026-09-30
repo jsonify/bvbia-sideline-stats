@@ -16,3 +16,10 @@ export const isGood = (e: StatEvent) => e.outcome === 'won' || e.outcome === 'cl
 export function tallyText(good: number, total: number, pct: number | null): string {
   return total === 0 ? 'No taps yet' : `${good} of ${total} · ${Math.round(pct ?? 0)}%`
 }
+
+/** "just now", "40s ago", "3 min ago": how long since the tracker last checked in. */
+export function agoText(seconds: number | null): string {
+  if (seconds === null || seconds < 10) return 'just now'
+  if (seconds < 60) return `${Math.round(seconds / 10) * 10}s ago`
+  return `${Math.round(seconds / 60)} min ago`
+}

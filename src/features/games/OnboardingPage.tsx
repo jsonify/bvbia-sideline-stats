@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useRepo } from '../../data/context'
 import { JoinCodeCard } from '../shell/JoinCodeCard'
+import { parseJoinCode } from '../../lib/invite'
 import type { Team } from '../../types'
 import '../shell/shell.css'
 import './games.css'
@@ -11,9 +12,12 @@ type Step = 'choose' | 'create' | 'join' | 'created'
 export default function OnboardingPage() {
   const repo = useRepo()
   const nav = useNavigate()
-  const adding = useSearchParams()[0].get('add') === '1' // already have a team; adding another
-  const [step, setStep] = useState<Step>('choose')
-  const [value, setValue] = useState('')
+  const params = useSearchParams()[0]
+  const adding = params.get('add') === '1' // already have a team; adding another
+  const invited = parseJoinCode(params.get('code') ?? '') // opened from a shared invite link: code arrives filled in
+  const [step, setStep] = useState<Step>(invited ? 'join' : 'choose')
+  const [value, setValue] = useState(invited)
+  const [fromLink, setFromLink] = useState(!!invited)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [team, setTeam] = useState<Team | null>(null)
@@ -25,7 +29,7 @@ export default function OnboardingPage() {
     setBusy(true); setError('')
     try {
       if (step === 'create') { setTeam(await repo.createTeam(v)); setStep('created') }
-      else { await repo.joinTeam(v.toUpperCase()); nav('/', { replace: true }) }
+      else { await repo.joinTeam(parseJoinCode(v)); nav('/', { replace: true }) }
     } catch (err) {
       setError(step === 'join' ? "We couldn't find that code. Check it with the parent who shared it." : (err as Error).message || 'Something went wrong. Try again.')
     } finally { setBusy(false) }
@@ -47,13 +51,17 @@ export default function OnboardingPage() {
       )}
       {(step === 'create' || step === 'join') && (
         <form onSubmit={submit} noValidate>
-          <button type="button" className="gm-back ss-icon-btn" style={{ width: 'auto', background: 'none' }} onClick={() => { setStep('choose'); setError(''); setValue('') }}>‹ Back</button>
+          <button type="button" className="gm-back ss-icon-btn" style={{ width: 'auto', background: 'none' }} onClick={() => { setStep('choose'); setError(''); setValue(''); setFromLink(false) }}>‹ Back</button>
           <h1>{step === 'create' ? "What's your team called?" : 'Enter your team code'}</h1>
-          <p className="lead">{step === 'create' ? "Something the parents will recognize, like “U10 Thunder”." : 'Ask a parent who already tracks games for the code. It shows in their Settings tab.'}</p>
+          <p className="lead">{step === 'create'
+            ? "Something the parents will recognize, like “U10 Thunder”."
+            : fromLink && value === invited
+              ? 'We filled in the code from your invite link. Tap Join team to continue.'
+              : 'Paste the team code from the invite you were sent. No invite? Ask a parent who tracks games: the code is in their Settings tab.'}</p>
           <div className="ss-field">
             <label className="ss-label" htmlFor="ob-input">{step === 'create' ? 'Team name' : 'Team code'}</label>
             <input id="ob-input" className="ss-input" value={value} autoFocus autoComplete="off"
-              autoCapitalize={step === 'join' ? 'characters' : 'words'} enterKeyHint="go"
+              autoCapitalize={step === 'join' ? 'characters' : 'words'} autoCorrect={step === 'join' ? 'off' : undefined} spellCheck={step === 'join' ? false : undefined} enterKeyHint="go"
               aria-invalid={!!error} aria-describedby={error ? 'ob-err' : undefined}
               onChange={(e) => { setValue(e.target.value); setError('') }} />
             {error && <div id="ob-err" className="ss-error" role="alert">{error}</div>}
@@ -66,7 +74,7 @@ export default function OnboardingPage() {
       {step === 'created' && team && (
         <>
           <h1>You're all set!</h1>
-          <p className="lead">Share this code so other parents can help track games for {team.name}.</p>
+          <p className="lead">Invite other parents to help track games for {team.name}. Tap Share code to send them the app link and the code, with steps to join.</p>
           <JoinCodeCard teamName={team.name} code={team.joinCode} />
           <button className="ss-btn ss-btn-primary ss-btn-big" style={{ width: '100%', marginTop: 16 }} onClick={() => nav('/', { replace: true })}>Let's go</button>
         </>

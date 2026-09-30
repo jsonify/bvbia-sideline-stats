@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { summarize } from '../../lib/summary'
 import { StatCard } from './StatCard'
-import { eventLabel, isGood, tallyText } from './labels'
+import { agoText, eventLabel, isGood, tallyText } from './labels'
 import { useTracker, useWakeLock } from './useTracker'
 import './tracker.css'
 
@@ -14,12 +14,15 @@ export default function TrackerPage() {
   const t = useTracker(id)
   useWakeLock()
   const [confirmEnd, setConfirmEnd] = useState(false)
+  const [confirmTakeOver, setConfirmTakeOver] = useState(false)
   const { game, summary: s, periodSummary: p } = t
 
   if (!t.loaded) return <main className="tk"><p className="tk-empty">Loading game…</p></main>
   if (!game) return <main className="tk"><p className="tk-empty">Game not found. <Link to="/">Back to games</Link></p></main>
 
   const locked = game.status === 'final'
+  const readOnly = !t.canTrack // final, still checking, or someone else is tracking
+  const someoneElse = t.other?.holder === 'other'
   const sync = t.sync
   const syncLabel = sync.state !== 'synced' && sync.pending > 0 ? `${SYNC_TEXT[sync.state]} · ${sync.pending} pending` : SYNC_TEXT[sync.state]
   const recent = [...t.events].reverse().slice(0, 6)
@@ -38,7 +41,10 @@ export default function TrackerPage() {
           <Link to="/" className="tk-back" aria-label="Back to games">‹</Link>
           <div className="tk-title">
             <h1>vs {game.opponent}</h1>
-            <span className={`tk-status ${game.status}`}>{game.status === 'live' ? '● Live' : game.status === 'final' ? 'Final' : 'Not started'}</span>
+            <span className={`tk-status ${game.status}`}>
+              {game.status === 'live' ? '● Live' : game.status === 'final' ? 'Final' : 'Not started'}
+              {t.canTrack && " · You're tracking"}{t.watching && ' · Watching'}
+            </span>
           </div>
           <span className={`tk-sync ${sync.state}`} role="status" aria-label={`Sync status: ${syncLabel}`}>
             <i aria-hidden="true" />{syncLabel}
@@ -53,14 +59,35 @@ export default function TrackerPage() {
         </div>
       </header>
 
-      {game.status === 'scheduled' && (
+      {t.watching && (
+        <section className="tk-watch" role="status" aria-live="polite" aria-label="Who is tracking">
+          {someoneElse ? (
+            <>
+              <strong>{t.lost ? 'Another parent took over tracking' : 'Another parent is tracking this game'}</strong>
+              <p>
+                {t.lost ? 'Your taps so far are saved. ' : `Active ${agoText(t.other?.idleSeconds ?? null)}. `}
+                You're watching live: the numbers update as they tap.
+              </p>
+              <button type="button" className="tk-watch-btn" onClick={() => setConfirmTakeOver(true)}>Take over tracking</button>
+            </>
+          ) : (
+            <>
+              <strong>Nobody is tracking right now</strong>
+              <p>Start tracking to record taps for this game. Everyone else will watch live.</p>
+              <button type="button" className="tk-watch-btn primary" onClick={() => t.startTracking()}>Start tracking</button>
+            </>
+          )}
+        </section>
+      )}
+
+      {game.status === 'scheduled' && t.canTrack && (
         <button type="button" className="tk-start" onClick={() => t.setStatus('live')}>▶ Start game</button>
       )}
       {locked && <p className="tk-final">Game is final. <Link to={`/games/${game.id}`}>View summary</Link></p>}
 
       <StatCard id="duel" title="Defensive 1v1s" hint="Did we win the duel?"
         tally={tallyText(s.duels.won, s.duels.total, s.duels.winPct)}
-        periodTally={`${p.duels.won}/${p.duels.total}`} period={t.period} pct={s.duels.winPct} disabled={locked}
+        periodTally={`${p.duels.won}/${p.duels.total}`} period={t.period} pct={s.duels.winPct} disabled={readOnly}
         buttons={[
           { label: 'Won', icon: '✓', tone: 'good', aria: 'Duel won', onTap: () => t.recordDuel('won') },
           { label: 'Lost', icon: '✕', tone: 'bad', aria: 'Duel lost', onTap: () => t.recordDuel('lost') },
@@ -68,7 +95,7 @@ export default function TrackerPage() {
 
       <StatCard id="contact" title="First contact" hint="Through balls and long balls"
         tally={tallyText(ft.clean, ft.total, ft.cleanPct)}
-        periodTally={`${pf.clean}/${pf.total}`} period={t.period} pct={ft.cleanPct} disabled={locked}
+        periodTally={`${pf.clean}/${pf.total}`} period={t.period} pct={ft.cleanPct} disabled={readOnly}
         extra={
           <div className="tk-seg" role="radiogroup" aria-label="Ball type">
             {([['through_ball', 'Through ball', ft.throughBall], ['long_ball', 'Long ball', ft.longBall]] as const).map(([v, label, b]) => (
@@ -85,7 +112,7 @@ export default function TrackerPage() {
 
       <StatCard id="box" title="Box entries" hint="Got into the box: did we shoot?"
         tally={tallyText(s.boxEntries.shot, s.boxEntries.total, s.boxEntries.shotPct)}
-        periodTally={`${p.boxEntries.shot}/${p.boxEntries.total}`} period={t.period} pct={s.boxEntries.shotPct} disabled={locked}
+        periodTally={`${p.boxEntries.shot}/${p.boxEntries.total}`} period={t.period} pct={s.boxEntries.shotPct} disabled={readOnly}
         buttons={[
           { label: 'Shot', icon: '◎', tone: 'good', aria: 'Box entry with shot', onTap: () => t.recordBox('shot') },
           { label: 'No shot', icon: '⊘', tone: 'bad', aria: 'Box entry, no shot', onTap: () => t.recordBox('no_shot') },
@@ -93,32 +120,50 @@ export default function TrackerPage() {
 
       <section className="tk-recent" aria-label="Recent taps">
         <h2>Recent taps</h2>
-        {recent.length === 0 ? <p className="tk-empty">Nothing yet. Tap a button above.</p> : (
+        {recent.length === 0 ? <p className="tk-empty">{t.watching ? 'Nothing yet. Taps will show up here as they happen.' : 'Nothing yet. Tap a button above.'}</p> : (
           <ul>
             {recent.map((e) => (
               <li key={e.id} className={isGood(e) ? 'good' : 'bad'}>
                 <span className="tk-ico" aria-hidden="true">{isGood(e) ? '✓' : '✕'}</span>
                 <span className="lbl">{eventLabel(e)}</span>
                 <span className="per">P{e.period}</span>
-                <button type="button" aria-label={`Undo ${eventLabel(e)}`} onClick={() => t.undo(e)}>Undo</button>
+                {!t.watching && <button type="button" aria-label={`Undo ${eventLabel(e)}`} onClick={() => t.undo(e)}>Undo</button>}
               </li>
             ))}
           </ul>
         )}
-        {game.status === 'live' && (
+        {game.status === 'live' && t.canTrack && (
           <button type="button" className="tk-end" onClick={() => setConfirmEnd(true)}>End game</button>
         )}
       </section>
 
       {t.toast && <div className="tk-toast" key={t.toast.key} role="status" aria-live="polite">{t.toast.msg}</div>}
 
-      <div className="tk-undo">
-        <button type="button" className="tk-undo-btn" disabled={!t.last || locked} onClick={() => t.undo()}
-          aria-label={t.last ? `Undo last: ${eventLabel(t.last)}` : 'Undo last tap'}>
-          <span aria-hidden="true">↶</span>
-          <span className="txt"><b>Undo</b><small>{t.last ? eventLabel(t.last) : 'nothing to undo'}</small></span>
-        </button>
-      </div>
+      {!t.watching && (
+        <div className="tk-undo">
+          <button type="button" className="tk-undo-btn" disabled={!t.last || readOnly} onClick={() => t.undo()}
+            aria-label={t.last ? `Undo last: ${eventLabel(t.last)}` : 'Undo last tap'}>
+            <span aria-hidden="true">↶</span>
+            <span className="txt"><b>Undo</b><small>{t.last ? eventLabel(t.last) : 'nothing to undo'}</small></span>
+          </button>
+        </div>
+      )}
+
+      {confirmTakeOver && (
+        <div className="tk-scrim" onClick={() => setConfirmTakeOver(false)}>
+          <div className="tk-dialog" role="alertdialog" aria-modal="true" aria-labelledby="take-h" onClick={(e) => e.stopPropagation()}>
+            <h2 id="take-h">Take over tracking?</h2>
+            <p>
+              Another parent is tracking this game (active {agoText(t.other?.idleSeconds ?? null)}). If you take over, they switch to
+              watching and can't tap until they take it back. Check with them first so the same play isn't counted twice.
+            </p>
+            <div>
+              <button type="button" autoFocus onClick={() => setConfirmTakeOver(false)}>Keep watching</button>
+              <button type="button" className="primary" onClick={() => { setConfirmTakeOver(false); void t.startTracking(true) }}>Take over</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {confirmEnd && (
         <div className="tk-scrim" onClick={() => setConfirmEnd(false)}>

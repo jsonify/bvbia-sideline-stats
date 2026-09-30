@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Game, StatEvent, Team, TeamBranding } from '../types'
 import type { GameRec } from './db'
 import { PermanentError, type QueueOp } from './queue'
+import type { GameTracker } from './repository'
 
 export interface RemoteApi {
   userId(): Promise<string>
@@ -13,6 +14,11 @@ export interface RemoteApi {
   push(op: QueueOp): Promise<void>
   pull(teamId: string): Promise<{ games: GameRec[]; events: StatEvent[] }>
   watch(teamId: string, onChange: () => void, onTeamChange?: () => void): () => void
+  getTracker(gameId: string): Promise<GameTracker>
+  claimTracker(gameId: string, takeOver: boolean): Promise<GameTracker>
+  releaseTracker(gameId: string): Promise<void>
+  /** Separate from `watch` so a deployment without the tracker migration can't break live stat sync. */
+  watchTrackers(teamId: string, onChange: () => void): () => void
 }
 
 const teamFromRow = (r: any): Team => ({
@@ -44,6 +50,8 @@ export function toEventRow(e: StatEvent & { teamId?: string }) {
     deleted_at: e.deletedAt ?? null, keeper_id: e.keeperId ?? null,
   }
 }
+
+const trackerFromRow = (r: any): GameTracker => ({ holder: r.holder, idleSeconds: r.idle_seconds ?? null })
 
 const PAGE = 500
 
@@ -120,6 +128,29 @@ export function createSupabaseRemote(url: string, key: string): RemoteApi {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'stat_events', filter: `team_id=eq.${teamId}` }, onChange)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'games', filter: `team_id=eq.${teamId}` }, onChange)
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'teams', filter: `id=eq.${teamId}` }, () => onTeamChange?.())
+        .subscribe()
+      return () => { void sb.removeChannel(ch) }
+    },
+    async getTracker(gameId) {
+      await userId()
+      const { data, error } = await sb.rpc('get_game_tracker', { game: gameId })
+      if (error) throw new Error(error.message)
+      return trackerFromRow(Array.isArray(data) ? data[0] : data)
+    },
+    async claimTracker(gameId, takeOver) {
+      await userId()
+      const { data, error } = await sb.rpc('claim_game_tracker', { game: gameId, take_over: takeOver })
+      if (error) throw new Error(error.message)
+      return trackerFromRow(Array.isArray(data) ? data[0] : data)
+    },
+    async releaseTracker(gameId) {
+      await userId()
+      const { error } = await sb.rpc('release_game_tracker', { game: gameId })
+      if (error) throw new Error(error.message)
+    },
+    watchTrackers(teamId, onChange) {
+      const ch = sb.channel(`trackers-${teamId}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'game_trackers', filter: `team_id=eq.${teamId}` }, onChange)
         .subscribe()
       return () => { void sb.removeChannel(ch) }
     },
