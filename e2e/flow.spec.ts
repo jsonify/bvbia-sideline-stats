@@ -87,7 +87,7 @@ test('team look: black/white/yellow default, upload logo, change accent, persist
   await page.getByLabel('Team name').fill('BVB Fans')
   await page.getByRole('button', { name: 'Create team' }).click()
   await page.getByRole('button', { name: /Let's go/ }).click()
-  await page.getByRole('link', { name: 'Team' }).click()
+  await page.getByRole('link', { name: 'Settings' }).click()
 
   const brand = () => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--brand').trim().toLowerCase())
   expect(await brand()).toBe('#fde100')
@@ -115,4 +115,63 @@ test('team look: black/white/yellow default, upload logo, change accent, persist
   await page.getByRole('button', { name: 'Save team look' }).click()
   await page.getByRole('radio', { name: 'Dark' }).click()
   expect(await brand()).toBe('#fde100')
+})
+
+test('multiple teams: add, switch, keep games + season stats separate, remove', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', (e) => errors.push(e.message))
+  const nav = (name: string) => page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name })
+
+  // Team A with one tracked game
+  await page.goto('/')
+  await page.getByRole('button', { name: /Create my team/ }).click()
+  await page.getByLabel('Team name').fill('U10 Thunder')
+  await page.getByRole('button', { name: 'Create team' }).click()
+  await page.getByRole('button', { name: /Let's go/ }).click()
+  await page.getByRole('link', { name: /Add your first game/ }).click()
+  await page.getByLabel('Opponent').fill('Rapids')
+  await page.getByRole('button', { name: /Save & start tracking/ }).click()
+  await page.getByRole('button', { name: 'Duel won', exact: true }).click()
+  await page.getByRole('button', { name: 'Duel won', exact: true }).click()
+  await page.getByRole('link', { name: /Back to games/ }).click()
+  await expect(page.getByText('Rapids').first()).toBeVisible()
+  await expect(page.getByRole('link', { name: /Viewing U10 Thunder/ })).toBeVisible()
+
+  // Add team B from the Teams tab
+  await nav('Teams').click()
+  await expect(page.getByRole('heading', { name: 'Teams' })).toBeVisible()
+  await page.getByRole('link', { name: /Add or join a team/ }).click()
+  await page.getByRole('button', { name: /Create my team/ }).click()
+  await page.getByLabel('Team name').fill('U12 Lightning')
+  await page.getByRole('button', { name: 'Create team' }).click()
+  await page.getByRole('button', { name: /Let's go/ }).click()
+
+  // B is active and starts empty; A's game and stats must not leak in
+  await expect(page.getByRole('link', { name: /Viewing U12 Lightning/ })).toBeVisible()
+  await expect(page.getByText('No games yet')).toBeVisible()
+  await expect(page.getByText('Rapids')).toHaveCount(0)
+  await nav('Season').click()
+  await expect(page.getByText('Rapids')).toHaveCount(0)
+  await page.screenshot({ path: 'e2e/screenshots/14-team-b-season-empty.png' })
+
+  // Switch back to A: its game is still there
+  await nav('Teams').click()
+  await page.screenshot({ path: 'e2e/screenshots/15-teams.png' })
+  await page.getByRole('button', { name: /U10 Thunder, switch to this team/ }).click()
+  await expect(page.getByRole('link', { name: /Viewing U10 Thunder/ })).toBeVisible()
+  await expect(page.getByText('Rapids').first()).toBeVisible()
+
+  // Remove B from this device; A stays
+  await nav('Teams').click()
+  await page.getByRole('button', { name: /Remove U12 Lightning/ }).click()
+  await expect(page.getByRole('alertdialog')).toContainText('team code')
+  await page.getByRole('button', { name: 'Remove', exact: true }).click()
+  await expect(page.getByRole('button', { name: /U12 Lightning/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'U10 Thunder, current team' })).toBeVisible()
+
+  // Settings tab holds the admin work
+  await nav('Settings').click()
+  await expect(page.getByRole('heading', { name: 'Team look' })).toBeVisible()
+  await expect(page.getByText('Team code').first()).toBeVisible()
+  expect(errors).toEqual([])
 })

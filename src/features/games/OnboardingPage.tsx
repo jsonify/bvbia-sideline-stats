@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useRepo } from '../../data/context'
 import { JoinCodeCard } from '../shell/JoinCodeCard'
 import type { Team } from '../../types'
@@ -11,6 +11,7 @@ type Step = 'choose' | 'create' | 'join' | 'created'
 export default function OnboardingPage() {
   const repo = useRepo()
   const nav = useNavigate()
+  const adding = useSearchParams()[0].get('add') === '1' // already have a team; adding another
   const [step, setStep] = useState<Step>('choose')
   const [value, setValue] = useState('')
   const [error, setError] = useState('')
@@ -34,9 +35,10 @@ export default function OnboardingPage() {
     <main className="gm-welcome">
       {step === 'choose' && (
         <>
-          <div className="ss-eyebrow">Sideline Stats</div>
-          <h1>Track the game. Cheer louder.</h1>
-          <p className="lead">Tally duels, first touches and box entries for the whole team in one tap, right from the sideline. Every parent sees the same numbers.</p>
+          {adding && <Link to="/teams" className="gm-back">‹ Back to teams</Link>}
+          <div className="ss-eyebrow">{adding ? 'Add a team' : 'Sideline Stats'}</div>
+          <h1>{adding ? 'Create or join another team' : 'Track the game. Cheer louder.'}</h1>
+          <p className="lead">{adding ? 'Each team keeps its own games and season stats. You can switch between them any time from the Teams tab.' : 'Tally duels, first touches and box entries for the whole team in one tap, right from the sideline. Every parent sees the same numbers.'}</p>
           <div className="gm-paths">
             <button className="ss-card gm-path" onClick={() => setStep('create')}><strong>Create my team</strong><span>I'm the first parent here. Set up our team.</span></button>
             <button className="ss-card gm-path" onClick={() => setStep('join')}><strong>Join with team code</strong><span>Another parent already set us up.</span></button>
@@ -47,7 +49,7 @@ export default function OnboardingPage() {
         <form onSubmit={submit} noValidate>
           <button type="button" className="gm-back ss-icon-btn" style={{ width: 'auto', background: 'none' }} onClick={() => { setStep('choose'); setError(''); setValue('') }}>‹ Back</button>
           <h1>{step === 'create' ? "What's your team called?" : 'Enter your team code'}</h1>
-          <p className="lead">{step === 'create' ? "Something the parents will recognize, like “U10 Thunder”." : 'Ask a parent who already tracks games for the code. It shows on their Team tab.'}</p>
+          <p className="lead">{step === 'create' ? "Something the parents will recognize, like “U10 Thunder”." : 'Ask a parent who already tracks games for the code. It shows in their Settings tab.'}</p>
           <div className="ss-field">
             <label className="ss-label" htmlFor="ob-input">{step === 'create' ? 'Team name' : 'Team code'}</label>
             <input id="ob-input" className="ss-input" value={value} autoFocus autoComplete="off"

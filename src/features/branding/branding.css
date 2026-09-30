@@ -23,3 +23,21 @@
 .bd-actions .ss-btn{width:100%}
 .bd-head{display:flex;align-items:center;gap:12px}
 .bd-head .ss-h1{margin:8px 0 16px}
+
+.bd-teambar{display:flex;align-items:center;gap:10px;max-width:640px;margin:0 auto;padding:calc(8px + env(safe-area-inset-top)) 16px 0;color:var(--text);text-decoration:none;min-height:48px}
+.bd-teambar .bd-logo{border-radius:8px}
+.bd-teambar-name{font-weight:800;font-size:15px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bd-teambar-switch{display:inline-flex;align-items:center;gap:2px;font-size:13px;font-weight:700;color:var(--muted);padding:6px 10px;border-radius:999px;background:var(--surface-2)}
+.ss-shell:not(.ss-no-nav) .ss-page{padding-top:8px}
+.tm-list{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.tm-row{display:flex;align-items:center;gap:12px;padding:12px;border-radius:var(--radius);background:var(--surface);border:2px solid var(--border)}
+.tm-row.active{border-color:var(--brand)}
+.tm-main{flex:1;min-width:0;display:flex;align-items:center;gap:12px;background:none;border:0;padding:4px;text-align:left;font:inherit;color:inherit;cursor:pointer;min-height:56px;border-radius:12px}
+.tm-name{font-weight:800;font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tm-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:2px;font-size:13px;color:var(--muted)}
+.tm-active{background:var(--brand);color:var(--brand-ink);font-weight:800;font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:999px}
+.tm-remove{background:none;border:0;color:var(--muted);font:inherit;font-weight:700;font-size:14px;min-height:48px;padding:0 10px;border-radius:12px;cursor:pointer}
+.tm-remove:hover{color:var(--bad)}
+.tm-add{width:100%;margin-top:14px}
+.tm-note{color:var(--muted);font-size:14px;margin:6px 0 14px}
+.st-version{margin-top:22px;text-align:center;color:var(--muted);font-size:12px}
