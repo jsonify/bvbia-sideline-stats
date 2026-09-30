@@ -77,6 +77,7 @@ test('dark theme screenshot', async ({ browser }) => {
   const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 412, height: 915 } })
   const page = await ctx.newPage()
   await page.goto('/welcome')
+  await expect(page.getByRole('heading', { name: /Track the game/ })).toBeVisible()
   await shot(page, '11-welcome-dark')
   await ctx.close()
 })
