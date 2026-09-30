@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useRepo } from '../../data/context'
 import { ConfirmDialog, useToast } from '../../ui'
 import type { Team } from '../../types'
-import { TeamLogoFor } from '../branding/BrandingProvider'
+import { TeamLogo } from '../branding/TeamLogo'
 import '../branding/branding.css'
 import '../shell/shell.css'
 
@@ -40,7 +40,7 @@ export default function TeamsPage() {
           {teams.map((t) => (
             <li key={t.id} className={'tm-row' + (t.id === activeId ? ' active' : '')}>
               <button type="button" className="tm-main" onClick={() => void open(t)} aria-label={`${t.name}${t.id === activeId ? ', current team' : ', switch to this team'}`}>
-                <TeamLogoFor team={t} size={48} />
+                <TeamLogo size={48} />
                 <span style={{ minWidth: 0 }}>
                   <div className="tm-name">{t.name}</div>
                   <div className="tm-meta">{t.id === activeId && <span className="tm-active">Viewing</span>}<span>Code {t.joinCode}</span></div>
