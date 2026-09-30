@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 
 const shot = (page: Page, name: string) => page.screenshot({ path: `e2e/screenshots/${name}.png`, fullPage: false })
 
@@ -86,6 +86,22 @@ test('branding is fixed: BVB yellow and the crest, no Team look section, old cus
   // A custom look saved on this device by an earlier version must not come back.
   await page.addInitScript(() => localStorage.setItem('ss-branding', JSON.stringify({ accent: '#E11D2A', appearance: 'dark', logo: null })))
   await page.goto('/')
+  // decode() rejects for a missing or broken file (naturalWidth is 0 for a viewBox-only SVG, so it can't be used)
+  const decodes = (img: Locator) => img.evaluate((el) => (el as HTMLImageElement).decode().then(() => true, () => false))
+
+  // The crest is on the welcome screen...
+  const welcomeCrest = page.locator('.gm-welcome img[src="/Borussia_Dortmund_logo.svg"]')
+  await expect(welcomeCrest).toBeVisible()
+  await expect.poll(() => decodes(welcomeCrest)).toBe(true)
+
+  // ...and is the tab favicon and the iPhone Home Screen icon (a 180x180 PNG)
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', '/Borussia_Dortmund_logo.svg')
+  const touchHref = await page.locator('link[rel="apple-touch-icon"]').getAttribute('href')
+  const touch = await page.request.get(touchHref!)
+  expect(touch.ok()).toBe(true)
+  expect(touch.headers()['content-type']).toContain('image/png')
+  expect((await touch.body()).readUInt32BE(16)).toBe(180) // PNG IHDR width
+
   await page.getByRole('button', { name: /Create my team/ }).click()
   await page.getByLabel('Team name').fill('BVB Fans')
   await page.getByRole('button', { name: 'Create team' }).click()
@@ -94,8 +110,7 @@ test('branding is fixed: BVB yellow and the crest, no Team look section, old cus
   // The crest is in the team bar and actually loaded
   const crest = page.locator('.bd-teambar img[src="/Borussia_Dortmund_logo.svg"]')
   await expect(crest).toBeVisible()
-  // decode() rejects for a missing or broken file (naturalWidth is 0 for a viewBox-only SVG, so it can't be used)
-  await expect.poll(() => crest.evaluate((el) => (el as HTMLImageElement).decode().then(() => true, () => false))).toBe(true)
+  await expect.poll(() => decodes(crest)).toBe(true)
 
   await page.getByRole('link', { name: 'Settings' }).click()
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
@@ -105,7 +120,7 @@ test('branding is fixed: BVB yellow and the crest, no Team look section, old cus
   await expect(page.getByRole('radio', { name: 'Red' })).toHaveCount(0)
 
   const brand = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--brand').trim().toLowerCase())
-  expect(brand).toBe('#fde100')
+  expect(brand).toBe('#ffd900')
   await expect(page.locator('html')).not.toHaveAttribute('data-theme', /.*/)
   await page.emulateMedia({ colorScheme: 'light' })
   await page.screenshot({ path: 'e2e/screenshots/12-settings.png', fullPage: true })

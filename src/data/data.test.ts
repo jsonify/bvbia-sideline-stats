@@ -22,7 +22,7 @@ describe('LocalRepository (demo mode)', () => {
 
   it('saves team branding and notifies subscribers', async () => {
     const r = repo()
-    await expect(r.saveBranding({ accent: '#FDE100', appearance: 'dark' })).rejects.toThrow()
+    await expect(r.saveBranding({ accent: '#FFD900', appearance: 'dark' })).rejects.toThrow()
     await r.createTeam('BVB Fans')
     const cb = vi.fn()
     r.subscribe(cb)

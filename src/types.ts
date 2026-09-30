@@ -4,7 +4,7 @@ export type Uuid = string
 
 /** Shared by everyone on the team (stored on the team row). */
 export interface TeamBranding {
-  accent: string // hex, e.g. '#FDE100'
+  accent: string // hex, e.g. '#FFD900'
   appearance: 'system' | 'light' | 'dark'
   logo?: string | null // small PNG/WebP data URL (resized client-side)
 }

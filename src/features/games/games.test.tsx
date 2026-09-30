@@ -88,6 +88,13 @@ describe('joining from an invite', () => {
     expect(screen.getByText('Join with team code')).toBeTruthy()
   })
 
+  it('the first screen carries the BVB crest; the join step does not', () => {
+    const { container } = join(makeFakeRepo(null), '/welcome')
+    expect(container.querySelector('.gm-welcome > img[src="/Borussia_Dortmund_logo.svg"]')).toBeTruthy()
+    fireEvent.click(screen.getByText('Join with team code'))
+    expect(container.querySelector('.gm-welcome img')).toBeNull()
+  })
+
   it('manual path: tells you to paste the code from the invite, and cleans up what you paste', async () => {
     const repo = makeFakeRepo(null)
     const spy = vi.spyOn(repo, 'joinTeam')
