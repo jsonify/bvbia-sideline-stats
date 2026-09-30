@@ -7,9 +7,9 @@ import type { Game, StatEvent } from '../../types'
 import TrackerPage from './TrackerPage'
 import { CLAIM_WAIT_MS, LEASE_TICK_MS } from './useTracker'
 
-const ME: GameTracker = { holder: 'me', idleSeconds: 0 }
-const OTHER: GameTracker = { holder: 'other', idleSeconds: 12 }
-const NOBODY: GameTracker = { holder: 'none', idleSeconds: null }
+const ME: GameTracker = { holder: 'me', idleSeconds: 0, name: null }
+const OTHER: GameTracker = { holder: 'other', idleSeconds: 12, name: null }
+const NOBODY: GameTracker = { holder: 'none', idleSeconds: null, name: null }
 
 function fakeRepo(status: Game['status'] = 'live', initial: GameTracker = ME) {
   let game: Game = { id: 'g1', teamId: 't', opponent: 'Rovers', date: '2026-01-01', home: true, periods: 2, status, createdAt: '', updatedAt: '' }
@@ -151,6 +151,20 @@ describe('one tracker per game', () => {
     expect(screen.queryByText('End game')).toBeNull()
     expect(screen.queryByLabelText(/Undo last/)).toBeNull()
     expect(f.releaseTracker).not.toHaveBeenCalled() // never held it, so nothing to hand back
+  })
+
+  it('names the tracker in the banner, the takeover confirm and the takeover notice when they set a name', async () => {
+    const f = await setup('live', { holder: 'other', idleSeconds: 3, name: 'Sam' })
+    expect(screen.getByText('Sam is tracking this game')).toBeTruthy()
+    fireEvent.click(screen.getByText('Take over tracking'))
+    expect(screen.getByRole('alertdialog').textContent).toMatch(/Sam is tracking this game/)
+    fireEvent.click(screen.getByText('Keep watching'))
+    f.lease.now = ME
+    await act(async () => { f.nudge() })
+    await screen.findByText(/You're tracking/)
+    f.lease.now = { holder: 'other', idleSeconds: 1, name: 'Priya' }
+    await act(async () => { f.nudge() })
+    expect((await screen.findAllByText('Priya took over tracking')).length).toBeGreaterThan(0)
   })
 
   it("can't start a scheduled game it isn't tracking", async () => {

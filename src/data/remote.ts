@@ -15,7 +15,7 @@ export interface RemoteApi {
   pull(teamId: string): Promise<{ games: GameRec[]; events: StatEvent[] }>
   watch(teamId: string, onChange: () => void, onTeamChange?: () => void): () => void
   getTracker(gameId: string): Promise<GameTracker>
-  claimTracker(gameId: string, takeOver: boolean): Promise<GameTracker>
+  claimTracker(gameId: string, takeOver: boolean, name: string): Promise<GameTracker>
   releaseTracker(gameId: string): Promise<void>
   /** Separate from `watch` so a deployment without the tracker migration can't break live stat sync. */
   watchTrackers(teamId: string, onChange: () => void): () => void
@@ -51,7 +51,7 @@ export function toEventRow(e: StatEvent & { teamId?: string }) {
   }
 }
 
-const trackerFromRow = (r: any): GameTracker => ({ holder: r.holder, idleSeconds: r.idle_seconds ?? null })
+const trackerFromRow = (r: any): GameTracker => ({ holder: r.holder, idleSeconds: r.idle_seconds ?? null, name: r.name ?? null })
 
 const PAGE = 500
 
@@ -137,9 +137,9 @@ export function createSupabaseRemote(url: string, key: string): RemoteApi {
       if (error) throw new Error(error.message)
       return trackerFromRow(Array.isArray(data) ? data[0] : data)
     },
-    async claimTracker(gameId, takeOver) {
+    async claimTracker(gameId, takeOver, name) {
       await userId()
-      const { data, error } = await sb.rpc('claim_game_tracker', { game: gameId, take_over: takeOver })
+      const { data, error } = await sb.rpc('claim_game_tracker', { game: gameId, take_over: takeOver, display_name: name })
       if (error) throw new Error(error.message)
       return trackerFromRow(Array.isArray(data) ? data[0] : data)
     },

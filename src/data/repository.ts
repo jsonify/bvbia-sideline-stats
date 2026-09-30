@@ -12,6 +12,8 @@ export type SyncState = 'synced' | 'syncing' | 'offline' | 'error'
 export interface GameTracker {
   holder: 'me' | 'other' | 'none'
   idleSeconds: number | null
+  /** The tracker's chosen name (from their Settings), if they set one. */
+  name: string | null
 }
 
 export interface Repository {
@@ -49,6 +51,9 @@ export interface Repository {
   getTracker(gameId: Uuid): Promise<GameTracker>
   /** Start (or keep) tracking. Fails to `other` if someone else holds a live lease, unless `takeOver`. Call every ~15s to stay the tracker. */
   claimTracker(gameId: Uuid, opts?: { takeOver?: boolean }): Promise<GameTracker>
+  /** This device's "your name", shown to other parents while you track. Empty = not set. */
+  getDisplayName(): Promise<string>
+  setDisplayName(name: string): Promise<void>
   /** Hand the game back so another parent can start tracking straight away. */
   releaseTracker(gameId: Uuid): Promise<void>
   /** Fires when anyone claims or releases a game on the active team (so a takeover shows up immediately). */

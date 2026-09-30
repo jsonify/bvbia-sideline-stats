@@ -428,14 +428,23 @@ export class LocalRepository implements Repository {
 
   async getTracker(gameId: Uuid): Promise<GameTracker> {
     await this.ready
-    if (!this.remote) return { holder: 'none', idleSeconds: null }
+    if (!this.remote) return { holder: 'none', idleSeconds: null, name: null }
     return this.remote.getTracker(gameId)
   }
 
   async claimTracker(gameId: Uuid, opts?: { takeOver?: boolean }): Promise<GameTracker> {
     await this.ready
-    if (!this.remote) return { holder: 'me', idleSeconds: 0 }
-    return this.remote.claimTracker(gameId, !!opts?.takeOver)
+    const name = await this.getDisplayName()
+    if (!this.remote) return { holder: 'me', idleSeconds: 0, name: name || null }
+    return this.remote.claimTracker(gameId, !!opts?.takeOver, name)
+  }
+
+  async getDisplayName(): Promise<string> {
+    return (((await (await this.dbp).get('kv', 'displayName')) as string | undefined) ?? '')
+  }
+
+  async setDisplayName(name: string): Promise<void> {
+    await (await this.dbp).put('kv', name.trim().slice(0, 30), 'displayName')
   }
 
   async releaseTracker(gameId: Uuid): Promise<void> {

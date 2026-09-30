@@ -45,7 +45,7 @@ Only one phone tracks a game at a time; it holds a short **lease** on the game.
 | Situation | What happens |
 |---|---|
 | Open a live game nobody is tracking | You become the tracker and can tap. |
-| Open a game someone else is tracking | You watch live (buttons off, numbers update as they tap). A banner shows they are active and offers **Take over tracking**, which asks you to confirm because it switches them to watching. |
+| Open a game someone else is tracking | You watch live (buttons off, numbers update as they tap). A banner names them ("Sam is tracking this game", or "Another parent" if they haven't set a name in Settings), shows they are active and offers **Take over tracking**, which asks you to confirm because it switches them to watching. |
 | The tracker leaves the screen, ends the game or taps back | The lease is released at once; watchers get **Start tracking** straight away, with no confirmation. |
 | The tracker's phone dies, loses signal or closes the app | Their phone checks in every 15 s. After 2 minutes of silence the game counts as free and anyone can start tracking. |
 | Someone takes over | The old tracker's screen switches to watching within a moment ("Another parent took over tracking"). Everything they tapped is kept. |

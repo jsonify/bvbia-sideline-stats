@@ -166,28 +166,28 @@ function fakeCloud() {
   let codes = 0
   // Tracking leases: same rules as supabase/migrations/0003_game_tracker.sql (120 s lease, take over, release).
   const LEASE = 120
-  const leases = new Map<string, { user: string | null; seenAt: number }>()
+  const leases = new Map<string, { user: string | null; seenAt: number; name: string | null }>()
   const trackerWatchers = new Set<() => void>()
   const clock = { now: 0, down: false }
   const ping = () => trackerWatchers.forEach((f) => f())
   const reach = () => { if (clock.down) throw new Error('Failed to fetch') }
   const view = (gameId: string, me: string) => {
     const l = leases.get(gameId)
-    if (!l || !l.user) return { holder: 'none' as const, idleSeconds: null }
+    if (!l || !l.user) return { holder: 'none' as const, idleSeconds: null, name: null }
     const idle = clock.now - l.seenAt
-    return { holder: l.user === me ? ('me' as const) : idle > LEASE ? ('none' as const) : ('other' as const), idleSeconds: idle }
+    return { holder: l.user === me ? ('me' as const) : idle > LEASE ? ('none' as const) : ('other' as const), idleSeconds: idle, name: l.name }
   }
   const api = (user = 'u'): RemoteApi => ({
     getTracker: async (id) => { reach(); return view(id, user) },
-    claimTracker: async (id, takeOver) => {
+    claimTracker: async (id, takeOver, name) => {
       reach()
       const l = leases.get(id)
-      if (takeOver || !l || !l.user || l.user === user || clock.now - l.seenAt > LEASE) { leases.set(id, { user, seenAt: clock.now }); ping() }
+      if (takeOver || !l || !l.user || l.user === user || clock.now - l.seenAt > LEASE) { leases.set(id, { user, seenAt: clock.now, name: name || null }); ping() }
       return view(id, user)
     },
     releaseTracker: async (id) => {
       reach()
-      if (leases.get(id)?.user === user) { leases.set(id, { user: null, seenAt: clock.now }); ping() }
+      if (leases.get(id)?.user === user) { leases.set(id, { user: null, seenAt: clock.now, name: null }); ping() }
     },
     watchTrackers: (_team, cb) => { trackerWatchers.add(cb); return () => { trackerWatchers.delete(cb) } },
     userId: async () => user,
@@ -344,7 +344,7 @@ describe('one tracker per game', () => {
     await b.releaseTracker(id) // not the tracker: does nothing
     expect(await a.getTracker(id)).toMatchObject({ holder: 'me' })
     await a.releaseTracker(id)
-    expect(await b.getTracker(id)).toEqual({ holder: 'none', idleSeconds: null })
+    expect(await b.getTracker(id)).toEqual({ holder: 'none', idleSeconds: null, name: null })
     expect(await b.claimTracker(id)).toMatchObject({ holder: 'me' })
   })
 
@@ -380,12 +380,33 @@ describe('one tracker per game', () => {
     await expect(a.releaseTracker(id)).resolves.toBeUndefined()
   })
 
+  it("sends this device's name with every claim so the other parent can see who is tracking", async () => {
+    const { a, b, id } = await setup()
+    expect(await a.getDisplayName()).toBe('')
+    await a.setDisplayName('  Sam  ')
+    expect(await a.getDisplayName()).toBe('Sam')
+    await a.claimTracker(id)
+    expect(await b.getTracker(id)).toMatchObject({ holder: 'other', name: 'Sam' })
+    await b.setDisplayName('Priya')
+    expect(await b.claimTracker(id)).toMatchObject({ holder: 'other', name: 'Sam' }) // blocked: Sam still shown
+    expect(await b.claimTracker(id, { takeOver: true })).toMatchObject({ holder: 'me', name: 'Priya' })
+    expect(await a.getTracker(id)).toMatchObject({ holder: 'other', name: 'Priya' })
+    await a.setDisplayName('x'.repeat(50))
+    expect((await a.getDisplayName()).length).toBe(30)
+  })
+
+  it('a parent with no name set shows as unnamed', async () => {
+    const { a, b, id } = await setup()
+    await a.claimTracker(id)
+    expect((await b.getTracker(id)).name).toBeNull()
+  })
+
   it('demo mode is one device: the game is always yours', async () => {
     const r = repo()
     await r.createTeam('A')
     const g = await r.saveGame(gameInput)
     expect(await r.claimTracker(g.id)).toMatchObject({ holder: 'me' })
-    expect(await r.getTracker(g.id)).toEqual({ holder: 'none', idleSeconds: null })
+    expect(await r.getTracker(g.id)).toEqual({ holder: 'none', idleSeconds: null, name: null })
     await expect(r.releaseTracker(g.id)).resolves.toBeUndefined()
   })
 

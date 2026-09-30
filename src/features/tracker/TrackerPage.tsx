@@ -23,6 +23,7 @@ export default function TrackerPage() {
   const locked = game.status === 'final'
   const readOnly = !t.canTrack // final, still checking, or someone else is tracking
   const someoneElse = t.other?.holder === 'other'
+  const who = t.other?.name || 'Another parent'
   const sync = t.sync
   const syncLabel = sync.state !== 'synced' && sync.pending > 0 ? `${SYNC_TEXT[sync.state]} · ${sync.pending} pending` : SYNC_TEXT[sync.state]
   const recent = [...t.events].reverse().slice(0, 6)
@@ -63,7 +64,7 @@ export default function TrackerPage() {
         <section className="tk-watch" role="status" aria-live="polite" aria-label="Who is tracking">
           {someoneElse ? (
             <>
-              <strong>{t.lost ? 'Another parent took over tracking' : 'Another parent is tracking this game'}</strong>
+              <strong>{t.lost ? `${who} took over tracking` : `${who} is tracking this game`}</strong>
               <p>
                 {t.lost ? 'Your taps so far are saved. ' : `Active ${agoText(t.other?.idleSeconds ?? null)}. `}
                 You're watching live: the numbers update as they tap.
@@ -154,7 +155,7 @@ export default function TrackerPage() {
           <div className="tk-dialog" role="alertdialog" aria-modal="true" aria-labelledby="take-h" onClick={(e) => e.stopPropagation()}>
             <h2 id="take-h">Take over tracking?</h2>
             <p>
-              Another parent is tracking this game (active {agoText(t.other?.idleSeconds ?? null)}). If you take over, they switch to
+              {who} is tracking this game (active {agoText(t.other?.idleSeconds ?? null)}). If you take over, they switch to
               watching and can't tap until they take it back. Check with them first so the same play isn't counted twice.
             </p>
             <div>

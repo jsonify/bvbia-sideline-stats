@@ -226,3 +226,18 @@ test('invite: Share code sends the app link, the code and the steps; the link op
   await expect(page.getByRole('heading', { name: 'Games', exact: true })).toBeVisible()
   expect(errors).toEqual([])
 })
+
+test('your name: set in Settings, saved on this device', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: /Create my team/ }).click()
+  await page.getByLabel('Team name').fill('U10 Thunder')
+  await page.getByRole('button', { name: 'Create team' }).click()
+  await page.getByRole('button', { name: /Let's go/ }).click()
+  await page.getByRole('link', { name: 'Settings' }).click()
+  await page.getByLabel('Your name').fill('Sam')
+  await page.getByRole('button', { name: 'Save name' }).click()
+  await expect(page.getByText('Saved', { exact: true })).toBeVisible()
+  await page.screenshot({ path: 'e2e/screenshots/18-your-name.png', fullPage: true })
+  await page.reload()
+  await expect(page.getByLabel('Your name')).toHaveValue('Sam')
+})

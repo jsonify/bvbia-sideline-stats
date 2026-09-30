@@ -77,8 +77,8 @@ export function useTracker(gameId: string) {
     if (t.holder === 'none' && roleRef.current === 'tracker') return // our lease lapsed but nobody took it: the next check-in renews it
     if (roleRef.current === 'tracker') {
       // Only "took over" if we really had it; if we were just assuming (offline), someone was already there.
-      if (confirmed.current) { setLost(true); say('Another parent took over tracking') }
-      else say('Another parent is already tracking this game')
+      if (confirmed.current) { setLost(true); say(`${t.name || 'Another parent'} took over tracking`) }
+      else say(`${t.name || 'Another parent'} is already tracking this game`)
     }
     confirmed.current = false
     setRole('viewer'); setOther(t)
@@ -127,7 +127,7 @@ export function useTracker(gameId: string) {
       if (seq !== trackSeq.current) return
       applyTracker(t)
       if (t.holder === 'me') say('You are tracking now')
-      else say('Another parent just started tracking')
+      else say(`${t.name || 'Another parent'} just started tracking`)
     } catch {
       say('Could not reach the server. Try again when you have signal.')
     }

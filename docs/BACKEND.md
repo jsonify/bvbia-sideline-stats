@@ -41,3 +41,7 @@ The table has read-only row-level security for team members; all changes go thro
 **It coordinates, it does not gate.** `stat_events` are never rejected by the lease: an offline phone's queued taps must still be accepted after someone else took over, or those taps would be lost. If you deploy the app before running this migration, the tracking calls fail and the app falls back to "anyone can tap" (the previous behaviour).
 
 To change the 2-minute timeout, edit both `interval '120 seconds'` occurrences in the migration (the functions are `create or replace`, so re-running is safe; skip the `create table` and `alter publication` lines).
+
+## Who is tracking — run `0004_tracker_name.sql`
+
+After `0003`, run `supabase/migrations/0004_tracker_name.sql`. It adds a `tracker_name` column and replaces `get_game_tracker` / `claim_game_tracker` so they carry an optional name (trimmed, max 30 characters). The name is set per phone in **Settings → Your name**, sent with each check-in and shown to other parents ("Sam is tracking this game"). Without `0004` the tracking calls fail and the app falls back to "anyone can tap", so run it right after `0003`.
