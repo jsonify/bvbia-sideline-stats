@@ -24,9 +24,9 @@
   color-scheme: light dark;
   /* colour */
   --bg:#f4f4f4; --surface:#ffffff; --surface-2:#ececec; --text:#0a0a0a; --muted:#565656; --border:#dcdcdc;
-  --brand:#FDE100; --brand-strong:#e3c900; --brand-soft:#fff6a8; --brand-ink:#000000; --brand-text:#000000;
+  --brand:#FFD900; --brand-strong:#e3c000; --brand-soft:#fff3a8; --brand-ink:#000000; --brand-text:#000000;
   --good:#15803d; --good-soft:#dcf5e4; --bad:#c81e1e; --bad-soft:#fde4e4; --warn:#b45309; --warn-soft:#fdeccd;
-  --pitch:#FDE100; --ring:#000000; --overlay:rgba(0,0,0,.55);
+  --pitch:#FFD900; --ring:#000000; --overlay:rgba(0,0,0,.55);
   --radius:16px; --radius-sm:10px; --radius-pill:999px;
   --shadow:0 1px 2px rgba(0,0,0,.06),0 6px 20px rgba(15,31,28,.08);
   --shadow-lg:0 12px 40px rgba(6,20,17,.28);
@@ -45,17 +45,17 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#000000; --surface:#141414; --surface-2:#1f1f1f; --text:#ffffff; --muted:#a8a8a8; --border:#2e2e2e;
-    --brand:#FDE100; --brand-strong:#ffec4d; --brand-soft:#3a3400; --brand-ink:#000000; --brand-text:#FDE100;
+    --brand:#FFD900; --brand-strong:#ffe54d; --brand-soft:#3a3200; --brand-ink:#000000; --brand-text:#FFD900;
     --good:#4ade80; --good-soft:#12361f; --bad:#f87171; --bad-soft:#441818; --warn:#fbbf24; --warn-soft:#42300c;
-    --ring:#FDE100; --overlay:rgba(0,0,0,.65); --shadow:0 0 0 1px rgba(255,255,255,.03); --shadow-lg:0 12px 40px rgba(0,0,0,.6);
+    --ring:#FFD900; --overlay:rgba(0,0,0,.65); --shadow:0 0 0 1px rgba(255,255,255,.03); --shadow-lg:0 12px 40px rgba(0,0,0,.6);
   }
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
   --bg:#000000; --surface:#141414; --surface-2:#1f1f1f; --text:#ffffff; --muted:#a8a8a8; --border:#2e2e2e;
-    --brand:#FDE100; --brand-strong:#ffec4d; --brand-soft:#3a3400; --brand-ink:#000000; --brand-text:#FDE100;
+    --brand:#FFD900; --brand-strong:#ffe54d; --brand-soft:#3a3200; --brand-ink:#000000; --brand-text:#FFD900;
   --good:#4ade80; --good-soft:#12361f; --bad:#f87171; --bad-soft:#441818; --warn:#fbbf24; --warn-soft:#42300c;
-  --ring:#FDE100; --overlay:rgba(0,0,0,.65); --shadow:0 0 0 1px rgba(255,255,255,.03); --shadow-lg:0 12px 40px rgba(0,0,0,.6);
+  --ring:#FFD900; --overlay:rgba(0,0,0,.65); --shadow:0 0 0 1px rgba(255,255,255,.03); --shadow-lg:0 12px 40px rgba(0,0,0,.6);
 }
 
 *,*::before,*::after{box-sizing:border-box}

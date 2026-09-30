@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+      includeAssets: ['Borussia_Dortmund_logo.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'Sideline Stats',
         short_name: 'Sideline',
@@ -23,7 +23,7 @@ export default defineConfig({
           { src: 'pwa-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa-512.png', sizes: '512x512', type: 'image/png' },
           { src: 'pwa-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-          { src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml' },
+          { src: 'Borussia_Dortmund_logo.svg', sizes: 'any', type: 'image/svg+xml' },
         ],
       },
       workbox: {

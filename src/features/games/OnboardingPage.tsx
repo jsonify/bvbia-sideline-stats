@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useRepo } from '../../data/context'
+import { TeamLogo } from '../branding/TeamLogo'
 import { JoinCodeCard } from '../shell/JoinCodeCard'
 import { parseJoinCode } from '../../lib/invite'
 import type { Team } from '../../types'
@@ -40,6 +41,7 @@ export default function OnboardingPage() {
       {step === 'choose' && (
         <>
           {adding && <Link to="/teams" className="gm-back">‹ Back to teams</Link>}
+          <TeamLogo size={88} />
           <div className="ss-eyebrow">{adding ? 'Add a team' : 'Sideline Stats'}</div>
           <h1>{adding ? 'Create or join another team' : <>Track the game. <mark>Cheer louder.</mark></>}</h1>
           <p className="lead">{adding ? 'Each team keeps its own games and season stats. You can switch between them any time from the Teams tab.' : 'Tally duels, first touches and box entries for the whole team in one tap, right from the sideline. Every parent sees the same numbers.'}</p>

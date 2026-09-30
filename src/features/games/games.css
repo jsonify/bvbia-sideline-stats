@@ -33,6 +33,7 @@
 .gm-welcome h1{font-family:var(--font-display);text-transform:uppercase;font-size:48px;line-height:1.05;font-weight:800;margin:10px 0 14px;letter-spacing:.005em}
 /* the one highlighted phrase: black on brand, like a kit number */
 .gm-welcome h1 mark{background:var(--brand);color:var(--brand-ink);padding:0 .12em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.gm-welcome>.bd-logo{margin-bottom:18px}
 .gm-welcome>.ss-eyebrow{display:flex;align-items:center;gap:8px}
 .gm-welcome>.ss-eyebrow::before{content:'';flex:none;width:14px;height:4px;background:var(--brand)}
 .gm-welcome p.lead{color:var(--muted);font-size:17px;margin:0 0 24px}
