@@ -56,3 +56,6 @@
 @keyframes tk-pulse{50%{opacity:.3}}
 @keyframes tk-toast{from{opacity:0;transform:translate(-50%,10px)}}
 @media (prefers-reduced-motion:reduce){.tk *{animation:none!important;transition:none!important}}
+
+/* keep last card clear of the fixed Undo bar */
+.tk{padding-bottom:calc(120px + env(safe-area-inset-bottom))}
