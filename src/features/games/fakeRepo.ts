@@ -1,5 +1,8 @@
-import type { Repository } from '../../data/repository'
+import type { GameTracker, Repository } from '../../data/repository'
 import type { Game, Team } from '../../types'
+
+const NOBODY: GameTracker = { holder: 'none', idleSeconds: null, name: null }
+const ME: GameTracker = { holder: 'me', idleSeconds: 0, name: null }
 
 /** In-memory Repository for tests. */
 export function makeFakeRepo(team: Team | null = null): Repository & { games: Game[] } {
@@ -25,11 +28,11 @@ export function makeFakeRepo(team: Team | null = null): Repository & { games: Ga
     listAllEvents: async () => [],
     addEvent: async () => { throw new Error('unused') },
     undoEvent: async () => {},
-    getTracker: async () => ({ holder: 'none', idleSeconds: null, name: null }),
-    claimTracker: async () => ({ holder: 'me', idleSeconds: 0, name: null }),
+    getLanes: async () => ({ defense: NOBODY, offense: NOBODY }),
+    claimLanes: async () => ({ defense: ME, offense: ME }),
     getDisplayName: async () => '',
     setDisplayName: async () => {},
-    releaseTracker: async () => {},
+    releaseLanes: async () => {},
     onTrackerChange: () => () => {},
     subscribe: () => () => {},
     onSyncState: () => () => {},

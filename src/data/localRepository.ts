@@ -1,7 +1,8 @@
 // Local-first Repository. Always reads/writes IndexedDB; if a `remote` is supplied,
 // writes are also queued for cloud upsert and remote changes are pulled into the cache.
 import type { Game, NewStatEvent, StatEvent, Team, TeamBranding, Uuid } from '../types'
-import type { GameTracker, Repository, SyncState } from './repository'
+import type { GameLanes, GameTracker, Repository, SyncState } from './repository'
+import { LANES, type Lane } from '../lib/lanes'
 import { openLocalDB, idbQueueStore, uuid, type GameRec, type LocalDB } from './db'
 import { WriteQueue, type QueueStore } from './queue'
 import type { RemoteApi } from './remote'
@@ -22,6 +23,11 @@ function genCode(): string {
   for (let i = 0; i < 6; i++) s += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)]
   return s
 }
+
+const NOBODY: GameTracker = { holder: 'none', idleSeconds: null, name: null }
+/** Every lane as `base`, except the `lanes` given, which get `mine`. */
+const laneView = (base: GameTracker, lanes: Lane[] = [], mine: GameTracker = base): GameLanes =>
+  ({ defense: lanes.includes('defense') ? mine : base, offense: lanes.includes('offense') ? mine : base })
 
 const later = (a?: string | null, b?: string | null) => (a && b ? (a > b ? a : b) : a ?? b ?? null)
 
@@ -423,20 +429,20 @@ export class LocalRepository implements Repository {
     this.emit()
   }
 
-  // --- tracking lease ---------------------------------------------------------------------------
-  // Demo mode is a single device, so nobody can ever be tracking against you: the game is always yours.
+  // --- tracking leases (one per lane) -----------------------------------------------------------
+  // Demo mode is a single device, so nobody can ever be tracking against you: any lane you ask for is yours.
 
-  async getTracker(gameId: Uuid): Promise<GameTracker> {
+  async getLanes(gameId: Uuid): Promise<GameLanes> {
     await this.ready
-    if (!this.remote) return { holder: 'none', idleSeconds: null, name: null }
-    return this.remote.getTracker(gameId)
+    if (!this.remote) return laneView(NOBODY)
+    return this.remote.getLanes(gameId)
   }
 
-  async claimTracker(gameId: Uuid, opts?: { takeOver?: boolean }): Promise<GameTracker> {
+  async claimLanes(gameId: Uuid, lanes: Lane[], opts?: { takeOver?: boolean }): Promise<GameLanes> {
     await this.ready
     const name = await this.getDisplayName()
-    if (!this.remote) return { holder: 'me', idleSeconds: 0, name: name || null }
-    return this.remote.claimTracker(gameId, !!opts?.takeOver, name)
+    if (!this.remote) return laneView(NOBODY, lanes, { holder: 'me', idleSeconds: 0, name: name || null })
+    return this.remote.claimLanes(gameId, lanes, !!opts?.takeOver, name)
   }
 
   async getDisplayName(): Promise<string> {
@@ -447,10 +453,10 @@ export class LocalRepository implements Repository {
     await (await this.dbp).put('kv', name.trim().slice(0, 30), 'displayName')
   }
 
-  async releaseTracker(gameId: Uuid): Promise<void> {
+  async releaseLanes(gameId: Uuid, lanes: Lane[] = [...LANES]): Promise<void> {
     await this.ready
     if (!this.remote) return
-    try { await this.remote.releaseTracker(gameId) } catch { /* offline: the lease simply runs out */ }
+    try { await this.remote.releaseLanes(gameId, lanes) } catch { /* offline: the lease simply runs out */ }
   }
 
   onTrackerChange(cb: () => void): () => void {

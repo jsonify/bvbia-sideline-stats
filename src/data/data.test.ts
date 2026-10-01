@@ -157,6 +157,8 @@ describe('WriteQueue', () => {
 
 // --- Two devices sharing one (fake) cloud ---------------------------------------------------------
 import type { RemoteApi } from './remote'
+import type { GameLanes } from './repository'
+import type { Lane } from '../lib/lanes'
 import type { Team } from '../types'
 
 function fakeCloud() {
@@ -164,30 +166,40 @@ function fakeCloud() {
   const games = new Map<string, any>()
   const events = new Map<string, any>()
   let codes = 0
-  // Tracking leases: same rules as supabase/migrations/0003_game_tracker.sql (120 s lease, take over, release).
+  // Tracking leases, one per lane: same rules as supabase/migrations/0005_tracker_lanes.sql (120 s lease, take over, release).
   const LEASE = 120
   const leases = new Map<string, { user: string | null; seenAt: number; name: string | null }>()
   const trackerWatchers = new Set<() => void>()
   const clock = { now: 0, down: false }
   const ping = () => trackerWatchers.forEach((f) => f())
   const reach = () => { if (clock.down) throw new Error('Failed to fetch') }
-  const view = (gameId: string, me: string) => {
-    const l = leases.get(gameId)
-    if (!l || !l.user) return { holder: 'none' as const, idleSeconds: null, name: null }
-    const idle = clock.now - l.seenAt
-    return { holder: l.user === me ? ('me' as const) : idle > LEASE ? ('none' as const) : ('other' as const), idleSeconds: idle, name: l.name }
+  const none = { holder: 'none' as const, idleSeconds: null, name: null }
+  const view = (gameId: string, me: string): GameLanes => {
+    const one = (lane: Lane): GameLanes[Lane] => {
+      const l = leases.get(`${gameId}:${lane}`)
+      if (!l || !l.user) return none
+      const idle = clock.now - l.seenAt
+      return { holder: l.user === me ? 'me' : idle > LEASE ? 'none' : 'other', idleSeconds: idle, name: l.name }
+    }
+    return { defense: one('defense'), offense: one('offense') }
   }
   const api = (user = 'u'): RemoteApi => ({
-    getTracker: async (id) => { reach(); return view(id, user) },
-    claimTracker: async (id, takeOver, name) => {
+    getLanes: async (id) => { reach(); return view(id, user) },
+    claimLanes: async (id, lanes, takeOver, name) => {
       reach()
-      const l = leases.get(id)
-      if (takeOver || !l || !l.user || l.user === user || clock.now - l.seenAt > LEASE) { leases.set(id, { user, seenAt: clock.now, name: name || null }); ping() }
+      let changed = false
+      for (const lane of lanes) {
+        const l = leases.get(`${id}:${lane}`)
+        if (takeOver || !l || !l.user || l.user === user || clock.now - l.seenAt > LEASE) { leases.set(`${id}:${lane}`, { user, seenAt: clock.now, name: name || null }); changed = true }
+      }
+      if (changed) ping()
       return view(id, user)
     },
-    releaseTracker: async (id) => {
+    releaseLanes: async (id, lanes) => {
       reach()
-      if (leases.get(id)?.user === user) { leases.set(id, { user: null, seenAt: clock.now, name: null }); ping() }
+      let changed = false
+      for (const lane of lanes) if (leases.get(`${id}:${lane}`)?.user === user) { leases.set(`${id}:${lane}`, { user: null, seenAt: clock.now, name: null }); changed = true }
+      if (changed) ping()
     },
     watchTrackers: (_team, cb) => { trackerWatchers.add(cb); return () => { trackerWatchers.delete(cb) } },
     userId: async () => user,
@@ -311,7 +323,7 @@ describe('multiple teams on one device', () => {
   })
 })
 
-describe('one tracker per game', () => {
+describe('one tracker per lane', () => {
   const setup = async () => {
     const cloud = fakeCloud()
     const a = new LocalRepository({ dbName: `lease-a${n++}`, remote: cloud.api('parent-a'), baseDelayMs: 1 })
@@ -321,63 +333,91 @@ describe('one tracker per game', () => {
     await b.joinTeam(team.joinCode)
     return { cloud, a, b, id: game.id }
   }
+  const BOTH: Lane[] = ['defense', 'offense']
+  /** "me/other": who holds defense and offense, from this phone's point of view. */
+  const holders = (l: GameLanes) => `${l.defense.holder}/${l.offense.holder}`
 
-  it('lets the first parent track and makes the second one watch', async () => {
+  it('lets the first parent track everything and makes the second one watch', async () => {
     const { a, b, id } = await setup()
-    expect(await a.claimTracker(id)).toMatchObject({ holder: 'me' })
-    expect(await b.getTracker(id)).toMatchObject({ holder: 'other' })
-    expect(await b.claimTracker(id)).toMatchObject({ holder: 'other' }) // cannot barge in
-    expect(await a.claimTracker(id)).toMatchObject({ holder: 'me' }) // renewing is fine
+    expect(holders(await a.claimLanes(id, BOTH))).toBe('me/me')
+    expect(holders(await b.getLanes(id))).toBe('other/other')
+    expect(holders(await b.claimLanes(id, BOTH))).toBe('other/other') // cannot barge in
+    expect(holders(await a.claimLanes(id, BOTH))).toBe('me/me') // renewing is fine
   })
 
-  it('a takeover switches who is tracking, and the old tracker finds out on their next check', async () => {
+  it('two parents can split the game: each tracks one lane and neither can tap the other\'s', async () => {
     const { a, b, id } = await setup()
-    await a.claimTracker(id)
-    expect(await b.claimTracker(id, { takeOver: true })).toMatchObject({ holder: 'me' })
-    expect(await a.getTracker(id)).toMatchObject({ holder: 'other' })
-    expect(await a.claimTracker(id)).toMatchObject({ holder: 'other' }) // heartbeat cannot steal it back
+    expect(holders(await a.claimLanes(id, ['defense']))).toBe('me/none')
+    expect(holders(await b.claimLanes(id, ['offense']))).toBe('other/me')
+    expect(holders(await a.getLanes(id))).toBe('me/other')
+    expect(holders(await a.claimLanes(id, ['defense']))).toBe('me/other') // renewing does not disturb the other lane
+    expect(holders(await b.claimLanes(id, ['offense']))).toBe('other/me')
   })
 
-  it('handing off frees the game straight away', async () => {
+  it('a second parent who asks for everything gets just the lane nobody has', async () => {
     const { a, b, id } = await setup()
-    await a.claimTracker(id)
-    await b.releaseTracker(id) // not the tracker: does nothing
-    expect(await a.getTracker(id)).toMatchObject({ holder: 'me' })
-    await a.releaseTracker(id)
-    expect(await b.getTracker(id)).toEqual({ holder: 'none', idleSeconds: null, name: null })
-    expect(await b.claimTracker(id)).toMatchObject({ holder: 'me' })
+    await a.claimLanes(id, ['defense'])
+    expect(holders(await b.claimLanes(id, BOTH))).toBe('other/me')
   })
 
-  it('a tracker who goes quiet for over 2 minutes loses the game to whoever asks next', async () => {
+  it('the one tracking everything can hand a lane to the other parent without losing the rest', async () => {
+    const { a, b, id } = await setup()
+    await a.claimLanes(id, BOTH)
+    await a.releaseLanes(id, ['offense'])
+    expect(holders(await b.getLanes(id))).toBe('other/none')
+    expect(holders(await b.claimLanes(id, ['offense']))).toBe('other/me') // no confirmation needed: it was free
+    expect(holders(await a.getLanes(id))).toBe('me/other')
+  })
+
+  it('a takeover switches who has that lane only, and the old tracker finds out on their next check', async () => {
+    const { a, b, id } = await setup()
+    await a.claimLanes(id, BOTH)
+    expect(holders(await b.claimLanes(id, ['offense'], { takeOver: true }))).toBe('other/me')
+    expect(holders(await a.getLanes(id))).toBe('me/other')
+    expect(holders(await a.claimLanes(id, BOTH))).toBe('me/other') // heartbeat cannot steal it back
+  })
+
+  it('handing off frees the lanes straight away, and only ever your own', async () => {
+    const { a, b, id } = await setup()
+    await a.claimLanes(id, BOTH)
+    await b.releaseLanes(id) // not the tracker: does nothing
+    expect(holders(await a.getLanes(id))).toBe('me/me')
+    await a.releaseLanes(id) // no lanes given: everything of yours
+    expect(await b.getLanes(id)).toEqual({ defense: { holder: 'none', idleSeconds: null, name: null }, offense: { holder: 'none', idleSeconds: null, name: null } })
+    expect(holders(await b.claimLanes(id, BOTH))).toBe('me/me')
+  })
+
+  it('a tracker who goes quiet for over 2 minutes loses their lanes to whoever asks next', async () => {
     const { cloud, a, b, id } = await setup()
-    await a.claimTracker(id)
+    await a.claimLanes(id, BOTH)
     cloud.clock.now = 100
-    expect(await b.claimTracker(id)).toMatchObject({ holder: 'other', idleSeconds: 100 })
+    expect(holders(await b.claimLanes(id, BOTH))).toBe('other/other')
+    expect((await b.claimLanes(id, BOTH)).defense.idleSeconds).toBe(100)
     cloud.clock.now = 121
-    expect(await b.getTracker(id)).toMatchObject({ holder: 'none' })
-    expect(await a.getTracker(id)).toMatchObject({ holder: 'me' }) // still theirs until someone else takes it
-    expect(await b.claimTracker(id)).toMatchObject({ holder: 'me' })
-    expect(await a.claimTracker(id)).toMatchObject({ holder: 'other' })
+    expect(holders(await b.getLanes(id))).toBe('none/none')
+    expect(holders(await a.getLanes(id))).toBe('me/me') // still theirs until someone else takes it
+    expect(holders(await b.claimLanes(id, BOTH))).toBe('me/me')
+    expect(holders(await a.claimLanes(id, BOTH))).toBe('other/other')
   })
 
   it('tells the app when someone claims or releases, so a takeover shows up immediately', async () => {
     const { a, b, id } = await setup()
     const seen = vi.fn()
     const off = b.onTrackerChange(seen)
-    await a.claimTracker(id)
-    await a.releaseTracker(id)
+    await a.claimLanes(id, BOTH)
+    await a.releaseLanes(id)
     expect(seen).toHaveBeenCalledTimes(2)
     off()
-    await a.claimTracker(id)
+    await a.claimLanes(id, BOTH)
     expect(seen).toHaveBeenCalledTimes(2)
   })
 
   it('without a connection, claiming fails (so the app carries on tracking) but releasing never throws', async () => {
     const { cloud, a, id } = await setup()
     cloud.clock.down = true
-    await expect(a.claimTracker(id)).rejects.toThrow()
-    await expect(a.getTracker(id)).rejects.toThrow()
-    await expect(a.releaseTracker(id)).resolves.toBeUndefined()
+    await expect(a.claimLanes(id, BOTH)).rejects.toThrow()
+    await expect(a.getLanes(id)).rejects.toThrow()
+    await expect(a.releaseLanes(id)).resolves.toBeUndefined()
   })
 
   it("sends this device's name with every claim so the other parent can see who is tracking", async () => {
@@ -385,34 +425,35 @@ describe('one tracker per game', () => {
     expect(await a.getDisplayName()).toBe('')
     await a.setDisplayName('  Sam  ')
     expect(await a.getDisplayName()).toBe('Sam')
-    await a.claimTracker(id)
-    expect(await b.getTracker(id)).toMatchObject({ holder: 'other', name: 'Sam' })
+    await a.claimLanes(id, BOTH)
+    expect(await b.getLanes(id)).toMatchObject({ defense: { holder: 'other', name: 'Sam' }, offense: { holder: 'other', name: 'Sam' } })
     await b.setDisplayName('Priya')
-    expect(await b.claimTracker(id)).toMatchObject({ holder: 'other', name: 'Sam' }) // blocked: Sam still shown
-    expect(await b.claimTracker(id, { takeOver: true })).toMatchObject({ holder: 'me', name: 'Priya' })
-    expect(await a.getTracker(id)).toMatchObject({ holder: 'other', name: 'Priya' })
+    expect((await b.claimLanes(id, BOTH)).offense).toMatchObject({ holder: 'other', name: 'Sam' }) // blocked: Sam still shown
+    expect((await b.claimLanes(id, ['offense'], { takeOver: true })).offense).toMatchObject({ holder: 'me', name: 'Priya' })
+    expect(await a.getLanes(id)).toMatchObject({ defense: { holder: 'me', name: 'Sam' }, offense: { holder: 'other', name: 'Priya' } })
     await a.setDisplayName('x'.repeat(50))
     expect((await a.getDisplayName()).length).toBe(30)
   })
 
   it('a parent with no name set shows as unnamed', async () => {
     const { a, b, id } = await setup()
-    await a.claimTracker(id)
-    expect((await b.getTracker(id)).name).toBeNull()
+    await a.claimLanes(id, BOTH)
+    expect((await b.getLanes(id)).defense.name).toBeNull()
   })
 
-  it('demo mode is one device: the game is always yours', async () => {
+  it('demo mode is one device: any lane you ask for is yours', async () => {
     const r = repo()
     await r.createTeam('A')
     const g = await r.saveGame(gameInput)
-    expect(await r.claimTracker(g.id)).toMatchObject({ holder: 'me' })
-    expect(await r.getTracker(g.id)).toEqual({ holder: 'none', idleSeconds: null, name: null })
-    await expect(r.releaseTracker(g.id)).resolves.toBeUndefined()
+    expect(holders(await r.claimLanes(g.id, BOTH))).toBe('me/me')
+    expect(holders(await r.claimLanes(g.id, ['offense']))).toBe('none/me')
+    expect(holders(await r.getLanes(g.id))).toBe('none/none')
+    await expect(r.releaseLanes(g.id)).resolves.toBeUndefined()
   })
 
   it('never blocks stat events: taps a parent made while someone else was tracking still sync', async () => {
     const { cloud, a, b, id } = await setup()
-    await a.claimTracker(id)
+    await a.claimLanes(id, ['defense', 'offense'])
     await vi.waitFor(async () => expect((await b.listGames()).length).toBe(1))
     await b.addEvent(id, ev(id)) // b is only watching, but the data layer stays append-only and lossless
     await vi.waitFor(() => expect(cloud.events.size).toBe(1))

@@ -66,5 +66,15 @@
 .tk-watch-btn.primary,.tk-dialog .primary{background:var(--brand);border-color:transparent;color:var(--brand-ink)!important}
 .tk-dialog p{color:var(--muted);line-height:1.4;margin:0}
 
+/* who tracks what: pick defense, offense or everything */
+.tk-roles{margin:0 0 14px}
+.tk-roles h2{font-size:15px;color:var(--muted);margin:0 0 6px}
+.tk-roles .tk-seg{margin-bottom:8px;border:1px solid var(--border)}
+.tk-lanes{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:14px}
+.tk-lanes li{display:flex;justify-content:space-between;gap:10px}
+.tk-lanes span{color:var(--muted)}.tk-lanes small{font-weight:600;color:var(--muted)}.tk-lanes .open{color:var(--muted);font-weight:600}
+.tk-roles-hint{margin:0;color:var(--muted);font-size:13px;line-height:1.4}
+.tk-note{margin:4px 0 0;font-size:13px;font-weight:700;color:var(--text)}
+
 /* keep last card clear of the fixed Undo bar */
 .tk{padding-bottom:calc(120px + env(safe-area-inset-bottom))}

@@ -215,7 +215,7 @@ test('invite: Share code sends the app link, the code and the steps; the link op
   expect(shared.text).toContain('Tap this link to open the app')
   expect(shared.text).toContain('Tap "Join with team code" and paste this code')
   expect(shared.text).toContain('Tap "Join team"')
-  expect(shared.text).toContain('One parent tracks each game at a time')
+  expect(shared.text).toContain('one on defense and one on offense')
 
   // Opening the link: straight to the join step, code already in the box
   await page.goto(link)
@@ -249,4 +249,54 @@ test('your name: set in Settings, saved on this device', async ({ page }) => {
   await page.screenshot({ path: 'e2e/screenshots/18-your-name.png', fullPage: true })
   await page.reload()
   await expect(page.getByLabel('Your name')).toHaveValue('Sam')
+})
+
+test('split roles: track everything by default, or just defense or offense', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', (e) => errors.push(e.message))
+  await page.goto('/')
+  await page.getByRole('button', { name: /Create my team/ }).click()
+  await page.getByLabel('Team name').fill('U10 Thunder')
+  await page.getByRole('button', { name: 'Create team' }).click()
+  await page.getByRole('button', { name: /Let's go/ }).click()
+  await page.getByRole('link', { name: /Add your first game/ }).click()
+  await page.getByLabel('Opponent').fill('Rapids U10')
+  await page.getByRole('button', { name: /Save & start tracking/ }).click()
+  await expect(page).toHaveURL(/\/track$/)
+
+  const duel = page.getByRole('button', { name: 'Duel won', exact: true })
+  const box = page.getByRole('button', { name: 'Box entry with shot', exact: true })
+  const picker = page.getByRole('radiogroup', { name: 'What you track' })
+
+  // On your own you track everything, and nothing extra gets in the way
+  await expect(page.getByText(/Tracking everything/)).toBeVisible()
+  await expect(picker.getByRole('radio', { name: /^Everything/ })).toHaveAttribute('aria-checked', 'true')
+  await expect(duel).toBeEnabled()
+  await expect(box).toBeEnabled()
+  await page.screenshot({ path: 'e2e/screenshots/19-roles-everything.png' })
+
+  // Defense only: the offense card is switched off and says nobody has it
+  await picker.getByRole('radio', { name: /^Defense/ }).click()
+  await expect(page.getByText(/Tracking defense/)).toBeVisible()
+  await expect(duel).toBeEnabled()
+  await expect(box).toBeDisabled()
+  await expect(page.getByText('Nobody is tracking this yet')).toBeVisible()
+  await page.screenshot({ path: 'e2e/screenshots/20-roles-defense.png' })
+
+  // Offense only: its card moves to the top and the 1v1s are off
+  await picker.getByRole('radio', { name: /^Offense/ }).click()
+  await expect(page.getByText(/Tracking offense/)).toBeVisible()
+  await expect(box).toBeEnabled()
+  await expect(duel).toBeDisabled()
+  const y = async (name: string) => (await page.getByRole('button', { name, exact: true }).boundingBox())!.y
+  expect(await y('Box entry with shot')).toBeLessThan(await y('Duel won'))
+  await box.click()
+  await expect(page.getByTestId('box-tally')).toContainText('1 of 1')
+
+  // Back to everything: nobody else has the lane, so there is nothing to confirm
+  await picker.getByRole('radio', { name: /^Everything/ }).click()
+  await expect(page.getByText(/Tracking everything/)).toBeVisible()
+  await expect(page.getByRole('alertdialog')).toHaveCount(0)
+  await expect(duel).toBeEnabled()
+  expect(errors).toEqual([])
 })

@@ -24,7 +24,7 @@ The app's look is fixed: BVB yellow accent and the official BVB crest (`public/B
 so the UI ignores any `branding` saved on a team. You can skip `0002_branding.sql` (the app reads teams with `select *` and
 tolerates the column being absent); if you already ran it, leave it in place. It is harmless, and any look saved earlier is simply ignored.
 
-## One tracker per game — run `0003_game_tracker.sql`
+## One tracker per game — run `0003_game_tracker.sql` (now per lane: see `0005` below)
 
 After `0001_init.sql`, open **SQL Editor → New query**, paste `supabase/migrations/0003_game_tracker.sql` and **Run**.
 It adds a `game_trackers` table (one row per game: who is tracking and when they last checked in) and three functions the app calls:
@@ -44,3 +44,20 @@ To change the 2-minute timeout, edit both `interval '120 seconds'` occurrences i
 ## Who is tracking — run `0004_tracker_name.sql`
 
 After `0003`, run `supabase/migrations/0004_tracker_name.sql`. It adds a `tracker_name` column and replaces `get_game_tracker` / `claim_game_tracker` so they carry an optional name (trimmed, max 30 characters). The name is set per phone in **Settings → Your name**, sent with each check-in and shown to other parents ("Sam is tracking this game"). Without `0004` the tracking calls fail and the app falls back to "anyone can tap", so run it right after `0003`.
+
+## Split tracking: defense and offense — run `0005_tracker_lanes.sql`
+
+After `0004`, run `supabase/migrations/0005_tracker_lanes.sql`. A game now has two **lanes**, `defense` and `offense`, and each has its own tracking lease, so two phones can track at once (one phone can still hold both). The migration:
+
+- clears current leases (they only last minutes) and makes `game_trackers` one row per `(game_id, lane)`;
+- **drops** `get_game_tracker`, `claim_game_tracker` and `release_game_tracker` and adds the lane versions below.
+
+| Function | What it does |
+|---|---|
+| `get_game_lanes(game)` | Always two rows, one per lane: `me` / `other` / `none`, seconds since the holder last checked in, and their name. Computed on the server. |
+| `claim_game_lanes(game, wanted, take_over, display_name)` | Start tracking the lanes in `wanted`, or renew your lease (the app calls it every ~15 s with the lanes it holds). Each lane succeeds if it is free, already yours, or its holder has been silent for 120 s, or if `take_over` is true; a lane someone else holds is left alone, so asking for both can come back with just one. One atomic statement per lane. |
+| `release_game_lanes(game, lanes)` | Hand your lanes back (`null` = all of yours). Only ever releases your own. |
+
+Which stat is in which lane is decided in the app (`LANE_OF` in `src/lib/lanes.ts`), not in the database, so moving a stat between lanes needs no SQL.
+
+Run it at the same time you deploy this version of the app. A phone still running the previous version calls the dropped functions, so it falls back to "anyone can tap" until it reloads; the new version without this migration does the same. Stats are never affected either way.

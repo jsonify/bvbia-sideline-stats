@@ -35,9 +35,10 @@ describe('inviteMessage', () => {
     expect(lines).toContain(link)
     expect(lines).toContain('ABC234')
   })
-  it('explains that one parent tracks a game at a time and the rest can watch and take over', () => {
-    expect(text).toMatch(/One parent tracks each game at a time/)
-    expect(text).toMatch(/watch live and take over/)
+  it('explains that parents can split a game between defense and offense, or one can track everything, and the rest can watch', () => {
+    expect(text).toMatch(/one on defense and one on offense/)
+    expect(text).toMatch(/one parent can track everything/)
+    expect(text).toMatch(/watch live/)
   })
 })
 
