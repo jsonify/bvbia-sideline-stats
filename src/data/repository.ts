@@ -1,11 +1,12 @@
 // SHARED CONTRACT — the only way UI code touches data. Implemented by the data-layer agent.
 import type { Game, NewStatEvent, StatEvent, Team, TeamBranding, Uuid } from '../types'
+import type { Lane } from '../lib/lanes'
 
 export type SyncState = 'synced' | 'syncing' | 'offline' | 'error'
 
 /**
- * Who is tracking a game right now. Only one parent tracks a game at a time; everyone else watches live.
- *  me     this phone holds the game
+ * Who is tracking one lane of a game right now. A lane has one tracker at a time, so the same play is never tapped twice.
+ *  me     this phone holds the lane
  *  other  another parent holds it (and checked in `idleSeconds` ago)
  *  none   nobody does: never claimed, handed off, or the last tracker went quiet for too long
  */
@@ -15,6 +16,9 @@ export interface GameTracker {
   /** The tracker's chosen name (from their Settings), if they set one. */
   name: string | null
 }
+
+/** Every lane of a game and who has it. One phone can hold both (tracking everything) or the phones can split them. */
+export type GameLanes = Record<Lane, GameTracker>
 
 export interface Repository {
   /** The active team on this device (null → show onboarding). Games and stats are always scoped to it. */
@@ -44,19 +48,23 @@ export interface Repository {
   undoEvent(eventId: Uuid): Promise<void>
 
   /**
-   * Tracking lease. One parent tracks a game at a time so the same play is never tapped twice.
+   * Tracking leases, one per lane. Each lane is tracked by one phone at a time so the same play is never tapped twice,
+   * and the lanes can go to different phones (defense on one, offense on another) or both to one.
    * It only coordinates who the UI lets tap: stat events are never rejected, so taps made offline are never lost.
-   * All three reject when the cloud can't be reached; callers should carry on tracking (offline-first).
+   * These reject when the cloud can't be reached; callers should carry on tracking (offline-first).
    */
-  getTracker(gameId: Uuid): Promise<GameTracker>
-  /** Start (or keep) tracking. Fails to `other` if someone else holds a live lease, unless `takeOver`. Call every ~15s to stay the tracker. */
-  claimTracker(gameId: Uuid, opts?: { takeOver?: boolean }): Promise<GameTracker>
+  getLanes(gameId: Uuid): Promise<GameLanes>
+  /**
+   * Start (or keep) tracking these lanes. A lane someone else holds stays theirs unless `takeOver`; the answer says
+   * which lanes you ended up with, so asking for both can come back with just one. Call every ~15s to stay the tracker.
+   */
+  claimLanes(gameId: Uuid, lanes: Lane[], opts?: { takeOver?: boolean }): Promise<GameLanes>
   /** This device's "your name", shown to other parents while you track. Empty = not set. */
   getDisplayName(): Promise<string>
   setDisplayName(name: string): Promise<void>
-  /** Hand the game back so another parent can start tracking straight away. */
-  releaseTracker(gameId: Uuid): Promise<void>
-  /** Fires when anyone claims or releases a game on the active team (so a takeover shows up immediately). */
+  /** Hand lanes back (default: all of yours) so another parent can start tracking them straight away. */
+  releaseLanes(gameId: Uuid, lanes?: Lane[]): Promise<void>
+  /** Fires when anyone claims or releases a lane on the active team (so a takeover shows up immediately). */
   onTrackerChange(cb: () => void): () => void
 
   /** Subscribe to any change (local or remote) so UIs refresh. Returns unsubscribe. */

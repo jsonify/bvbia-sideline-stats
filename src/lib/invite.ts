@@ -24,7 +24,7 @@ export function inviteMessage(teamName: string, code: string, link: string = inv
     '',
     '3) Tap "Join team". That\'s it!',
     '',
-    'One parent tracks each game at a time. If someone else is already tracking, you can watch live and take over from the game screen.',
+    'Two parents can track a game at once: one on defense and one on offense (or one parent can track everything). Open the game, pick what you want to track, and watch live the rest of the time.',
   ].join('\n')
 }
 

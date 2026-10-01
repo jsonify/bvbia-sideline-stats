@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useRepo } from '../../data/context'
 
-/** Optional name shown to other parents while you track ("Sam is tracking this game"). Stored on this device. */
+/** Optional name shown to other parents while you track ("Sam is tracking defense"). Stored on this device. */
 export function YourName() {
   const repo = useRepo()
   const [saved, setSaved] = useState<string | null>(null)

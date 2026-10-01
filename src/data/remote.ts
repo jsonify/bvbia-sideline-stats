@@ -3,7 +3,8 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Game, StatEvent, Team, TeamBranding } from '../types'
 import type { GameRec } from './db'
 import { PermanentError, type QueueOp } from './queue'
-import type { GameTracker } from './repository'
+import type { GameLanes, GameTracker } from './repository'
+import { LANES, type Lane } from '../lib/lanes'
 
 export interface RemoteApi {
   userId(): Promise<string>
@@ -14,9 +15,9 @@ export interface RemoteApi {
   push(op: QueueOp): Promise<void>
   pull(teamId: string): Promise<{ games: GameRec[]; events: StatEvent[] }>
   watch(teamId: string, onChange: () => void, onTeamChange?: () => void): () => void
-  getTracker(gameId: string): Promise<GameTracker>
-  claimTracker(gameId: string, takeOver: boolean, name: string): Promise<GameTracker>
-  releaseTracker(gameId: string): Promise<void>
+  getLanes(gameId: string): Promise<GameLanes>
+  claimLanes(gameId: string, lanes: Lane[], takeOver: boolean, name: string): Promise<GameLanes>
+  releaseLanes(gameId: string, lanes: Lane[]): Promise<void>
   /** Separate from `watch` so a deployment without the tracker migration can't break live stat sync. */
   watchTrackers(teamId: string, onChange: () => void): () => void
 }
@@ -52,6 +53,13 @@ export function toEventRow(e: StatEvent & { teamId?: string }) {
 }
 
 const trackerFromRow = (r: any): GameTracker => ({ holder: r.holder, idleSeconds: r.idle_seconds ?? null, name: r.name ?? null })
+/** The tracker functions answer with one row per lane; a lane missing from the answer is simply nobody's. */
+const lanesFromRows = (rows: any): GameLanes => {
+  const out = {} as GameLanes
+  for (const l of LANES) out[l] = { holder: 'none', idleSeconds: null, name: null }
+  for (const r of Array.isArray(rows) ? rows : [rows]) if (r && LANES.includes(r.lane)) out[r.lane as Lane] = trackerFromRow(r)
+  return out
+}
 
 const PAGE = 500
 
@@ -131,21 +139,21 @@ export function createSupabaseRemote(url: string, key: string): RemoteApi {
         .subscribe()
       return () => { void sb.removeChannel(ch) }
     },
-    async getTracker(gameId) {
+    async getLanes(gameId) {
       await userId()
-      const { data, error } = await sb.rpc('get_game_tracker', { game: gameId })
+      const { data, error } = await sb.rpc('get_game_lanes', { game: gameId })
       if (error) throw new Error(error.message)
-      return trackerFromRow(Array.isArray(data) ? data[0] : data)
+      return lanesFromRows(data)
     },
-    async claimTracker(gameId, takeOver, name) {
+    async claimLanes(gameId, lanes, takeOver, name) {
       await userId()
-      const { data, error } = await sb.rpc('claim_game_tracker', { game: gameId, take_over: takeOver, display_name: name })
+      const { data, error } = await sb.rpc('claim_game_lanes', { game: gameId, wanted: lanes, take_over: takeOver, display_name: name })
       if (error) throw new Error(error.message)
-      return trackerFromRow(Array.isArray(data) ? data[0] : data)
+      return lanesFromRows(data)
     },
-    async releaseTracker(gameId) {
+    async releaseLanes(gameId, lanes) {
       await userId()
-      const { error } = await sb.rpc('release_game_tracker', { game: gameId })
+      const { error } = await sb.rpc('release_game_lanes', { game: gameId, lanes })
       if (error) throw new Error(error.message)
     },
     watchTrackers(teamId, onChange) {

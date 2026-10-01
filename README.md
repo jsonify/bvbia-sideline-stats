@@ -10,7 +10,7 @@ Three stats, tracked for the whole team (not individual players):
 | **First contact** | Clean / Miss, tagged Through ball or Long ball | Clean-touch % (overall and per ball type) |
 | **Box entries** | Shot / No shot | % of entries that produced a shot |
 
-Mistaps are safe: every tap can be undone. **One parent tracks a game at a time** so the same play is never counted twice. Everyone else on the team can open the live game and watch the numbers update, and can take over if the tracker hands off or goes quiet (see [Tracking a game with several parents](#tracking-a-game-with-several-parents)).
+Mistaps are safe: every tap can be undone. **Split the work or do it all:** one parent can track everything, or two parents can each take a side (**Defense** or **Offense**) on their own phones, so there are more eyes on the field. Each stat is tapped by exactly one phone, so a play is never counted twice. Anyone else on the team can open the live game and watch the numbers update (see [Tracking a game with several parents](#tracking-a-game-with-several-parents)).
 
 ## Quickstart (no accounts, no backend)
 
@@ -40,24 +40,36 @@ Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (copy `.env.example` to `.e
 
 ### Tracking a game with several parents
 
-Only one phone tracks a game at a time; it holds a short **lease** on the game.
+A game has two **lanes**, and each lane is tracked by one phone at a time:
+
+| Lane | Stats |
+|---|---|
+| **Defense** | Defensive 1v1s, first contact |
+| **Offense** | Box entries |
+
+A phone can hold both lanes (**Everything**, the default) or just one. Pick what you track with the **What you track** switch at the top of the game screen. Which stat belongs to which lane is one small map in `src/lib/lanes.ts`.
 
 | Situation | What happens |
 |---|---|
-| Open a live game nobody is tracking | You become the tracker and can tap. |
-| Open a game someone else is tracking | You watch live (buttons off, numbers update as they tap). A banner names them ("Sam is tracking this game", or "Another parent" if they haven't set a name in Settings), shows they are active and offers **Take over tracking**, which asks you to confirm because it switches them to watching. |
-| The tracker leaves the screen, ends the game or taps back | The lease is released at once; watchers get **Start tracking** straight away, with no confirmation. |
-| The tracker's phone dies, loses signal or closes the app | Their phone checks in every 15 s. After 2 minutes of silence the game counts as free and anyone can start tracking. |
-| Someone takes over | The old tracker's screen switches to watching within a moment ("Another parent took over tracking"). Everything they tapped is kept. |
-| No signal when you open the game | You are never blocked: after a few seconds the app assumes you are the tracker and carries on. If it later finds someone else was already tracking, you switch to watching. |
+| You open a live game nobody is tracking | You track **everything**. Nothing to set up if you are on your own. |
+| A second parent opens it | They pick up every lane nobody holds. If you already hold both, they watch until you give one up or they take one. |
+| Splitting up | Whoever tracks everything taps **Defense** or **Offense**; the other lane is released at once. The second parent taps **Everything** or the lane that is now open, with no confirmation. |
+| Taking a lane someone is actively tracking | The app asks first ("Sam is tracking offense… Sam keeps defense"). They lose only that lane, keep the other, and are told on their screen. |
+| Watching | Buttons are off for lanes you do not hold; a note on each card says who has it, and numbers update as they tap. Your **Undo** only ever takes back taps in your own lanes. |
+| The tracker leaves the screen, ends the game or taps back | Their lanes are released at once; others can start tracking straight away. |
+| The tracker's phone dies, loses signal or closes the app | Their phone checks in every 15 s. After 2 minutes of silence their lanes count as free. |
+| No signal when you open the game | You are never blocked: after a few seconds the app assumes you hold the lanes and carries on. If it later finds someone else already had one, you switch to watching that lane. |
+| Ending the game | Any tracker can end it. It ends for everyone, so the confirm names anyone still tracking. |
 
-The lease only decides who the app lets tap; it never rejects stats. Taps recorded on a phone with no signal are still merged when it reconnects, even if someone took over meanwhile, so nothing is lost (worst case, a play is counted twice and can be undone). It needs the `0003_game_tracker.sql` migration; without it the app quietly falls back to letting anyone tap. In demo mode (one device) you are always the tracker.
+Each phone has its **own 1st/2nd half switch**. A phone that opens the game late starts in the half the game is in, and a phone that sees another phone record in a later half moves up with it (it says so, and you can still go back by hand). When the game moves to the 2nd half, tap **2nd half** on each phone.
+
+The lease only decides who the app lets tap; it never rejects stats. Taps recorded on a phone with no signal are still merged when it reconnects, even if someone took the lane meanwhile, so nothing is lost (worst case, a play is counted twice and can be undone). It needs the `0005_tracker_lanes.sql` migration; without it the app quietly falls back to letting anyone tap. In demo mode (one device) you hold whatever you pick.
 
 Schema, row-level security and setup steps are in [docs/BACKEND.md](docs/BACKEND.md) and `supabase/migrations/`.
 
 ## Deploy in 5 steps (Vercel or Netlify)
 
-1. Create a free Supabase project and run the SQL in `supabase/migrations/`, in order (`0001` to `0003`; see [docs/BACKEND.md](docs/BACKEND.md)). Enable **Anonymous sign-ins** under Authentication.
+1. Create a free Supabase project and run the SQL in `supabase/migrations/`, in order (`0001`, then `0003` to `0005`; `0002` is no longer needed; see [docs/BACKEND.md](docs/BACKEND.md)). Enable **Anonymous sign-ins** under Authentication.
 2. Push this repo to GitHub.
 3. Import it in Vercel (or Netlify). Framework preset: **Vite**. Build command `npm run build`, output `dist`. `vercel.json` already contains the SPA rewrites.
 4. Add environment variables `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
