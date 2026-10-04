@@ -1,0 +1,61 @@
+/* The "i" button. Small to look at, but a full 44px target; the negative margins keep it from making its row taller. */
+.gd-info{flex:none;width:44px;height:44px;margin:-11px -8px -11px -4px;display:inline-grid;place-items:center;border:0;background:transparent;border-radius:50%;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.gd-info-i{display:grid;color:var(--muted)}
+.gd-info:hover .gd-info-i,.gd-info:active .gd-info-i{color:var(--text)}
+
+/* The sheet: a fixed bar with the tabs and a close button, and a body that scrolls underneath it. */
+.gd-sheet{padding:0;gap:0;overflow:hidden;height:90dvh}
+.gd-sheet .sheet-handle{flex:none;margin:10px auto 4px}
+.gd-bar{flex:none;display:flex;align-items:center;gap:var(--s-2);padding:var(--s-2) var(--s-3) var(--s-3) var(--s-4);border-bottom:1px solid var(--border)}
+.gd-tabs{flex:1;min-width:0}
+.gd-tabs>button{padding:0 4px;font-size:var(--fs-sm);white-space:nowrap}
+.gd-x{flex:none;width:44px;height:44px;display:grid;place-items:center;border:0;border-radius:50%;background:var(--surface-2);color:var(--text);cursor:pointer;touch-action:manipulation}
+.gd-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:var(--s-4) var(--s-5) calc(var(--s-5) + var(--safe-bottom));display:flex;flex-direction:column;gap:var(--s-4)}
+.gd-body:focus{outline:none}
+.gd-title{font-size:var(--fs-2xl);font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.gd-lead{font-size:var(--fs-md);line-height:1.5}
+.gd-why{padding:var(--s-3) var(--s-4);border-radius:var(--radius-sm);background:var(--surface-2);font-size:var(--fs-sm);line-height:1.45}
+.gd-sec{display:flex;flex-direction:column;gap:var(--s-3)}
+.gd-sec h3{font-size:var(--fs-xl);font-weight:800;letter-spacing:-.01em}
+.gd-about{color:var(--muted);line-height:1.45}
+
+/* How to read the pictures */
+.gd-key{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:var(--s-2) var(--s-4);color:var(--muted);font-size:var(--fs-xs);font-weight:600}
+.gd-key li{display:inline-flex;align-items:center;gap:6px}
+
+/* One picture per button, with the button's own colour and label beneath it */
+.gd-fig{margin:0;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--surface)}
+.gd-fig.good{border-color:var(--good)}.gd-fig.bad{border-color:var(--bad)}
+.gd-fig figcaption{padding:var(--s-3) var(--s-4) var(--s-4);display:flex;flex-direction:column;gap:var(--s-2);align-items:flex-start}
+.gd-fig figcaption p{line-height:1.45}
+.gd-pill{display:inline-flex;align-items:center;gap:6px;padding:2px 12px 2px 8px;min-height:30px;border-radius:var(--radius-pill);border:2px solid;font-weight:800;font-size:var(--fs-md)}
+.gd-pill i{font-style:normal;font-size:var(--fs-lg);line-height:1}
+.gd-pill.good{color:var(--good);background:var(--good-soft);border-color:var(--good)}
+.gd-pill.bad{color:var(--bad);background:var(--bad-soft);border-color:var(--bad)}
+
+.gd-tip{padding:var(--s-3) var(--s-4);border-radius:var(--radius-sm);background:var(--brand-soft);color:var(--text);font-size:var(--fs-sm);line-height:1.45}
+.gd-words-h{font-size:var(--fs-sm);font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.gd-words{margin:0;display:flex;flex-direction:column;gap:var(--s-3)}
+.gd-words dt{font-weight:800}.gd-words dd{margin:0;color:var(--muted);line-height:1.4}
+.gd-note{color:var(--muted);font-size:var(--fs-sm);line-height:1.45}
+
+/* The pictures. Every colour is a theme token, so they hold up in dark mode and with any team accent. */
+.gd-scene{display:block;width:100%;height:auto}
+.gd-grass{fill:var(--surface-2);fill:color-mix(in srgb,var(--good) 15%,var(--surface))}
+.gd-lines *{fill:none;stroke:var(--muted);stroke-width:1.5;opacity:.75;vector-effect:non-scaling-stroke}
+.gd-lines .lit{fill:color-mix(in srgb,var(--brand) 26%,transparent);stroke:var(--text);opacity:1}
+.gd-lines .spot{fill:var(--muted);stroke:none}
+.gd-lines .goal{fill:var(--surface);stroke:var(--text);opacity:1}
+.gd-us{fill:var(--brand);stroke:var(--text);stroke-width:2}
+.gd-them{fill:var(--text);stroke:var(--surface);stroke-width:2}
+.gd-ball{fill:var(--surface);stroke:var(--text);stroke-width:2.5}
+.gd-arrow .line{fill:none;stroke:var(--text);stroke-width:3;stroke-linecap:round}
+.gd-arrow .head{fill:var(--text)}
+.gd-arrow.run .line{stroke-dasharray:1 7;stroke-width:3.5}
+.gd-arrow.good .line{stroke:var(--good)}.gd-arrow.good .head{fill:var(--good)}
+.gd-arrow.bad .line{stroke:var(--bad)}.gd-arrow.bad .head{fill:var(--bad)}
+.gd-badge circle{stroke:none}
+.gd-badge path{fill:none;stroke:var(--surface);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.gd-badge.good circle{fill:var(--good)}.gd-badge.bad circle{fill:var(--bad)}
+.gd-missed{fill:none;stroke:var(--bad);stroke-width:3.5;stroke-linecap:round}
+.gd-label{fill:var(--muted);font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-family:var(--font)}

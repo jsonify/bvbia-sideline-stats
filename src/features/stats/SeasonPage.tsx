@@ -6,6 +6,7 @@ import type { Game, StatEvent } from '../../types'
 import { summarize } from '../../lib/summary'
 import { eventsToCsv, fmtPct, seasonToCsv } from '../../lib/export'
 import { download } from './insights'
+import { InfoButton } from '../guide/InfoButton'
 import { StatHero } from './StatHero'
 import './stats.css'
 
@@ -61,9 +62,9 @@ export default function SeasonPage() {
       ) : (
         <>
           <section className="hero" aria-label="Season totals">
-            <StatHero cls="d" label="Defensive 1v1s won" pct={total.duels.winPct} n={total.duels.won} d={total.duels.total} unit="1v1s" />
-            <StatHero cls="f" label="Clean first contact" pct={total.firstContact.cleanPct} n={total.firstContact.clean} d={total.firstContact.total} unit="balls" />
-            <StatHero cls="b" label="Box entries with a shot" pct={total.boxEntries.shotPct} n={total.boxEntries.shot} d={total.boxEntries.total} unit="entries" />
+            <StatHero cls="d" label="Defensive 1v1s won" pct={total.duels.winPct} n={total.duels.won} d={total.duels.total} unit="1v1s" info={<InfoButton topic="duel" />} />
+            <StatHero cls="f" label="Clean first contact" pct={total.firstContact.cleanPct} n={total.firstContact.clean} d={total.firstContact.total} unit="balls" info={<InfoButton topic="first_contact" />} />
+            <StatHero cls="b" label="Box entries with a shot" pct={total.boxEntries.shotPct} n={total.boxEntries.shot} d={total.boxEntries.total} unit="entries" info={<InfoButton topic="box_entry" />} />
           </section>
 
           {STATS.map((st) => {

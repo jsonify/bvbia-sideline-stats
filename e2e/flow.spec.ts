@@ -40,6 +40,19 @@ test('team -> game -> track -> undo -> end -> summary -> season', async ({ page 
   await tap('Box entry, no shot', 2)
   await shot(page, '05-tracker')
 
+  // The stat guide: an "i" on each card explains the stat in plain words and leaves the live game alone
+  await page.getByRole('button', { name: 'About First contact' }).click()
+  const guide = page.getByRole('dialog', { name: 'What each stat means' })
+  await expect(guide.getByRole('heading', { name: 'Through ball' })).toBeVisible()
+  await expect(guide.getByRole('img', { name: /rolls a pass along the ground between two of our defenders/ }).first()).toBeVisible()
+  await page.waitForTimeout(400) // let the sheet finish sliding up
+  await shot(page, '21-stat-guide')
+  await guide.getByRole('tab', { name: 'Box entries' }).click()
+  await expect(guide.getByText(/penalty area/).first()).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(guide).toHaveCount(0)
+  await expect(page.getByTestId('contact-tally')).toContainText('3 of 4') // nothing was tapped by looking around
+
   // Undo the last tap (a no-shot box entry): 2 shot / 1 no-shot
   await page.getByRole('button', { name: /^Undo last/ }).click()
   await expect(page.getByRole('button', { name: /^Undo last: .*/ })).toBeVisible()

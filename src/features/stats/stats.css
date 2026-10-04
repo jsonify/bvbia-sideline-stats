@@ -5,12 +5,14 @@
 :root[data-theme="dark"] .stats{--s-duel:#3987e5;--s-fc:#d95926;--s-box:#199e70}
 .stats h1{margin:0;font-family:var(--font-display);text-transform:uppercase;font-size:2.4rem;line-height:1;font-weight:800;letter-spacing:.01em}
 .stats h2{margin:0 0 8px;font-size:1rem}
+.stats .title-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .stats .sub{color:var(--muted);font-size:.9rem;margin:6px 0 0}
 .stats .back{color:var(--muted);text-decoration:none;font-size:.9rem}
 .stats .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
 .stats .hero{display:grid;gap:12px;grid-template-columns:1fr}
 @media(min-width:560px){.stats .hero{grid-template-columns:repeat(3,1fr)}}
 .stats .hero .card{border-top:4px solid var(--accent)}
+.stats .hero .label-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .stats .hero .label{font-size:.85rem;color:var(--muted);font-weight:600}
 .stats .hero .big{font-family:var(--font-display);font-size:3.2rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
 .stats .hero .of{color:var(--muted);font-size:.9rem}

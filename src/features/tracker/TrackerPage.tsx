@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { summarize } from '../../lib/summary'
 import { canThank } from '../../lib/thanks'
 import { ThanksHeart } from '../thanks/ThanksHeart'
+import { InfoButton } from '../guide/InfoButton'
 import { LANES, LANE_OF, ROLE_LABEL, lanesText, roleOf, type Lane, type Role } from '../../lib/lanes'
 import { RolePanel } from './RolePanel'
 import { StatCard } from './StatCard'
@@ -121,7 +122,7 @@ export default function TrackerPage() {
 
       {[
         { lane: LANE_OF.duel, el: (
-          <StatCard key="duel" id="duel" title="Defensive 1v1s" hint="Did we win the duel?"
+          <StatCard key="duel" id="duel" title="Defensive 1v1s" hint="Did we win the duel?" info={<InfoButton topic="duel" tracking />}
             tally={tallyText(s.duels.won, s.duels.total, s.duels.winPct)}
             periodTally={`${p.duels.won}/${p.duels.total}`} period={t.period} pct={s.duels.winPct} {...cardProps(LANE_OF.duel)}
             buttons={[
@@ -130,7 +131,7 @@ export default function TrackerPage() {
             ]} />
         ) },
         { lane: LANE_OF.first_contact, el: (
-          <StatCard key="contact" id="contact" title="First contact" hint="Through balls and long balls"
+          <StatCard key="contact" id="contact" title="First contact" hint="Through balls and long balls" info={<InfoButton topic="first_contact" tracking />}
             tally={tallyText(ft.clean, ft.total, ft.cleanPct)}
             periodTally={`${pf.clean}/${pf.total}`} period={t.period} pct={ft.cleanPct} {...cardProps(LANE_OF.first_contact)}
             extra={
@@ -148,7 +149,7 @@ export default function TrackerPage() {
             ]} />
         ) },
         { lane: LANE_OF.box_entry, el: (
-          <StatCard key="box" id="box" title="Box entries" hint="Got into the box: did we shoot?"
+          <StatCard key="box" id="box" title="Box entries" hint="Got into the box: did we shoot?" info={<InfoButton topic="box_entry" tracking />}
             tally={tallyText(s.boxEntries.shot, s.boxEntries.total, s.boxEntries.shotPct)}
             periodTally={`${p.boxEntries.shot}/${p.boxEntries.total}`} period={t.period} pct={s.boxEntries.shotPct} {...cardProps(LANE_OF.box_entry)}
             buttons={[

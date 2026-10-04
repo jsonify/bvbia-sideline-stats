@@ -19,16 +19,18 @@ interface Props {
   buttons: [StatButton, StatButton]
   disabled?: boolean
   extra?: ReactNode
+  /** The ⓘ that explains this stat, shown beside its name. */
+  info?: ReactNode
   /** Why the buttons are off when it is not this phone's stat, e.g. "Sam is tracking this". */
   note?: string
 }
 
-export function StatCard({ id, title, hint, tally, periodTally, period, pct, buttons, disabled, extra, note }: Props) {
+export function StatCard({ id, title, hint, tally, periodTally, period, pct, buttons, disabled, extra, info, note }: Props) {
   return (
     <section className="tk-card" aria-labelledby={`${id}-h`}>
       <header className="tk-card-head">
         <div>
-          <h2 id={`${id}-h`}>{title}</h2>
+          <div className="tk-title-row"><h2 id={`${id}-h`}>{title}</h2>{info}</div>
           <p className="tk-hint">{hint}</p>
           {note && <p className="tk-note">{note}</p>}
         </div>
