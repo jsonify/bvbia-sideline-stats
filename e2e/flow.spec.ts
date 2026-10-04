@@ -56,6 +56,9 @@ test('team -> game -> track -> undo -> end -> summary -> season', async ({ page 
   await expect(hero.getByRole('group', { name: 'Defensive 1v1s won' })).toContainText('75%')
   await expect(hero.getByRole('group', { name: 'Clean first contact' })).toContainText('75%')
   await expect(hero.getByRole('group', { name: 'Box entries with a shot' })).toContainText('67%')
+  // Game map: 3 + 1 1v1s, 3 + 1 first contacts at our end, 2 + 1 box entries (the undone one is gone) at theirs
+  await expect(page.getByRole('img', { name: /Game map.*Defending end: 4 1v1s, 4 first contacts. Attacking end: 3 box entries/ })).toBeVisible()
+  await expect(page.locator('svg.field .mk')).toHaveCount(11)
   await shot(page, '08-summary')
 
   // Season page

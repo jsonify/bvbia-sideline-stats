@@ -4,12 +4,11 @@ import { useRepo } from '../../data/context'
 import type { Game, StatEvent } from '../../types'
 import { summarize } from '../../lib/summary'
 import { categoryLabel, eventsToCsv, fmtPct, gameSummaryToText, outcomeLabel } from '../../lib/export'
-import { download, periodBreakdown, slug, takeaways } from './insights'
+import { CLS, download, periodBreakdown, POSITIVE, slug, takeaways } from './insights'
+import { FieldMap } from './FieldMap'
 import { StatHero } from './StatHero'
 import './stats.css'
 
-const POSITIVE = new Set(['won', 'clean', 'shot'])
-const CLS = { duel: 'd', first_contact: 'f', box_entry: 'b' } as const
 const LETTER = { duel: 'D', first_contact: 'F', box_entry: 'B' } as const
 const cell = (n: number, d: number) => (d === 0 ? '—' : <>{n}/{d} <small>{fmtPct((n / d) * 100)}</small></>)
 
@@ -79,6 +78,13 @@ export default function GameSummaryPage() {
         <h2 id="take">Coach's takeaways</h2>
         <ul className="take">{notes.map((n) => <li key={n}>{n}</li>)}</ul>
       </section>
+
+      {live.length > 0 && (
+        <section className="card" aria-labelledby="map">
+          <h2 id="map">Game map</h2>
+          <FieldMap events={events} />
+        </section>
+      )}
 
       <section className="card" aria-labelledby="per">
         <h2 id="per">By half</h2>

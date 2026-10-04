@@ -3,6 +3,11 @@ import { fmtPct } from '../../lib/export'
 
 export const SMALL = 5
 
+/** Outcomes that count as a good result (drawn filled). */
+export const POSITIVE = new Set(['won', 'clean', 'shot'])
+/** Class that picks each stat's colour (see .d/.f/.b in stats.css). */
+export const CLS = { duel: 'd', first_contact: 'f', box_entry: 'b' } as const
+
 /** Auto-generated plain-English takeaways (max 3). Careful with tiny samples. */
 export function takeaways(s: StatSummary): string[] {
   const out: string[] = []

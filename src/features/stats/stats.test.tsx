@@ -45,6 +45,18 @@ describe('GameSummaryPage', () => {
     expect(screen.getByRole('link', { name: 'Continue tracking' }).getAttribute('href')).toBe('/games/g1/track')
     expect(screen.getByText(/Small sample/)).toBeTruthy()
   })
+  it('draws every live event on the game map and skips undone ones', async () => {
+    const events = [
+      ev('g1', 'duel', 'won'), ev('g1', 'duel', 'lost'), ev('g1', 'first_contact', 'clean', { ballType: 'through_ball' }),
+      ev('g1', 'box_entry', 'shot'), ev('g1', 'box_entry', 'no_shot', { deletedAt: '2026-01-01T01:00:00Z' }),
+    ]
+    const { container } = renderGame(fakeRepo([mkGame('g1', 'Bears', '2026-01-01')], events), 'g1')
+    const map = await screen.findByRole('img', { name: /Game map/ })
+    expect(map.getAttribute('aria-label')).toBe('Game map, simulated positions. Defending end: 2 1v1s, 1 first contacts. Attacking end: 1 box entries.')
+    expect(container.querySelectorAll('svg.field .mk')).toHaveLength(4)
+    expect(container.querySelectorAll('svg.field .mk.pos')).toHaveLength(3)
+    expect(screen.getByText(/each dot is placed at random/)).toBeTruthy()
+  })
   it('handles zero events gracefully and hides continue for final', async () => {
     renderGame(fakeRepo([mkGame('g1', 'Bears', '2026-01-01')], []), 'g1')
     await screen.findByText('vs Bears')
