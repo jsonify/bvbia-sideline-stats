@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { RepoContext } from '../../data/context'
-import type { GameLanes, GameTracker, Repository } from '../../data/repository'
+import type { GameLanes, GameThanks, GameTracker, Repository } from '../../data/repository'
 import { LANES, type Lane } from '../../lib/lanes'
 import type { Game, StatEvent } from '../../types'
 import TrackerPage from './TrackerPage'
@@ -19,6 +19,7 @@ const sam = (idleSeconds = 3): GameTracker => ({ holder: 'other', idleSeconds, n
 function fakeRepo(status: Game['status'] = 'live', initial: GameTracker | GameLanes = ME) {
   let game: Game = { id: 'g1', teamId: 't', opponent: 'Rovers', date: '2026-01-01', home: true, periods: 2, status, createdAt: '', updatedAt: '' }
   const events: StatEvent[] = []
+  const hearts: GameThanks[] = []
   const subs = new Set<() => void>()
   const nudges = new Set<() => void>()
   let n = 0
@@ -39,6 +40,11 @@ function fakeRepo(status: Game['status'] = 'live', initial: GameTracker | GameLa
   const repo = {
     claimLanes, getLanes, releaseLanes,
     onTrackerChange: (cb: () => void) => { nudges.add(cb); return () => nudges.delete(cb) },
+    listThanks: async () => hearts.slice(),
+    setThanks: vi.fn(async (_id: string, on: boolean) => {
+      hearts.splice(0, hearts.length, ...hearts.filter((h) => !h.mine), ...(on ? [{ gameId: 'g1', name: null, mine: true, createdAt: 'x' }] : []))
+      subs.forEach((f) => f())
+    }),
     getGame: async () => game,
     saveGame: async (g: any) => (game = { ...game, ...g }),
     listEvents: async () => events.filter((e) => !e.deletedAt),
@@ -48,7 +54,9 @@ function fakeRepo(status: Game['status'] = 'live', initial: GameTracker | GameLa
     onSyncState: (cb: any) => { cb('offline', 2); return () => {} },
   } as unknown as Repository
   return {
-    repo, events, lease, claimLanes, getLanes, releaseLanes,
+    repo, events, lease, claimLanes, getLanes, releaseLanes, hearts,
+    /** Another parent gave a heart. */
+    giveHeart: (name: string | null) => { hearts.push({ gameId: 'g1', name, mine: false, createdAt: `2026-01-01T00:00:${String(hearts.length).padStart(2, '0')}Z` }); subs.forEach((f) => f()) },
     notify: () => subs.forEach((f) => f()),
     nudge: () => nudges.forEach((f) => f()),
     getGame: () => game,
@@ -513,5 +521,43 @@ describe('a bad connection never stops a parent tracking', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Take over' }))
     await screen.findByText(/Could not reach the server/)
     expect(btn('Duel won').disabled).toBe(true)
+  })
+})
+
+describe('thanks: a heart for whoever tracked the game', () => {
+  const heartBtn = () => screen.queryByRole('button', { name: /^Thanks/ }) as HTMLButtonElement | null
+
+  it('the parent tracking sees who thanked them but has no heart to give, and nothing at all before the first one', async () => {
+    const f = await setup('live', ME)
+    expect(heartBtn()).toBeNull()
+    expect(screen.queryByText(/Thanked by/)).toBeNull()
+    await act(async () => { f.giveHeart('Sam') })
+    expect(await screen.findByText('Thanked by Sam')).toBeTruthy()
+    await act(async () => { f.giveHeart(null) })
+    expect(await screen.findByText('Thanked by Sam and a parent')).toBeTruthy()
+    expect(heartBtn()).toBeNull()
+    expect(btn('Duel won').disabled).toBe(false) // the taps are untouched
+  })
+
+  it('a parent watching can give and take back a heart, and the hearts never count as taps', async () => {
+    const f = await setup('live', OTHER)
+    const b = heartBtn()!
+    expect(b.getAttribute('aria-pressed')).toBe('false')
+    fireEvent.click(b)
+    await waitFor(() => expect(heartBtn()!.getAttribute('aria-pressed')).toBe('true'))
+    expect(f.hearts).toHaveLength(1)
+    expect(await screen.findByText('Thanked by You')).toBeTruthy()
+    fireEvent.click(heartBtn()!)
+    await waitFor(() => expect(heartBtn()!.getAttribute('aria-pressed')).toBe('false'))
+    expect(f.events).toHaveLength(0)
+  })
+
+  it('is not offered before the game has started, and is offered to everyone once it is final', async () => {
+    await setup('scheduled', ME)
+    expect(heartBtn()).toBeNull()
+    cleanup()
+    setupNoWait('final', OTHER) // a finished game is never claimed, so there is no claim to wait for
+    await screen.findByText('vs Rovers')
+    expect(heartBtn()).toBeTruthy()
   })
 })

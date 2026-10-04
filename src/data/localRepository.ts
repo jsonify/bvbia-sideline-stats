@@ -1,7 +1,7 @@
 // Local-first Repository. Always reads/writes IndexedDB; if a `remote` is supplied,
 // writes are also queued for cloud upsert and remote changes are pulled into the cache.
 import type { Game, NewStatEvent, StatEvent, Team, TeamBranding, Uuid } from '../types'
-import type { GameLanes, GameTracker, Repository, SyncState } from './repository'
+import type { GameLanes, GameThanks, GameTracker, Repository, SyncState } from './repository'
 import { LANES, type Lane } from '../lib/lanes'
 import { openLocalDB, idbQueueStore, uuid, type GameRec, type LocalDB } from './db'
 import { WriteQueue, type QueueStore } from './queue'
@@ -38,8 +38,12 @@ export class LocalRepository implements Repository {
   private queue: WriteQueue | null = null
   private unwatch: (() => void) | null = null
   private unwatchTrackers: (() => void) | null = null
+  private unwatchThanks: (() => void) | null = null
   private watchedTeam: string | null = null
   private pulling: Promise<void> | null = null
+  private pullingThanks: Promise<void> | null = null
+  private thanksOps: Promise<unknown> = Promise.resolve() // hearts being sent, one at a time
+  private thanksEpoch = 0 // bumped whenever one of our hearts starts or finishes being sent
   private remote: RemoteApi | null
   private now: () => string
   private ready: Promise<void>
@@ -63,7 +67,7 @@ export class LocalRepository implements Repository {
     })
     this.queue.onState((s, n) => { this.lastState = [s, n] })
     if (typeof window !== 'undefined') {
-      window.addEventListener('online', () => { this.queue?.kick(); void this.pull(); void this.refreshTeam() })
+      window.addEventListener('online', () => { this.queue?.kick(); void this.pull(); void this.pullThanks(); void this.refreshTeam() })
       window.addEventListener('offline', () => void this.queue?.init())
     }
     await this.queue.init()
@@ -134,10 +138,13 @@ export class LocalRepository implements Repository {
     if (!this.remote || this.watchedTeam === team.id) return
     this.unwatch?.()
     this.unwatchTrackers?.()
+    this.unwatchThanks?.()
     this.watchedTeam = team.id
     this.unwatch = this.remote.watch(team.id, () => void this.pull(), () => void this.refreshTeam())
     this.unwatchTrackers = this.remote.watchTrackers(team.id, () => this.trackerListeners.forEach((l) => l()))
+    this.unwatchThanks = this.remote.watchThanks(team.id, () => void this.pullThanks())
     void this.backfill(team).then(() => this.pull())
+    void this.pullThanks()
     void this.refreshTeam()
   }
 
@@ -146,6 +153,8 @@ export class LocalRepository implements Repository {
     this.unwatch = null
     this.unwatchTrackers?.()
     this.unwatchTrackers = null
+    this.unwatchThanks?.()
+    this.unwatchThanks = null
     this.watchedTeam = null
   }
 
@@ -305,6 +314,7 @@ export class LocalRepository implements Repository {
       }
       await db.delete('kv', `backfill:${id}`)
     }
+    await db.delete('kv', `thanks:${id}`) // only a cache: it comes back with the team
     await this.writeTeams(rest)
     await this.setLocalOnly((await this.localOnlyIds()).filter((x) => x !== id))
     if ((await this.activeId()) === id) {
@@ -462,6 +472,71 @@ export class LocalRepository implements Repository {
   onTrackerChange(cb: () => void): () => void {
     this.trackerListeners.add(cb)
     return () => { this.trackerListeners.delete(cb) }
+  }
+
+  // --- thanks (a heart on a game) ---------------------------------------------------------------
+  // kv `thanks:<teamId>` = the hearts on that team's games, as last seen. They live apart from games/events and the write
+  // queue on purpose: a heart that can't be sent (no signal, or the thanks migration not run) must never hold up stats,
+  // so it is sent directly and undone on screen if it fails, rather than queued.
+
+  private async readThanks(teamId: string): Promise<GameThanks[]> {
+    return ((await (await this.dbp).get('kv', `thanks:${teamId}`)) as GameThanks[] | undefined) ?? []
+  }
+  private async writeThanks(teamId: string, rows: GameThanks[]) { await (await this.dbp).put('kv', rows, `thanks:${teamId}`) }
+
+  async listThanks(): Promise<GameThanks[]> {
+    await this.ready
+    const team = await this.activeId()
+    return team ? this.readThanks(team) : []
+  }
+
+  setThanks(gameId: Uuid, on: boolean): Promise<void> {
+    // One at a time, so a heart given and quickly taken back reaches the cloud in the order it was tapped.
+    const run = this.thanksOps.then(() => this.sendThanks(gameId, on))
+    this.thanksOps = run.catch(() => {})
+    return run
+  }
+
+  private async sendThanks(gameId: Uuid, on: boolean): Promise<void> {
+    await this.ready
+    const team = await this.requireTeam()
+    const mine = (t: GameThanks) => t.gameId === gameId && t.mine
+    const before = (await this.readThanks(team.id)).find(mine)
+    const name = (await this.getDisplayName()) || null
+    const put = async (heart: GameThanks | undefined) => {
+      const others = (await this.readThanks(team.id)).filter((t) => !mine(t))
+      await this.writeThanks(team.id, heart ? [...others, heart] : others)
+      this.emit()
+    }
+    this.thanksEpoch++
+    try {
+      await put(on ? { gameId, name, mine: true, createdAt: before?.createdAt ?? this.now() } : undefined) // answer the tap now
+      if (this.remote) {
+        try { await this.remote.setThanks(gameId, on, name ?? '') } catch (e) { await put(before); throw e }
+      }
+    } finally { this.thanksEpoch++ }
+    void this.pullThanks() // pick up the server's copy (and anyone else's hearts) right away
+  }
+
+  /** Merge the cloud's hearts into the cache. Silent when it fails (offline, or the thanks migration hasn't been run). */
+  private pullThanks(): Promise<void> {
+    if (!this.remote) return Promise.resolve()
+    if (this.pullingThanks) return this.pullingThanks
+    this.pullingThanks = (async () => {
+      try {
+        const team = await this.activeId()
+        if (!team) return
+        for (;;) {
+          await this.thanksOps // not while one of ours is on its way: that answer would still lack it
+          const epoch = this.thanksEpoch
+          const rows = await this.remote!.pullThanks(team)
+          if (epoch !== this.thanksEpoch) continue // one of ours started or finished meanwhile, so this answer may be stale: ask again
+          if (JSON.stringify(rows) !== JSON.stringify(await this.readThanks(team))) { await this.writeThanks(team, rows); this.emit() }
+          return
+        }
+      } catch { /* keep what we have */ } finally { this.pullingThanks = null }
+    })()
+    return this.pullingThanks
   }
 
   subscribe(cb: () => void): () => void {

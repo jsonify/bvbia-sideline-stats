@@ -5,6 +5,8 @@ import type { Game, StatEvent } from '../../types'
 import { summarize } from '../../lib/summary'
 import { categoryLabel, eventsToCsv, fmtPct, gameSummaryToText, outcomeLabel } from '../../lib/export'
 import { CLS, download, periodBreakdown, POSITIVE, slug, takeaways } from './insights'
+import { canThank } from '../../lib/thanks'
+import { ThanksHeart } from '../thanks/ThanksHeart'
 import { FieldMap } from './FieldMap'
 import { StatHero } from './StatHero'
 import './stats.css'
@@ -58,6 +60,7 @@ export default function GameSummaryPage() {
       <header>
         <h1>{game.home ? 'vs' : '@'} {game.opponent}</h1>
         <p className="sub">{dateLabel}{game.location ? ` · ${game.location}` : ''} · {game.status === 'final' ? 'Final' : game.status === 'live' ? 'In progress' : 'Scheduled'}</p>
+        {canThank(game.status) && <ThanksHeart gameId={game.id} />}
       </header>
 
       <div className="actions">

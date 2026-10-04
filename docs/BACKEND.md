@@ -61,3 +61,15 @@ After `0004`, run `supabase/migrations/0005_tracker_lanes.sql`. A game now has t
 Which stat is in which lane is decided in the app (`LANE_OF` in `src/lib/lanes.ts`), not in the database, so moving a stat between lanes needs no SQL.
 
 Run it at the same time you deploy this version of the app. A phone still running the previous version calls the dropped functions, so it falls back to "anyone can tap" until it reloads; the new version without this migration does the same. Stats are never affected either way.
+
+## Thank the trackers with a heart: run `0006_game_thanks.sql`
+
+After `0005`, run `supabase/migrations/0006_game_thanks.sql`. It adds a `game_thanks` table (one row per parent per game, with the name they had set) and one function the app calls:
+
+| Function | What it does |
+|---|---|
+| `set_game_thanks(game, given, display_name)` | Give (`given = true`) or take back your heart on a game. Giving needs a game that is live or final; taking back always works. Giving twice keeps the first time, taking back twice does nothing. Only ever touches your own row, and only for a game on a team you belong to. |
+
+The table has read-only row-level security for team members; all changes go through the function. Taking a heart back is a soft delete (`deleted_at`), like undoing a tap, so the change reaches other phones over realtime (Realtime cannot filter hard deletes by team). The table is in the realtime publication on its own channel, so a missing migration cannot affect live stats.
+
+**It never touches the stats.** Hearts are read and written apart from `games`, `stat_events` and the write queue, so a heart that can't be sent (no signal, or this migration not run) can't hold up a single tap. The app sends it directly: it shows at once, and if the cloud can't be reached it un-does itself and tells the parent. Run the migration at the same time you deploy this version of the app; until then the heart simply doesn't save.

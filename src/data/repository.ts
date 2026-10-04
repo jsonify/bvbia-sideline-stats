@@ -20,6 +20,17 @@ export interface GameTracker {
 /** Every lane of a game and who has it. One phone can hold both (tracking everything) or the phones can split them. */
 export type GameLanes = Record<Lane, GameTracker>
 
+/** One parent's heart on a game: "thanks for tracking". A parent has at most one per game. */
+export interface GameThanks {
+  gameId: Uuid
+  /** The parent's chosen name (from their Settings) when they gave it, if they set one. */
+  name: string | null
+  /** Given from this phone. */
+  mine: boolean
+  /** ISO timestamp. */
+  createdAt: string
+}
+
 export interface Repository {
   /** The active team on this device (null → show onboarding). Games and stats are always scoped to it. */
   getTeam(): Promise<Team | null>
@@ -66,6 +77,17 @@ export interface Repository {
   releaseLanes(gameId: Uuid, lanes?: Lane[]): Promise<void>
   /** Fires when anyone claims or releases a lane on the active team (so a takeover shows up immediately). */
   onTrackerChange(cb: () => void): () => void
+
+  /**
+   * Hearts on the active team's games, from every parent. Kept on the device, so it answers offline with what was last seen.
+   * It is only an acknowledgement: nothing here ever feeds the stats.
+   */
+  listThanks(): Promise<GameThanks[]>
+  /**
+   * Give (`on`) or take back this phone's heart on a game that is live or final. Shows at once, then is sent; in cloud
+   * mode it needs a connection, and rejects (after undoing what it showed) when the cloud can't be reached.
+   */
+  setThanks(gameId: Uuid, on: boolean): Promise<void>
 
   /** Subscribe to any change (local or remote) so UIs refresh. Returns unsubscribe. */
   subscribe(cb: () => void): () => void

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import type { Game, StatEvent } from '../../types'
-import type { Repository } from '../../data/repository'
+import type { GameThanks, Repository } from '../../data/repository'
 import { RepoContext } from '../../data/context'
 import GameSummaryPage from './GameSummaryPage'
 import SeasonPage from './SeasonPage'
@@ -17,14 +17,20 @@ let n = 0
 const ev = (gameId: string, category: string, outcome: string, extra: object = {}, period = 1) =>
   ({ id: `e${n++}`, gameId, category, outcome, period, createdAt: `2026-01-01T00:00:${String(n % 60).padStart(2, '0')}Z`, ...extra }) as StatEvent
 
-function fakeRepo(games: Game[], events: StatEvent[]): Repository {
+function fakeRepo(games: Game[], events: StatEvent[], hearts: GameThanks[] = []): Repository {
   const notImpl = () => { throw new Error('nope') }
+  const subs = new Set<() => void>()
   return {
+    listThanks: async () => hearts,
+    setThanks: async (id: string, on: boolean) => {
+      hearts = [...hearts.filter((h) => !h.mine), ...(on ? [{ gameId: id, name: null, mine: true, createdAt: 'x' }] : [])]
+      subs.forEach((f) => f())
+    },
     getTeam: async () => null, createTeam: notImpl, joinTeam: notImpl,
     listGames: async () => games, getGame: async (id: string) => games.find((g) => g.id === id) ?? null,
     saveGame: notImpl, deleteGame: notImpl,
     listEvents: async (id: string) => events.filter((e) => e.gameId === id), listAllEvents: async () => events,
-    addEvent: notImpl, undoEvent: notImpl, subscribe: () => () => {}, onSyncState: () => () => {},
+    addEvent: notImpl, undoEvent: notImpl, subscribe: (cb: () => void) => { subs.add(cb); return () => subs.delete(cb) }, onSyncState: () => () => {},
   } as unknown as Repository
 }
 
@@ -99,6 +105,29 @@ describe('GameSummaryPage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Share summary' }))
     await waitFor(() => expect(writeText).toHaveBeenCalled())
     expect(await screen.findByText('Summary copied to clipboard.')).toBeTruthy()
+  })
+  it('offers a heart to thank whoever tracked, on live and final games but not before kickoff', async () => {
+    const heart = () => screen.queryByRole('button', { name: /^Thanks/ })
+    const live = renderGame(fakeRepo([mkGame('g1', 'Bears', '2026-01-01', 'live')], []), 'g1')
+    await screen.findByText('vs Bears')
+    expect(heart()).toBeTruthy()
+    live.unmount()
+    const done = renderGame(fakeRepo([mkGame('g1', 'Bears', '2026-01-01')], [], [{ gameId: 'g1', name: 'Sam', mine: false, createdAt: 'x' }]), 'g1')
+    expect(await screen.findByText('Thanked by Sam')).toBeTruthy()
+    done.unmount()
+    renderGame(fakeRepo([mkGame('g1', 'Bears', '2026-01-01', 'scheduled')], []), 'g1')
+    await screen.findByText('vs Bears')
+    expect(heart()).toBeNull()
+  })
+  it('gives and takes back a heart without changing a single stat', async () => {
+    const events = [ev('g1', 'duel', 'won'), ev('g1', 'duel', 'lost')]
+    renderGame(fakeRepo([mkGame('g1', 'Bears', '2026-01-01')], events), 'g1')
+    const before = (await screen.findByText('1 of 2 1v1s')).textContent
+    fireEvent.click(await screen.findByRole('button', { name: /^Thanks/ }))
+    expect(await screen.findByText('Thanked by You')).toBeTruthy()
+    expect(screen.getByText('1 of 2 1v1s').textContent).toBe(before)
+    fireEvent.click(screen.getByRole('button', { name: /^Thanks/ }))
+    await waitFor(() => expect(screen.queryByText(/Thanked by/)).toBeNull())
   })
   it('shows not found', async () => {
     renderGame(fakeRepo([], []), 'zzz')
