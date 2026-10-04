@@ -34,6 +34,8 @@ export function makeFakeRepo(team: Team | null = null): Repository & { games: Ga
     setDisplayName: async () => {},
     releaseLanes: async () => {},
     onTrackerChange: () => () => {},
+    listThanks: async () => [],
+    setThanks: async () => {},
     subscribe: () => () => {},
     onSyncState: () => () => {},
   }

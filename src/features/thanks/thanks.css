@@ -1,0 +1,23 @@
+/* A heart to say thanks for tracking a game. Shared by the summary, the tracker and the games list. */
+.th,.th-tag{--heart:#d6204f}
+.th{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:0 0 12px}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .th,:root:not([data-theme=light]) .th-tag{--heart:#ff6b8f}}
+:root[data-theme=dark] .th,:root[data-theme=dark] .th-tag{--heart:#ff6b8f}
+.th-btn{appearance:none;display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px 0 12px;border-radius:99px;
+  border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit;font-weight:700;cursor:pointer;touch-action:manipulation}
+.th-btn .icon{color:var(--muted);transition:transform .15s var(--ease)}
+.th-btn b{font-variant-numeric:tabular-nums;color:var(--muted);font-weight:700}
+.th-btn[aria-pressed=true]{border-color:var(--heart);background:color-mix(in srgb,var(--heart) 12%,var(--surface))}
+.th-btn[aria-pressed=true] .icon{color:var(--heart)}
+.th-btn[aria-pressed=true] b{color:var(--text)}
+.th-btn:active .icon{transform:scale(1.25)}
+.th-btn:focus-visible{outline:3px solid var(--ring);outline-offset:2px}
+.th-count,.th-tag{display:inline-flex;align-items:center;gap:4px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--heart);vertical-align:bottom}
+.th-tag .icon{flex:none}
+.th-names{color:var(--muted);font-size:14px}
+.th-error{flex-basis:100%;color:var(--bad);font-size:14px;font-weight:600}
+@media (prefers-reduced-motion:reduce){.th-btn .icon{transition:none}.th-btn:active .icon{transform:none}}
+/* the live card on the games list is yellow: keep the count in the card's own ink */
+.gm-live .th-tag{color:inherit}
+/* on the game summary the heart sits under the title, not between blocks */
+.stats header .th{margin:12px 0 0}

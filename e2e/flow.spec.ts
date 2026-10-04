@@ -68,6 +68,20 @@ test('team -> game -> track -> undo -> end -> summary -> season', async ({ page 
   await page.getByRole('radio', { name: '1st half' }).click()
   await expect(page.locator('svg.field-map .mk')).toHaveCount(11)
   await page.getByRole('radio', { name: 'Whole game' }).click()
+
+  // Thank whoever tracked with a heart: one tap gives it, another takes it back, and the stats don't move
+  const heart = page.getByRole('button', { name: /^Thanks/ })
+  await expect(page.getByText('Say thanks to whoever tracked this game')).toBeVisible()
+  await expect(heart).toHaveAttribute('aria-pressed', 'false')
+  await heart.click()
+  await expect(heart).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByText('Thanked by You')).toBeVisible()
+  await heart.click()
+  await expect(heart).toHaveAttribute('aria-pressed', 'false')
+  await expect(page.getByText('Thanked by')).toHaveCount(0)
+  await heart.click()
+  await expect(page.getByText('Thanked by You')).toBeVisible()
+  await expect(hero.getByRole('group', { name: 'Defensive 1v1s won' })).toContainText('75%')
   await shot(page, '08-summary')
 
   // Season page
@@ -80,6 +94,7 @@ test('team -> game -> track -> undo -> end -> summary -> season', async ({ page 
   // Games list now has the game
   await page.goto('/')
   await expect(page.getByText('Rapids U10').first()).toBeVisible()
+  await expect(page.locator('.th-tag')).toContainText('1') // the heart given on the summary shows on the game's card
   await shot(page, '10-games')
 
   expect(errors).toEqual([])

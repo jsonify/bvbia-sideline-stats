@@ -2,7 +2,10 @@ import '../branding/branding.css'
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useRepo } from '../../data/context'
+import { heartsFor } from '../../lib/thanks'
 import { summarize } from '../../lib/summary'
+import { ThanksTag } from '../thanks/ThanksHeart'
+import { useThanks } from '../thanks/useThanks'
 import type { Game, StatSummary } from '../../types'
 import '../shell/shell.css'
 import './games.css'
@@ -35,8 +38,8 @@ function Chips({ s }: { s: StatSummary }) {
   )
 }
 
-function GameCard({ g, s, open, onMenu, onDelete }: {
-  g: Game; s?: StatSummary; open: boolean; onMenu: () => void; onDelete: () => void
+function GameCard({ g, s, hearts, open, onMenu, onDelete }: {
+  g: Game; s?: StatSummary; hearts: number; open: boolean; onMenu: () => void; onDelete: () => void
 }) {
   const to = g.status === 'live' ? `/games/${g.id}/track` : `/games/${g.id}`
   return (
@@ -44,7 +47,7 @@ function GameCard({ g, s, open, onMenu, onDelete }: {
       <div className="ss-card">
         <Link to={to} className="ss-card-link">
           <div className="gm-opp">{g.home ? 'vs' : '@'} {g.opponent}</div>
-          <div className="gm-meta">{fmtDate(g.date)} · {g.home ? 'Home' : 'Away'} · {statusLabel[g.status]}{g.location ? ` · ${g.location}` : ''}</div>
+          <div className="gm-meta">{fmtDate(g.date)} · {g.home ? 'Home' : 'Away'} · {statusLabel[g.status]}{g.location ? ` · ${g.location}` : ''}{hearts > 0 && <> · <ThanksTag n={hearts} /></>}</div>
           {g.status === 'final' && s && <Chips s={s} />}
         </Link>
         <button className="ss-icon-btn" aria-label={`Options for ${g.opponent}`} aria-haspopup="menu" aria-expanded={open} onClick={onMenu}>⋮</button>
@@ -65,6 +68,7 @@ export default function GamesPage() {
   const [stats, setStats] = useState<Record<string, StatSummary>>({})
   const [menu, setMenu] = useState<string | null>(null)
   const [confirm, setConfirm] = useState<Game | null>(null)
+  const thanks = useThanks()
 
   const load = useCallback(async () => {
     const list = await repo.listGames()
@@ -82,7 +86,7 @@ export default function GamesPage() {
   const upcoming = games.filter((g) => g.status === 'scheduled').sort((a, b) => a.date.localeCompare(b.date))
   const final = games.filter((g) => g.status === 'final').sort((a, b) => b.date.localeCompare(a.date))
   const card = (g: Game) => (
-    <GameCard key={g.id} g={g} s={stats[g.id]} open={menu === g.id}
+    <GameCard key={g.id} g={g} s={stats[g.id]} hearts={heartsFor(thanks, g.id).length} open={menu === g.id}
       onMenu={() => setMenu(menu === g.id ? null : g.id)} onDelete={() => { setMenu(null); setConfirm(g) }} />
   )
 
@@ -97,14 +101,17 @@ export default function GamesPage() {
           <Link to="/games/new" className="ss-btn ss-btn-primary ss-btn-big">Add your first game</Link>
         </section>
       )}
-      {live.map((g) => (
+      {live.map((g) => {
+        const n = heartsFor(thanks, g.id).length
+        return (
         <section key={g.id} className="gm-live" aria-label="Live game">
           <div className="ss-eyebrow"><span className="gm-pulse" aria-hidden="true" /> Live now</div>
           <div className="gm-live-title">{g.home ? 'vs' : '@'} {g.opponent}</div>
-          <div className="gm-live-sub">{fmtDate(g.date)} · {g.home ? 'Home' : 'Away'}</div>
+          <div className="gm-live-sub">{fmtDate(g.date)} · {g.home ? 'Home' : 'Away'}{n > 0 && <> · <ThanksTag n={n} /></>}</div>
           <Link to={`/games/${g.id}/track`} className="ss-btn ss-btn-big">Continue tracking</Link>
         </section>
-      ))}
+        )
+      })}
       {upcoming.length > 0 && <><h2 className="ss-h2">Upcoming</h2><ul className="gm-list">{upcoming.map(card)}</ul></>}
       {final.length > 0 && <><h2 className="ss-h2">Final</h2><ul className="gm-list">{final.map(card)}</ul></>}
       {games.length > 0 && <Link to="/games/new" className="ss-fab" aria-label="New game"><span aria-hidden="true">＋</span> New game</Link>}

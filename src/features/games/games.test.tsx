@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { RepoContext } from '../../data/context'
 import { RequireTeam } from '../shell/Shell'
 import GameFormPage from './GameFormPage'
+import GamesPage from './GamesPage'
 import OnboardingPage from './OnboardingPage'
 import { makeFakeRepo } from './fakeRepo'
 
@@ -146,5 +147,26 @@ describe('joining from an invite', () => {
     expect(screen.getByRole('button', { name: 'Share code' })).toBeTruthy()
     expect(screen.getByText('How other parents join')).toBeTruthy()
     expect(screen.getByLabelText('Invite link').textContent).toContain('/welcome?code=ABC123')
+  })
+})
+
+describe('games list: hearts', () => {
+  const game = (id: string, opponent: string, status: 'scheduled' | 'live' | 'final') =>
+    ({ id, teamId: 't1', opponent, date: '2026-01-01', home: true, periods: 2 as const, status, createdAt: 'x', updatedAt: 'x' })
+  const heart = (gameId: string, name: string | null) => ({ gameId, name, mine: false, createdAt: 'x' })
+
+  it('shows how many parents said thanks on a finished or live game, and nothing when there are none', async () => {
+    const repo = { ...makeFakeRepo({ id: 't1', name: 'T', joinCode: 'X' }),
+      listGames: async () => [game('g1', 'Bears', 'final'), game('g2', 'Lions', 'final'), game('g3', 'Hawks', 'live'), game('g4', 'Owls', 'scheduled')],
+      listThanks: async () => [heart('g1', 'Sam'), heart('g1', null), heart('g1', 'Lee'), heart('g3', 'Sam')],
+    }
+    render(<RepoContext.Provider value={repo}><MemoryRouter><GamesPage /></MemoryRouter></RepoContext.Provider>)
+    await screen.findByText('Continue tracking')
+    const card = (name: string) => screen.getByText(new RegExp(`vs ${name}`)).closest('li, section') as HTMLElement
+    await waitFor(() => expect(card('Bears').textContent).toContain('3 thanks'))
+    expect(card('Hawks').textContent).toContain('1 thanks')
+    expect(card('Lions').textContent).not.toMatch(/thanks/)
+    expect(card('Owls').textContent).not.toMatch(/thanks/)
+    expect(card('Lions').querySelector('.th-tag')).toBeNull() // a game nobody has thanked just looks like a game: no "0"
   })
 })

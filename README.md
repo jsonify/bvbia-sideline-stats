@@ -16,6 +16,8 @@ Mistaps are safe: every tap can be undone. **Split the work or do it all:** one 
 
 The game summary includes a **game map**: a line drawing of the field with every tap as a dot (circle = 1v1, diamond = first contact, square = box entry; filled = good outcome). We record what happened, not where, so positions are simulated: 1v1s and first contacts land at random in our half, box entries always inside the attacking box. A toggle narrows the map to the 1st or 2nd half without moving any dot. Each dot's spot comes from its event id, so the picture is the same every time and on every phone.
 
+**Say thanks with a heart.** Tracking is quiet work, so any parent can tap the **♥ Thanks** heart on a game that is live or finished to thank whoever tracked it, and tap again to take it back. One heart per parent per game. The parent tracking sees who thanked them (a small ♥ line under the header, with no button, since they are the one being thanked), and the games list shows a heart count on each game; a game nobody has thanked just shows nothing. Hearts are only an acknowledgement and never touch the stats. A heart is sent straight away rather than queued, so it needs a signal: with none, it un-does itself and says so. It needs the `0006_game_thanks.sql` migration; without it the heart simply doesn't save and nothing else is affected. In demo mode (one device) it works too, on this device only.
+
 ## Quickstart (no accounts, no backend)
 
 ```bash
@@ -73,7 +75,7 @@ Schema, row-level security and setup steps are in [docs/BACKEND.md](docs/BACKEND
 
 ## Deploy in 5 steps (Vercel or Netlify)
 
-1. Create a free Supabase project and run the SQL in `supabase/migrations/`, in order (`0001`, then `0003` to `0005`; `0002` is no longer needed; see [docs/BACKEND.md](docs/BACKEND.md)). Enable **Anonymous sign-ins** under Authentication.
+1. Create a free Supabase project and run the SQL in `supabase/migrations/`, in order (`0001`, then `0003` to `0006`; `0002` is no longer needed; see [docs/BACKEND.md](docs/BACKEND.md)). Enable **Anonymous sign-ins** under Authentication.
 2. Push this repo to GitHub.
 3. Import it in Vercel (or Netlify). Framework preset: **Vite**. Build command `npm run build`, output `dist`. `vercel.json` already contains the SPA rewrites.
 4. Add environment variables `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.

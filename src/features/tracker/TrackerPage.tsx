@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { summarize } from '../../lib/summary'
+import { canThank } from '../../lib/thanks'
+import { ThanksHeart } from '../thanks/ThanksHeart'
 import { LANES, LANE_OF, ROLE_LABEL, lanesText, roleOf, type Lane, type Role } from '../../lib/lanes'
 import { RolePanel } from './RolePanel'
 import { StatCard } from './StatCard'
@@ -79,6 +81,9 @@ export default function TrackerPage() {
           ))}
         </div>
       </header>
+
+      {/* The parent tracking is the one being thanked, so they see the hearts; everyone else can give one. */}
+      {canThank(game.status) && <ThanksHeart gameId={game.id} readOnly={t.canTrack || (t.checking && !locked)} />}
 
       {t.watching && (
         <section className="tk-watch" role="status" aria-live="polite" aria-label="Who is tracking">

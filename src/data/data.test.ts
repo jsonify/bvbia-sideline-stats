@@ -157,7 +157,7 @@ describe('WriteQueue', () => {
 
 // --- Two devices sharing one (fake) cloud ---------------------------------------------------------
 import type { RemoteApi } from './remote'
-import type { GameLanes } from './repository'
+import type { GameLanes, GameThanks } from './repository'
 import type { Lane } from '../lib/lanes'
 import type { Team } from '../types'
 
@@ -166,10 +166,15 @@ function fakeCloud() {
   const games = new Map<string, any>()
   const events = new Map<string, any>()
   let codes = 0
+  let stamp = Date.UTC(2026, 0, 1)
   // Tracking leases, one per lane: same rules as supabase/migrations/0005_tracker_lanes.sql (120 s lease, take over, release).
   const LEASE = 120
   const leases = new Map<string, { user: string | null; seenAt: number; name: string | null }>()
   const trackerWatchers = new Set<() => void>()
+  // Hearts, same rules as supabase/migrations/0006_game_thanks.sql: one per parent per game, only on a started game, taking back is a soft delete.
+  const thanks = new Map<string, { gameId: string; user: string; name: string | null; createdAt: string; deleted: boolean }>()
+  const thanksWatchers = new Set<() => void>()
+  const thanksGates = new Map<string, Promise<void>>() // holds the next heart a parent sends until the test lets it through
   const clock = { now: 0, down: false }
   const ping = () => trackerWatchers.forEach((f) => f())
   const reach = () => { if (clock.down) throw new Error('Failed to fetch') }
@@ -202,6 +207,29 @@ function fakeCloud() {
       if (changed) ping()
     },
     watchTrackers: (_team, cb) => { trackerWatchers.add(cb); return () => { trackerWatchers.delete(cb) } },
+    watchThanks: (_team, cb) => { thanksWatchers.add(cb); return () => { thanksWatchers.delete(cb) } },
+    setThanks: async (gameId, on, name) => {
+      reach()
+      const gate = thanksGates.get(user)
+      thanksGates.delete(user)
+      await gate
+      const game = games.get(gameId)
+      if (!game || game.deletedAt) throw new Error('game not found')
+      const key = `${gameId}:${user}`
+      const cur = thanks.get(key)
+      if (on) {
+        if (game.status === 'scheduled') throw new Error('game has not started')
+        thanks.set(key, { gameId, user, name: name.trim().slice(0, 30) || null, createdAt: cur && !cur.deleted ? cur.createdAt : new Date(++stamp).toISOString(), deleted: false })
+      } else if (cur) thanks.set(key, { ...cur, deleted: true })
+      thanksWatchers.forEach((f) => f())
+    },
+    pullThanks: async (teamId) => {
+      reach()
+      return [...thanks.values()]
+        .filter((t) => !t.deleted && games.get(t.gameId)?.teamId === teamId)
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+        .map((t) => ({ gameId: t.gameId, name: t.name, mine: t.user === user, createdAt: t.createdAt }))
+    },
     userId: async () => user,
     myTeams: async () => [...teams.values()],
     createTeam: async (name) => { const t = { id: crypto.randomUUID(), name, joinCode: `CODE${++codes}` }; teams.set(t.id, t); return t },
@@ -222,7 +250,7 @@ function fakeCloud() {
     }),
     watch: () => () => {},
   })
-  return { api, games, events, teams, clock, trackerWatchers }
+  return { api, games, events, teams, clock, trackerWatchers, thanks, thanksWatchers, thanksGates }
 }
 const ev = (gameId: string, category = 'duel', outcome = 'won') => ({ gameId, category, outcome, period: 1 }) as any
 
@@ -457,5 +485,135 @@ describe('one tracker per lane', () => {
     await vi.waitFor(async () => expect((await b.listGames()).length).toBe(1))
     await b.addEvent(id, ev(id)) // b is only watching, but the data layer stays append-only and lossless
     await vi.waitFor(() => expect(cloud.events.size).toBe(1))
+  })
+})
+
+describe('thanks (a heart on a game)', () => {
+  const setup = async (status: 'scheduled' | 'live' | 'final' = 'live') => {
+    const cloud = fakeCloud()
+    const a = new LocalRepository({ dbName: `th-a${n++}`, remote: cloud.api('parent-a'), baseDelayMs: 1 })
+    const team = await a.createTeam('Thunder')
+    const game = await a.saveGame({ ...gameInput, status })
+    const b = new LocalRepository({ dbName: `th-b${n++}`, remote: cloud.api('parent-b'), baseDelayMs: 1 })
+    await b.joinTeam(team.joinCode)
+    await vi.waitFor(() => expect(cloud.games.size).toBe(1))
+    return { cloud, a, b, team, id: game.id }
+  }
+  /** "Sam*, Priya": who gave a heart, from this phone's point of view (* = mine). */
+  const who = (l: GameThanks[]) => l.map((t) => `${t.name ?? '?'}${t.mine ? '*' : ''}`).sort().join(',')
+
+  it('demo mode: a heart is given, kept with its name, and taken back, all on this device', async () => {
+    const r = repo()
+    await r.createTeam('A')
+    const g = await r.saveGame(gameInput)
+    const changed = vi.fn()
+    r.subscribe(changed)
+    await r.setDisplayName('Sam')
+    await r.setThanks(g.id, true)
+    expect(await r.listThanks()).toEqual([{ gameId: g.id, name: 'Sam', mine: true, createdAt: expect.any(String) }])
+    expect(changed).toHaveBeenCalled()
+    const first = (await r.listThanks())[0].createdAt
+    await r.setThanks(g.id, true) // already given: still one heart, from the same moment
+    expect(await r.listThanks()).toHaveLength(1)
+    expect((await r.listThanks())[0].createdAt).toBe(first)
+    await r.setThanks(g.id, false)
+    expect(await r.listThanks()).toEqual([])
+    await expect(r.setThanks(g.id, false)).resolves.toBeUndefined() // already taken back
+  })
+
+  it('needs a team, and keeps each team\'s hearts apart', async () => {
+    await expect(repo().setThanks('nope', true)).rejects.toThrow()
+    expect(await repo().listThanks()).toEqual([])
+    const r = repo()
+    const a = await r.createTeam('A')
+    const g = await r.saveGame(gameInput)
+    await r.setThanks(g.id, true)
+    await r.createTeam('B')
+    expect(await r.listThanks()).toEqual([])
+    await r.switchTeam(a.id)
+    expect(await r.listThanks()).toHaveLength(1)
+  })
+
+  it('two parents see each other\'s hearts, each marked as theirs or not, and a heart taken back disappears for both', async () => {
+    const { a, b, id } = await setup()
+    await a.setDisplayName('Sam')
+    await a.setThanks(id, true)
+    await vi.waitFor(async () => expect(who(await b.listThanks())).toBe('Sam'))
+    await b.setThanks(id, true) // b has no name set
+    await vi.waitFor(async () => expect(who(await a.listThanks())).toBe('?,Sam*'))
+    expect(who(await b.listThanks())).toBe('?*,Sam')
+    await a.setThanks(id, false)
+    await vi.waitFor(async () => expect(who(await b.listThanks())).toBe('?*'))
+    expect(who(await a.listThanks())).toBe('?')
+  })
+
+  it('works on a game that is still live and on a finished one, but not on one that has not started', async () => {
+    const live = await setup('live')
+    await expect(live.a.setThanks(live.id, true)).resolves.toBeUndefined()
+    const done = await setup('final')
+    await expect(done.a.setThanks(done.id, true)).resolves.toBeUndefined()
+    const later = await setup('scheduled')
+    await expect(later.a.setThanks(later.id, true)).rejects.toThrow('has not started')
+    expect(await later.a.listThanks()).toEqual([]) // what was shown for the tap is undone
+  })
+
+  it('without a connection it says so, undoes what it showed, and never turns into a queued sync error', async () => {
+    const { cloud, a, b, id } = await setup()
+    let sync = ''
+    a.onSyncState((s) => { sync = s })
+    await a.setThanks(id, true)
+    await vi.waitFor(async () => expect(who(await b.listThanks())).toBe('?'))
+
+    cloud.clock.down = true
+    await expect(a.setThanks(id, false)).rejects.toThrow()
+    expect(who(await a.listThanks())).toBe('?*') // the take-back did not happen, so the heart is still there
+    expect(who(await b.listThanks())).toBe('?') // and a phone offline still shows what it last saw
+    await expect(b.setThanks(id, true)).rejects.toThrow()
+    expect(who(await b.listThanks())).toBe('?') // nothing was left behind by the failed give
+
+    cloud.clock.down = false
+    await a.addEvent(id, ev(id)) // stats carry on syncing, and the failed take-back is not replayed
+    await vi.waitFor(() => expect(cloud.events.size).toBe(1))
+    expect(sync).not.toBe('error')
+    expect([...cloud.thanks.values()].map((t) => t.deleted)).toEqual([false])
+  })
+
+  it('a heart given and quickly taken back reaches the cloud in that order', async () => {
+    const { cloud, a, id } = await setup()
+    let release!: () => void
+    cloud.thanksGates.set('parent-a', new Promise<void>((res) => { release = res })) // the first one is slow
+    const give = a.setThanks(id, true)
+    const take = a.setThanks(id, false)
+    await new Promise((res) => setTimeout(res, 20)) // long enough for the take-back to overtake the give, if nothing held it back
+    release()
+    await Promise.all([give, take])
+    expect([...cloud.thanks.values()].map((t) => t.deleted)).toEqual([true])
+    expect(await a.listThanks()).toEqual([])
+  })
+
+  it('an answer from the cloud that predates my own heart does not wipe it off the screen', async () => {
+    const { cloud, a, b, id } = await setup()
+    await a.setDisplayName('Sam')
+    await b.setDisplayName('Priya')
+    let release!: () => void
+    cloud.thanksGates.set('parent-a', new Promise<void>((res) => { release = res }))
+    const sending = a.setThanks(id, true) // on its way, not yet in the cloud
+    await vi.waitFor(async () => expect(who(await a.listThanks())).toBe('Sam*'))
+    await b.setThanks(id, true) // makes a's phone ask the cloud for hearts, and the answer has no Sam in it
+    await new Promise((res) => setTimeout(res, 20))
+    expect(who(await a.listThanks())).toBe('Sam*')
+    release()
+    await sending
+    await vi.waitFor(async () => expect(who(await a.listThanks())).toBe('Priya,Sam*'))
+  })
+
+  it('hearts come back when a team is re-joined', async () => {
+    const { b, a, team, id } = await setup()
+    await a.setThanks(id, true)
+    await vi.waitFor(async () => expect(await b.listThanks()).toHaveLength(1))
+    await b.leaveTeam(team.id)
+    expect(await b.listThanks()).toEqual([])
+    await b.joinTeam(team.joinCode)
+    await vi.waitFor(async () => expect(await b.listThanks()).toHaveLength(1))
   })
 })

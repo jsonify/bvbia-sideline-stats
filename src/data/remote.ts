@@ -3,7 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Game, StatEvent, Team, TeamBranding } from '../types'
 import type { GameRec } from './db'
 import { PermanentError, type QueueOp } from './queue'
-import type { GameLanes, GameTracker } from './repository'
+import type { GameLanes, GameThanks, GameTracker } from './repository'
 import { LANES, type Lane } from '../lib/lanes'
 
 export interface RemoteApi {
@@ -20,6 +20,10 @@ export interface RemoteApi {
   releaseLanes(gameId: string, lanes: Lane[]): Promise<void>
   /** Separate from `watch` so a deployment without the tracker migration can't break live stat sync. */
   watchTrackers(teamId: string, onChange: () => void): () => void
+  /** Hearts on the team's games. Their own calls, apart from `pull` and `watch`, so a deployment without the thanks migration can't break stat sync. */
+  pullThanks(teamId: string): Promise<GameThanks[]>
+  setThanks(gameId: string, on: boolean, name: string): Promise<void>
+  watchThanks(teamId: string, onChange: () => void): () => void
 }
 
 const teamFromRow = (r: any): Team => ({
@@ -62,6 +66,10 @@ const lanesFromRows = (rows: any): GameLanes => {
 }
 
 const PAGE = 500
+
+const thanksFromRow = (r: any, uid: string): GameThanks => ({
+  gameId: r.game_id, name: r.name ?? null, mine: r.user_id === uid, createdAt: r.created_at,
+})
 
 function wrap(error: { code?: string; message: string } | null) {
   if (!error) return
@@ -159,6 +167,28 @@ export function createSupabaseRemote(url: string, key: string): RemoteApi {
     watchTrackers(teamId, onChange) {
       const ch = sb.channel(`trackers-${teamId}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'game_trackers', filter: `team_id=eq.${teamId}` }, onChange)
+        .subscribe()
+      return () => { void sb.removeChannel(ch) }
+    },
+    async pullThanks(teamId) {
+      const uid = await userId()
+      const rows: any[] = []
+      for (let from = 0; ; from += PAGE) {
+        const r = await sb.from('game_thanks').select('*').eq('team_id', teamId).is('deleted_at', null)
+          .order('created_at').order('game_id').order('user_id').range(from, from + PAGE - 1)
+        if (r.error) throw new Error(r.error.message)
+        rows.push(...(r.data ?? []))
+        if ((r.data ?? []).length < PAGE) return rows.map((x) => thanksFromRow(x, uid))
+      }
+    },
+    async setThanks(gameId, on, name) {
+      await userId()
+      const { error } = await sb.rpc('set_game_thanks', { game: gameId, given: on, display_name: name })
+      if (error) throw new Error(error.message)
+    },
+    watchThanks(teamId, onChange) {
+      const ch = sb.channel(`thanks-${teamId}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'game_thanks', filter: `team_id=eq.${teamId}` }, onChange)
         .subscribe()
       return () => { void sb.removeChannel(ch) }
     },
