@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { StatEvent } from '../../types'
-import { END_OF, PITCH_H, PITCH_W, placeEvents } from './fieldPlacement'
+import { BOX_H, BOX_W, END_OF, PITCH_H, PITCH_W, placeEvents } from './fieldPlacement'
 
 let n = 0
 const ev = (category: string, outcome: string, extra: object = {}) =>
@@ -14,12 +14,21 @@ describe('placeEvents', () => {
     ...Array.from({ length: 5 }, () => ev('box_entry', 'shot')),
   ]
 
-  it('puts 1v1s and first contact in our half and box entries in the attacking third', () => {
-    for (const { event, x, y } of placeEvents(game)) {
-      if (END_OF[event.category] === 'defending') expect(x).toBeLessThan(PITCH_W / 2)
-      else expect(x).toBeGreaterThan(PITCH_W * 0.6)
-      expect(x).toBeGreaterThan(0); expect(x).toBeLessThan(PITCH_W)
+  it('puts 1v1s and first contact in our half', () => {
+    const ours = placeEvents(game).filter((p) => END_OF[p.event.category] === 'defending')
+    expect(ours).toHaveLength(16)
+    for (const { x, y } of ours) {
+      expect(x).toBeGreaterThan(0); expect(x).toBeLessThan(PITCH_W / 2)
       expect(y).toBeGreaterThan(0); expect(y).toBeLessThan(PITCH_H)
+    }
+  })
+
+  it('always puts box entries inside the attacking box, shot or not', () => {
+    const entries = placeEvents(Array.from({ length: 30 }, (_, i) => ev('box_entry', i % 2 ? 'shot' : 'no_shot')))
+    expect(entries).toHaveLength(30)
+    for (const { x, y } of entries) {
+      expect(x).toBeGreaterThan(PITCH_W - BOX_W); expect(x).toBeLessThan(PITCH_W)
+      expect(y).toBeGreaterThan((PITCH_H - BOX_H) / 2); expect(y).toBeLessThan((PITCH_H + BOX_H) / 2)
     }
   })
 
@@ -45,5 +54,12 @@ describe('placeEvents', () => {
     let closest = Infinity
     for (const a of dots) for (const b of dots) if (a !== b) closest = Math.min(closest, Math.hypot(a.x - b.x, a.y - b.y))
     expect(closest).toBeGreaterThan(3)
+  })
+
+  it('keeps a typical number of box entries from piling up inside the small box', () => {
+    const dots = placeEvents(Array.from({ length: 12 }, () => ev('box_entry', 'shot')))
+    let closest = Infinity
+    for (const a of dots) for (const b of dots) if (a !== b) closest = Math.min(closest, Math.hypot(a.x - b.x, a.y - b.y))
+    expect(closest).toBeGreaterThan(4.8)
   })
 })

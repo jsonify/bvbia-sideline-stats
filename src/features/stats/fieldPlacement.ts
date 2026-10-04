@@ -6,6 +6,9 @@ import type { StatCategory, StatEvent } from '../../types'
 /** Pitch size in metres. x runs from our goal line (0) to theirs, y across the width. */
 export const PITCH_W = 105
 export const PITCH_H = 68
+/** Penalty area ("the box") size in metres. */
+export const BOX_W = 16.5
+export const BOX_H = 40.32
 
 export type End = 'defending' | 'attacking'
 
@@ -14,14 +17,16 @@ export const END_OF: Record<StatCategory, End> = { duel: 'defending', first_cont
 
 interface Zone { x: [number, number]; y: [number, number] }
 const EDGE = 4 // keeps a dot clear of the touchlines
-/** Where a dot may land. Box entries stay in the attacking third, around the box, since that is what the stat means. */
+const BOX_EDGE = 2.6 // keeps a box entry's whole dot inside the lines of the box
+const BOX_TOP = (PITCH_H - BOX_H) / 2
+/** Where a dot may land: 1v1s and first contact anywhere in our half, box entries always inside their box. */
 const ZONES: Record<End, Zone> = {
   defending: { x: [EDGE, PITCH_W / 2 - EDGE], y: [EDGE, PITCH_H - EDGE] },
-  attacking: { x: [PITCH_W * 0.63, PITCH_W - EDGE], y: [EDGE, PITCH_H - EDGE] },
+  attacking: { x: [PITCH_W - BOX_W + BOX_EDGE, PITCH_W - BOX_EDGE], y: [BOX_TOP + BOX_EDGE, BOX_TOP + BOX_H - BOX_EDGE] },
 }
 
 /** Random spots tried per event; the one furthest from the dots already there wins, so dots spread out. */
-const CANDIDATES = 30
+const CANDIDATES = 100
 
 export interface Placed { event: StatEvent; x: number; y: number }
 

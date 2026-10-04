@@ -51,6 +51,10 @@ export function takeaways(s: StatSummary): string[] {
   return out.slice(0, 3)
 }
 
+/** "1st half" / "2nd half", or "Q1".."Q4" when the game is played in quarters (`count` = number of periods). */
+export const periodLabel = (p: number, count: number) =>
+  count > 2 ? `Q${p}` : p === 1 ? '1st half' : p === 2 ? '2nd half' : `Period ${p}`
+
 /** Summaries per period (1..n, extended if events exceed configured periods). */
 export function periodBreakdown(events: StatEvent[], periods: number): number[] {
   const max = Math.max(periods, ...events.map((e) => e.period), 1)
