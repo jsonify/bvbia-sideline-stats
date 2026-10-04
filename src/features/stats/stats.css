@@ -36,7 +36,9 @@
 .stats .legend{display:flex;flex-wrap:wrap;gap:12px;color:var(--muted);font-size:.8rem;margin-top:8px}
 .stats .field-box{max-width:560px;margin:0 auto}
 .stats .field-ends{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:.8rem;font-weight:600;padding:0 2.7%}
-.stats .field{display:block;width:100%;height:auto;margin-top:4px}
+.stats .field-period{margin-bottom:12px}
+.stats .field-period>button{font-size:.85rem;padding:0 4px;white-space:nowrap}
+.stats .field-map{display:block;width:100%;height:auto;margin-top:4px}
 .stats .pitch{fill:var(--surface-2);fill:color-mix(in srgb,var(--s-box) 9%,var(--surface))}
 .stats .pitch-lines{fill:none;stroke:var(--muted);stroke-width:1.25px;opacity:.6}
 .stats .pitch-lines *{vector-effect:non-scaling-stroke}

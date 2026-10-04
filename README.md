@@ -14,7 +14,7 @@ Three stats, tracked for the whole team (not individual players):
 
 Mistaps are safe: every tap can be undone. **Split the work or do it all:** one parent can track everything, or two parents can each take a side (**Defense** or **Offense**) on their own phones, so there are more eyes on the field. Each stat is tapped by exactly one phone, so a play is never counted twice. Anyone else on the team can open the live game and watch the numbers update (see [Tracking a game with several parents](#tracking-a-game-with-several-parents)).
 
-The game summary includes a **game map**: a line drawing of the field with every tap as a dot (circle = 1v1, diamond = first contact, square = box entry; filled = good outcome). We record what happened, not where, so positions are simulated: 1v1s and first contacts land at random in our half, box entries in the attacking third. Each dot's spot comes from its event id, so the picture is the same every time and on every phone.
+The game summary includes a **game map**: a line drawing of the field with every tap as a dot (circle = 1v1, diamond = first contact, square = box entry; filled = good outcome). We record what happened, not where, so positions are simulated: 1v1s and first contacts land at random in our half, box entries always inside the attacking box. A toggle narrows the map to the 1st or 2nd half without moving any dot. Each dot's spot comes from its event id, so the picture is the same every time and on every phone.
 
 ## Quickstart (no accounts, no backend)
 

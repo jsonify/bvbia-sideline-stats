@@ -58,7 +58,16 @@ test('team -> game -> track -> undo -> end -> summary -> season', async ({ page 
   await expect(hero.getByRole('group', { name: 'Box entries with a shot' })).toContainText('67%')
   // Game map: 3 + 1 1v1s, 3 + 1 first contacts at our end, 2 + 1 box entries (the undone one is gone) at theirs
   await expect(page.getByRole('img', { name: /Game map.*Defending end: 4 1v1s, 4 first contacts. Attacking end: 3 box entries/ })).toBeVisible()
-  await expect(page.locator('svg.field .mk')).toHaveCount(11)
+  await expect(page.locator('svg.field-map .mk')).toHaveCount(11)
+  // All box entries sit inside the attacking box (penalty area is x 88.5-105 of a 105 m pitch); the half toggle filters the dots
+  const boxXs = await page.locator('svg.field-map g:has(rect.mk.b)').evaluateAll((gs) => gs.map((g) => Number(/translate\(([\d.]+)/.exec(g.getAttribute('transform') ?? '')?.[1])))
+  expect(boxXs).toHaveLength(3)
+  for (const x of boxXs) expect(x).toBeGreaterThan(88.5)
+  await page.getByRole('radio', { name: '2nd half' }).click()
+  await expect(page.locator('svg.field-map .mk')).toHaveCount(0)
+  await page.getByRole('radio', { name: '1st half' }).click()
+  await expect(page.locator('svg.field-map .mk')).toHaveCount(11)
+  await page.getByRole('radio', { name: 'Whole game' }).click()
   await shot(page, '08-summary')
 
   // Season page

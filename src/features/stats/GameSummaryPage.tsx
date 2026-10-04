@@ -82,7 +82,7 @@ export default function GameSummaryPage() {
       {live.length > 0 && (
         <section className="card" aria-labelledby="map">
           <h2 id="map">Game map</h2>
-          <FieldMap events={events} />
+          <FieldMap events={events} periods={periodBreakdown(live, game.periods)} />
         </section>
       )}
 

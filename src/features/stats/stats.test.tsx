@@ -53,9 +53,37 @@ describe('GameSummaryPage', () => {
     const { container } = renderGame(fakeRepo([mkGame('g1', 'Bears', '2026-01-01')], events), 'g1')
     const map = await screen.findByRole('img', { name: /Game map/ })
     expect(map.getAttribute('aria-label')).toBe('Game map, simulated positions. Defending end: 2 1v1s, 1 first contacts. Attacking end: 1 box entries.')
-    expect(container.querySelectorAll('svg.field .mk')).toHaveLength(4)
-    expect(container.querySelectorAll('svg.field .mk.pos')).toHaveLength(3)
+    expect(container.querySelectorAll('svg.field-map .mk')).toHaveLength(4)
+    expect(container.querySelectorAll('svg.field-map .mk.pos')).toHaveLength(3)
     expect(screen.getByText(/each dot is placed at random/)).toBeTruthy()
+  })
+  it('narrows the game map to one half without moving any dot, and labels quarters as Q1-Q4', async () => {
+    const events = [
+      ev('g1', 'duel', 'won'), ev('g1', 'duel', 'lost', {}, 2), ev('g1', 'first_contact', 'clean', { ballType: 'through_ball' }),
+      ev('g1', 'box_entry', 'shot'), ev('g1', 'box_entry', 'no_shot', {}, 2),
+    ]
+    const { container, unmount } = renderGame(fakeRepo([mkGame('g1', 'Bears', '2026-01-01')], events), 'g1')
+    await screen.findByRole('img', { name: /Game map/ })
+    const spots = () => Array.from(container.querySelectorAll('svg.field-map .mk')).map((m) => m.parentElement!.getAttribute('transform'))
+    const whole = spots()
+    expect(whole).toHaveLength(5)
+    expect(screen.getByRole('radio', { name: 'Whole game' }).getAttribute('aria-checked')).toBe('true')
+
+    fireEvent.click(screen.getByRole('radio', { name: '2nd half' }))
+    expect(screen.getByRole('img', { name: /Game map, simulated positions \(2nd half\)\. Defending end: 1 1v1s, 0 first contacts\. Attacking end: 1 box entries/ })).toBeTruthy()
+    const second = spots()
+    expect(second).toHaveLength(2)
+    for (const t of second) expect(whole).toContain(t)
+
+    fireEvent.click(screen.getByRole('radio', { name: '1st half' }))
+    expect(spots()).toHaveLength(3)
+    fireEvent.click(screen.getByRole('radio', { name: 'Whole game' }))
+    expect(spots()).toEqual(whole)
+
+    unmount()
+    renderGame(fakeRepo([{ ...mkGame('g1', 'Bears', '2026-01-01'), periods: 4 }], events), 'g1')
+    await screen.findByRole('img', { name: /Game map/ })
+    expect(screen.getAllByRole('radio').map((r) => r.textContent)).toEqual(['All', 'Q1', 'Q2', 'Q3', 'Q4'])
   })
   it('handles zero events gracefully and hides continue for final', async () => {
     renderGame(fakeRepo([mkGame('g1', 'Bears', '2026-01-01')], []), 'g1')
