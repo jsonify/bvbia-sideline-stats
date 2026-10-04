@@ -2,6 +2,8 @@
 
 A mobile-first web app for soccer parent volunteers to track **team** stats live from the sideline. One tap records one event; the app turns them into simple percentages the coach can act on.
 
+Deployed on Vercel as `bvbia-sideline-stats`.
+
 Three stats, tracked for the whole team (not individual players):
 
 | Stat | Taps | Summary |
