@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import type { Game, StatEvent } from '../../types'
 import type { GameThanks, Repository } from '../../data/repository'
@@ -39,6 +39,15 @@ const renderGame = (repo: Repository, id: string) => render(
     <Routes><Route path="/games/:id" element={<GameSummaryPage />} /></Routes></MemoryRouter></RepoContext.Provider>)
 
 describe('GameSummaryPage', () => {
+  it('explains each key stat from an ⓘ on its card', async () => {
+    renderGame(fakeRepo([mkGame('g1', 'Bears', '2026-01-01')], [ev('g1', 'duel', 'won')]), 'g1')
+    const hero = await screen.findByRole('region', { name: 'Key stats' })
+    const card = within(hero).getByRole('group', { name: 'Clean first contact' })
+    fireEvent.click(within(card).getByRole('button', { name: 'About First contact' }))
+    const dialog = screen.getByRole('dialog', { name: 'What each stat means' })
+    expect(within(dialog).getByRole('heading', { name: 'Through ball' })).toBeTruthy()
+    expect(dialog.textContent).not.toMatch(/Undo/) // nothing to tap on this page
+  })
   it('shows hero stats, takeaways and continue link for live game', async () => {
     const events = [
       ...Array.from({ length: 6 }, (_, i) => ev('g1', 'duel', i < 4 ? 'won' : 'lost')),

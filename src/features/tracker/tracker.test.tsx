@@ -561,3 +561,27 @@ describe('thanks: a heart for whoever tracked the game', () => {
     expect(heartBtn()).toBeTruthy()
   })
 })
+
+describe('stat guide', () => {
+  it('explains each stat from an ⓘ on its card without recording a tap', async () => {
+    const f = await setup()
+    for (const [name, tab] of [['About 1v1s', '1v1s'], ['About First contact', 'First contact'], ['About Box entries', 'Box entries']] as const) {
+      fireEvent.click(screen.getByRole('button', { name }))
+      const dialog = screen.getByRole('dialog', { name: 'What each stat means' })
+      expect(within(dialog).getByRole('tab', { name: tab }).getAttribute('aria-selected')).toBe('true')
+      expect(dialog.textContent).toMatch(/Undo button/) // on the tracker, so mistakes are covered
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Got it' }))
+      expect(screen.queryByRole('dialog')).toBeNull()
+    }
+    expect(f.events).toHaveLength(0)
+    expect(screen.getByTestId('duel-tally').textContent).toContain('No taps yet')
+  })
+
+  it('stays available to someone who is only watching', async () => {
+    await setup('live', OTHER)
+    expect(btn('Duel won').disabled).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: 'About First contact' }))
+    expect(screen.getByRole('dialog', { name: 'What each stat means' })).toBeTruthy()
+  })
+})
+

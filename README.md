@@ -16,6 +16,8 @@ Mistaps are safe: every tap can be undone. **Split the work or do it all:** one 
 
 The game summary includes a **game map**: a line drawing of the field with every tap as a dot (circle = 1v1, diamond = first contact, square = box entry; filled = good outcome). We record what happened, not where, so positions are simulated: 1v1s and first contacts land at random in our half, box entries always inside the attacking box. A toggle narrows the map to the 1st or 2nd half without moving any dot. Each dot's spot comes from its event id, so the picture is the same every time and on every phone.
 
+**A guide for parents who are new to soccer.** Every stat has a small **ⓘ** next to its name: on each card of the tracker, and on the key stats of the game summary and season pages. Tapping it opens a sheet that explains the stat in plain words, with a picture for every button (what makes a through ball *clean* or a *miss*, what a *box entry* is, when a 1v1 is *won*). The sheet opens over the page, so a live game is never left or interrupted, and it stays available to anyone who is only watching. All the wording is in one file, `src/features/guide/topics.ts`; the pictures are in `src/features/guide/Scene.tsx`.
+
 **Say thanks with a heart.** Tracking is quiet work, so any parent can tap the **♥ Thanks** heart on a game that is live or finished to thank whoever tracked it, and tap again to take it back. One heart per parent per game. The parent tracking sees who thanked them (a small ♥ line under the header, with no button, since they are the one being thanked), and the games list shows a heart count on each game; a game nobody has thanked just shows nothing. Hearts are only an acknowledgement and never touch the stats. A heart is sent straight away rather than queued, so it needs a signal: with none, it un-does itself and says so. It needs the `0006_game_thanks.sql` migration; without it the heart simply doesn't save and nothing else is affected. In demo mode (one device) it works too, on this device only.
 
 ## Quickstart (no accounts, no backend)
@@ -88,7 +90,7 @@ More detail (Netlify redirects, custom domain, troubleshooting) in [docs/DEPLOY.
 ```
 src/ui/              design system (base.css tokens + Button, Card, Chip, Segmented, Toast, ...)
 src/data/            repository (local + Supabase), sync
-src/features/        games, tracker, stats, shell
+src/features/        games, tracker, stats, shell, guide (the ⓘ stat explainer)
 src/lib/summary.ts   the single source of truth for all percentages
 e2e/                 Playwright tests (screenshots land in e2e/screenshots)
 ```

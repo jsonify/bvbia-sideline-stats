@@ -7,6 +7,7 @@ import { categoryLabel, eventsToCsv, fmtPct, gameSummaryToText, outcomeLabel } f
 import { CLS, download, periodBreakdown, POSITIVE, slug, takeaways } from './insights'
 import { canThank } from '../../lib/thanks'
 import { ThanksHeart } from '../thanks/ThanksHeart'
+import { InfoButton } from '../guide/InfoButton'
 import { FieldMap } from './FieldMap'
 import { StatHero } from './StatHero'
 import './stats.css'
@@ -72,9 +73,9 @@ export default function GameSummaryPage() {
       <div className="status" role="status" aria-live="polite">{status}</div>
 
       <section className="hero" aria-label="Key stats">
-        <StatHero cls="d" label="Defensive 1v1s won" pct={s.duels.winPct} n={s.duels.won} d={s.duels.total} unit="1v1s" />
-        <StatHero cls="f" label="Clean first contact" pct={fc.cleanPct} n={fc.clean} d={fc.total} unit="balls" />
-        <StatHero cls="b" label="Box entries with a shot" pct={s.boxEntries.shotPct} n={s.boxEntries.shot} d={s.boxEntries.total} unit="entries" />
+        <StatHero cls="d" label="Defensive 1v1s won" pct={s.duels.winPct} n={s.duels.won} d={s.duels.total} unit="1v1s" info={<InfoButton topic="duel" />} />
+        <StatHero cls="f" label="Clean first contact" pct={fc.cleanPct} n={fc.clean} d={fc.total} unit="balls" info={<InfoButton topic="first_contact" />} />
+        <StatHero cls="b" label="Box entries with a shot" pct={s.boxEntries.shotPct} n={s.boxEntries.shot} d={s.boxEntries.total} unit="entries" info={<InfoButton topic="box_entry" />} />
       </section>
 
       <section className="card" aria-labelledby="take">
@@ -103,7 +104,7 @@ export default function GameSummaryPage() {
       </section>
 
       <section className="card f" aria-labelledby="fcs">
-        <h2 id="fcs">First contact: through balls vs long balls</h2>
+        <div className="title-row"><h2 id="fcs">First contact: through balls vs long balls</h2><InfoButton topic="first_contact" /></div>
         <div className="split">
           <div><span className="sub">Through balls</span><b>{cell(fc.throughBall.clean, fc.throughBall.clean + fc.throughBall.miss)}</b><span className="sub">clean</span></div>
           <div><span className="sub">Long balls</span><b>{cell(fc.longBall.clean, fc.longBall.clean + fc.longBall.miss)}</b><span className="sub">clean</span></div>
