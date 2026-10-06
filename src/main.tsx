@@ -5,6 +5,7 @@ import { RepoProvider } from './data/context'
 import { ToastProvider } from './ui'
 import '@fontsource/barlow-condensed/latin-700.css'
 import '@fontsource/barlow-condensed/latin-800.css'
+import './styles/tailwind.css'
 import './ui/base.css'
 import './features/shell/shell.css'
 

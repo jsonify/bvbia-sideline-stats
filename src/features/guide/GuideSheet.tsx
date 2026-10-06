@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { Button, Icon, Sheet } from '../../ui'
+import { Tabs, TabsHighlight, TabsHighlightItem, TabsList, TabsTrigger } from '@/components/animate-ui/primitives/radix/tabs'
 import { Scene } from './Scene'
 import { TOPICS, TOPIC_IDS, type TopicId } from './topics'
 import './guide.css'
@@ -39,14 +40,17 @@ export function GuideSheet({ topic, tracking, onClose }: Props) {
   return (
     <Sheet open onClose={onClose} label="What each stat means" className="gd-sheet">
       <div className="gd-bar">
-        <div className="segmented gd-tabs" role="tablist" aria-label="Stat">
-          {TOPIC_IDS.map((k) => (
-            <button key={k} type="button" role="tab" id={`gd-tab-${k}`} aria-selected={k === id} aria-controls="gd-panel"
-              className={k === id ? 'is-active' : undefined} onClick={() => pick(k)}>
-              {TOPICS[k].tab}
-            </button>
-          ))}
-        </div>
+        <Tabs className="gd-tabs-root" value={id} onValueChange={(v) => pick(v as TopicId)}>
+          <TabsHighlight className="gd-tab-pill">
+            <TabsList className="gd-tabs" aria-label="Stat">
+              {TOPIC_IDS.map((k) => (
+                <TabsHighlightItem key={k} value={k} className="gd-tab-item">
+                  <TabsTrigger value={k} id={`gd-tab-${k}`} aria-controls="gd-panel" className="gd-tab">{TOPICS[k].tab}</TabsTrigger>
+                </TabsHighlightItem>
+              ))}
+            </TabsList>
+          </TabsHighlight>
+        </Tabs>
         <button type="button" className="gd-x" aria-label="Close" onClick={onClose}><Icon name="x" size={22} /></button>
       </div>
 
