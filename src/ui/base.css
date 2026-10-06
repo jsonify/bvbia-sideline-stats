@@ -153,7 +153,12 @@ textarea.input,.field textarea{min-height:96px;resize:vertical}
 .sheet{width:100%;max-width:560px;max-height:90dvh;overflow:auto;background:var(--surface);border-radius:24px 24px 0 0;
   padding:var(--s-3) var(--s-5) calc(var(--s-5) + var(--safe-bottom));box-shadow:var(--shadow-lg);animation:rise .24s var(--ease);display:flex;flex-direction:column;gap:var(--s-3)}
 .sheet:focus{outline:none}
-.sheet-handle{width:44px;height:5px;border-radius:3px;background:var(--border);margin:0 auto var(--s-2)}
+/* the strip you drag to pull the sheet down; taller than the handle so a thumb can find it */
+.sheet-grab{flex:none;touch-action:none;cursor:grab;margin:calc(-1*var(--s-3)) calc(-1*var(--s-5)) 0;padding:var(--s-3) 0 var(--s-2)}
+.sheet-handle{width:44px;height:5px;border-radius:3px;background:var(--border);margin:0 auto}
+.ss-sheet-dim{position:absolute;inset:0;background:var(--overlay);pointer-events:none}
+.ss-sheet-overlay{background:transparent}
+.ss-sheet-overlay>.sheet{position:relative}
 .sheet-title{font-size:var(--fs-xl);font-weight:800}
 .sheet-actions{display:flex;gap:var(--s-2);margin-top:var(--s-2)} .sheet-actions>.btn{flex:1}
 .dialog{width:calc(100% - 2*var(--s-4));max-width:400px;background:var(--surface);border-radius:var(--radius);padding:var(--s-5);box-shadow:var(--shadow-lg);
