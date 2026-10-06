@@ -14,6 +14,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['Borussia_Dortmund_logo.svg', 'apple-touch-icon.png'],
       manifest: {
+        id: '/',
+        lang: 'en',
+        categories: ['sports'],
         name: 'Sideline Stats',
         short_name: 'Sideline',
         description: 'Live team stats for soccer parent volunteers.',
