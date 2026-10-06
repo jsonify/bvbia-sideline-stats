@@ -32,7 +32,8 @@ export default function OnboardingPage() {
       if (step === 'create') { setTeam(await repo.createTeam(v)); setStep('created') }
       else { await repo.joinTeam(parseJoinCode(v)); nav('/', { replace: true }) }
     } catch (err) {
-      setError(step === 'join' ? "We couldn't find that code. Check it with the parent who shared it." : (err as Error).message || 'Something went wrong. Try again.')
+      const msg = (err as Error).message
+      setError(step === 'join' && /no team found|not found/i.test(msg) ? "We couldn't find that code. Check it with the parent who shared it." : msg || 'Something went wrong. Try again.')
     } finally { setBusy(false) }
   }
 

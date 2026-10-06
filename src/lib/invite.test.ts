@@ -50,6 +50,8 @@ describe('parseJoinCode', () => {
     ['ABC-234', 'ABC234'],
     ['https://sideline.example.com/welcome?code=abc234', 'ABC234'],
     ['https://sideline.example.com/welcome?add=1&code=ABC234', 'ABC234'],
+    ['Team code: ABC234', 'ABC234'],
+    ['Join Thunder! My tracks code is\nABC234\nthanks', 'ABC234'],
     ['', ''],
   ])('%j -> %j', (input, want) => expect(parseJoinCode(input)).toBe(want))
 
