@@ -7,7 +7,9 @@
 .ss-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 0 8px;min-height:56px;color:var(--muted);text-decoration:none;font-size:12px;font-weight:600}
 .ss-tab{position:relative}
 .ss-tab.active{color:var(--text)}
-.ss-tab.active::before{content:'';position:absolute;top:0;left:28%;right:28%;height:3px;border-radius:0 0 3px 3px;background:var(--brand)}
+/* the yellow marker is a sliding Animate UI highlight, not a per-tab ::before */
+.ss-tab-item{flex:1;display:flex}
+.ss-nav-pill{top:0;left:28%;right:28%;height:3px;border-radius:0 0 3px 3px;background:var(--brand)}
 .ss-tab:focus-visible,.ss-btn:focus-visible,.ss-fab:focus-visible,.ss-input:focus-visible,.ss-card-link:focus-visible,.ss-icon-btn:focus-visible,.ss-seg label:has(input:focus-visible){outline:3px solid var(--ring);outline-offset:2px}
 .ss-page{max-width:640px;margin:0 auto;padding:16px 16px 24px;padding-top:calc(16px + env(safe-area-inset-top))}
 .ss-h1{font-family:var(--font-display);text-transform:uppercase;font-size:40px;line-height:1;margin:8px 0 16px;font-weight:800;letter-spacing:.01em}

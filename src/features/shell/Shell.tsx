@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Highlight, HighlightItem } from '@/components/animate-ui/primitives/effects/highlight'
 import { useTeam } from './useTeam'
 import { TeamBar } from './TeamBar'
 
@@ -20,6 +21,7 @@ const tabs = [
 
 export function Shell() {
   const { pathname } = useLocation()
+  const current = tabs.find((t) => (t.end ? pathname === t.to : pathname.startsWith(t.to)))?.to // same rule NavLink uses for .active
   const hideNav = /\/track$|\/edit$|^\/games\/new$/.test(pathname)
   return (
     <RequireTeam>
@@ -30,12 +32,16 @@ export function Shell() {
         </div>
         {!hideNav && (
           <nav className="ss-nav" aria-label="Main">
-            {tabs.map((t) => (
-              <NavLink key={t.to} to={t.to} end={t.end} className="ss-tab">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={t.icon} /></svg>
-                <span>{t.label}</span>
-              </NavLink>
-            ))}
+            <Highlight controlledItems value={current ?? null} click={false} className="ss-nav-pill" transition={{ type: 'spring', stiffness: 400, damping: 32 }}>
+              {tabs.map((t) => (
+                <HighlightItem key={t.to} value={t.to} className="ss-tab-item">
+                  <NavLink to={t.to} end={t.end} className="ss-tab">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={t.icon} /></svg>
+                    <span>{t.label}</span>
+                  </NavLink>
+                </HighlightItem>
+              ))}
+            </Highlight>
           </nav>
         )}
       </div>
