@@ -42,5 +42,12 @@ export const INVITE_STEPS = [
 export function parseJoinCode(input: string): string {
   const s = input.trim()
   const fromLink = s.match(/[?&]code=([A-Za-z0-9]+)/)
-  return (fromLink ? fromLink[1] : s).replace(/[\s-]+/g, '').toUpperCase()
+  if (fromLink) return fromLink[1].toUpperCase()
+  const bare = s.replace(/[\s-]+/g, '').toUpperCase()
+  if (JOIN_CODE.test(bare)) return bare
+  // Pasted a sentence or a whole shared message with no link in it: pick out the one standalone code in it.
+  const tokens = s.split(/[^A-Za-z0-9]+/).filter((t) => JOIN_CODE.test(t) && t === t.toUpperCase())
+  return tokens.length === 1 ? tokens[0] : bare
 }
+
+const JOIN_CODE = /^[A-HJKMNP-Z2-9]{6}$/i
