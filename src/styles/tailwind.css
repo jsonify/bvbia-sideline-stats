@@ -1,0 +1,29 @@
+/*
+ * Tailwind v4, loaded WITHOUT preflight so the existing design system in ui/base.css is untouched.
+ * Only theme tokens + utilities are emitted. Brand tokens are mapped from the CSS variables in
+ * ui/base.css (`inline` keeps them live, so light/dark theming keeps working).
+ */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-foreground: var(--text);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-ink: var(--brand-ink);
+  --color-good: var(--good);
+  --color-bad: var(--bad);
+  --color-warn: var(--warn);
+  --color-ring: var(--ring);
+  --radius-card: var(--radius);
+  --radius-card-sm: var(--radius-sm);
+  --font-sans: var(--font);
+  --font-display: var(--font-display);
+}
