@@ -1,8 +1,12 @@
 /* Shell + shared "ss-" primitives for games/onboarding/team. Uses tokens from ui/base.css. */
 .ss-loading{display:grid;place-items:center;min-height:50vh;color:var(--muted)}
 .ss-shell{min-height:100dvh}
-.ss-content{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
-.ss-no-nav .ss-content{padding-bottom:0}
+/* each screen is a "layer" so transitions can slide it over / out from the one beside it */
+.ss-content{position:relative;overflow-x:clip}
+.ss-layer{position:relative;min-height:100dvh;box-sizing:border-box;background:var(--bg);padding-bottom:calc(76px + env(safe-area-inset-bottom));box-shadow:-10px 0 24px -8px rgba(0,0,0,.28)}
+.ss-no-nav .ss-layer{padding-bottom:0}
+/* a thin strip along the left edge: drag from it to go back */
+.ss-edge{position:fixed;left:0;top:0;bottom:0;width:20px;z-index:40;touch-action:none}
 .ss-nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--surface);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom);z-index:20}
 .ss-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 0 8px;min-height:56px;color:var(--muted);text-decoration:none;font-size:12px;font-weight:600}
 .ss-tab{position:relative}

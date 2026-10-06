@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react'
-import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Navigate, NavLink, useLocation } from 'react-router-dom'
 import { Highlight, HighlightItem } from '@/components/animate-ui/primitives/effects/highlight'
 import { useTeam } from './useTeam'
-import { TeamBar } from './TeamBar'
+import { hidesNav, PageTransition } from './PageTransition'
 
 /** Redirects to /welcome when this device has no team yet. */
 export function RequireTeam({ children }: { children: ReactNode }) {
@@ -22,13 +22,12 @@ const tabs = [
 export function Shell() {
   const { pathname } = useLocation()
   const current = tabs.find((t) => (t.end ? pathname === t.to : pathname.startsWith(t.to)))?.to // same rule NavLink uses for .active
-  const hideNav = /\/track$|\/edit$|^\/games\/new$/.test(pathname)
+  const hideNav = hidesNav(pathname)
   return (
     <RequireTeam>
       <div className={'ss-shell' + (hideNav ? ' ss-no-nav' : '')}>
         <div className="ss-content">
-          {!hideNav && <TeamBar />}
-          <Outlet />
+          <PageTransition />
         </div>
         {!hideNav && (
           <nav className="ss-nav" aria-label="Main">
