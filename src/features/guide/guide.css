@@ -7,8 +7,14 @@
 .gd-sheet{padding:0;gap:0;overflow:hidden;height:90dvh}
 .gd-sheet .sheet-handle{flex:none;margin:10px auto 4px}
 .gd-bar{flex:none;display:flex;align-items:center;gap:var(--s-2);padding:var(--s-2) var(--s-3) var(--s-3) var(--s-4);border-bottom:1px solid var(--border)}
-.gd-tabs{flex:1;min-width:0}
-.gd-tabs>button{padding:0 4px;font-size:var(--fs-sm);white-space:nowrap}
+.gd-tabs-root{flex:1;min-width:0}
+/* sliding-pill tabs (Animate UI): same look as .segmented, but the selected pill glides between tabs */
+.gd-tabs{display:flex;padding:4px;gap:4px;background:var(--surface-2);border-radius:calc(var(--radius-sm) + 4px);border:1px solid var(--border)}
+.gd-tab-item{flex:1;min-width:0}
+.gd-tab-pill{inset:0;border-radius:var(--radius-sm);background:var(--surface);box-shadow:var(--shadow)}
+.gd-tab{width:100%;min-height:calc(var(--touch) - 8px);border:0;border-radius:var(--radius-sm);background:transparent;color:var(--muted);font-weight:700;
+  font-size:var(--fs-sm);white-space:nowrap;padding:0 4px;cursor:pointer;touch-action:manipulation;transition:color .2s}
+.gd-tab[data-state=active]{color:var(--brand-text)}
 .gd-x{flex:none;width:44px;height:44px;display:grid;place-items:center;border:0;border-radius:50%;background:var(--surface-2);color:var(--text);cursor:pointer;touch-action:manipulation}
 .gd-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:var(--s-4) var(--s-5) calc(var(--s-5) + var(--safe-bottom));display:flex;flex-direction:column;gap:var(--s-4)}
 .gd-body:focus{outline:none}

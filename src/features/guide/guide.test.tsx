@@ -59,7 +59,7 @@ describe('InfoButton', () => {
     render(<InfoButton topic="duel" />)
     const dialog = open('About 1v1s')
     expect(within(dialog).getByText(/one attacker, one defender/i)).toBeTruthy()
-    fireEvent.click(within(dialog).getByRole('tab', { name: 'Box entries' }))
+    fireEvent.mouseDown(within(dialog).getByRole('tab', { name: 'Box entries' })) // Radix tabs switch on pointer-down
     expect(within(dialog).getByRole('heading', { name: 'Box entries' })).toBeTruthy()
     expect(within(dialog).getByText(/big rectangle painted on the grass/i)).toBeTruthy()
     expect(within(dialog).queryByText(/one attacker, one defender/i)).toBeNull()
