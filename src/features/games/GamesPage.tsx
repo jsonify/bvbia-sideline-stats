@@ -2,6 +2,7 @@ import '../branding/branding.css'
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useRepo } from '../../data/context'
+import { useRemembered } from '../../data/remember'
 import { heartsFor } from '../../lib/thanks'
 import { summarize } from '../../lib/summary'
 import { ThanksTag } from '../thanks/ThanksHeart'
@@ -64,8 +65,8 @@ function GameCard({ g, s, hearts, open, onMenu, onDelete }: {
 
 export default function GamesPage() {
   const repo = useRepo()
-  const [games, setGames] = useState<Game[] | null>(null)
-  const [stats, setStats] = useState<Record<string, StatSummary>>({})
+  const [games, setGames] = useRemembered<Game[] | null>(repo, 'games', null)
+  const [stats, setStats] = useRemembered<Record<string, StatSummary>>(repo, 'game-stats', {})
   const [menu, setMenu] = useState<string | null>(null)
   const [confirm, setConfirm] = useState<Game | null>(null)
   const thanks = useThanks()
@@ -76,7 +77,7 @@ export default function GamesPage() {
     const finals = list.filter((g) => g.status === 'final')
     const entries = await Promise.all(finals.map(async (g) => [g.id, summarize(await repo.listEvents(g.id))] as const))
     setStats(Object.fromEntries(entries))
-  }, [repo])
+  }, [repo, setGames, setStats])
 
   useEffect(() => { void load(); return repo.subscribe(() => void load()) }, [repo, load])
 

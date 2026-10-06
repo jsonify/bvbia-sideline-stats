@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useRepo } from '../../data/context'
+import { useRemembered } from '../../data/remember'
 import type { Game, StatEvent } from '../../types'
 import { summarize } from '../../lib/summary'
 import { categoryLabel, eventsToCsv, fmtPct, gameSummaryToText, outcomeLabel } from '../../lib/export'
@@ -18,14 +19,14 @@ const cell = (n: number, d: number) => (d === 0 ? '—' : <>{n}/{d} <small>{fmtP
 export default function GameSummaryPage() {
   const { id = '' } = useParams()
   const repo = useRepo()
-  const [game, setGame] = useState<Game | null | undefined>(undefined)
-  const [events, setEvents] = useState<StatEvent[]>([])
+  const [game, setGame] = useRemembered<Game | null | undefined>(repo, `game:${id}`, undefined)
+  const [events, setEvents] = useRemembered<StatEvent[]>(repo, `events:${id}`, [])
   const [status, setStatus] = useState('')
 
   const load = useCallback(async () => {
     const [g, ev] = await Promise.all([repo.getGame(id), repo.listEvents(id)])
     setGame(g); setEvents(ev)
-  }, [repo, id])
+  }, [repo, id, setGame, setEvents])
   useEffect(() => {
     load().catch(() => setGame(null))
     return repo.subscribe(() => { load().catch(() => {}) })

@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useRepo } from '../../data/context'
+import { useRemembered } from '../../data/remember'
 import type { Game, StatEvent } from '../../types'
 import { summarize } from '../../lib/summary'
 import { eventsToCsv, fmtPct, seasonToCsv } from '../../lib/export'
@@ -25,13 +26,13 @@ const shortDate = (d: string) => new Date(d + 'T12:00:00').toLocaleDateString(un
 
 export default function SeasonPage() {
   const repo = useRepo()
-  const [games, setGames] = useState<Game[] | null>(null)
-  const [events, setEvents] = useState<StatEvent[]>([])
+  const [games, setGames] = useRemembered<Game[] | null>(repo, 'games', null)
+  const [events, setEvents] = useRemembered<StatEvent[]>(repo, 'all-events', [])
 
   const load = useCallback(async () => {
     const [g, e] = await Promise.all([repo.listGames(), repo.listAllEvents()])
     setGames(g); setEvents(e)
-  }, [repo])
+  }, [repo, setGames, setEvents])
   useEffect(() => {
     load().catch(() => setGames([]))
     return repo.subscribe(() => { load().catch(() => {}) })
