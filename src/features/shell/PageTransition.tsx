@@ -1,5 +1,5 @@
-import { useCallback, useLayoutEffect, useRef, type PointerEvent as ReactPointerEvent, type ReactNode, type Ref } from 'react'
-import { useLocation, useNavigate, useOutlet } from 'react-router-dom'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode, type Ref } from 'react'
+import { useLocation, useNavigate, useNavigationType, useOutlet } from 'react-router-dom'
 import { TeamBar } from './TeamBar'
 import { AnimatePresence, animate, motion, useIsPresent, useMotionValue, usePresenceData, type Variants } from 'motion/react'
 
@@ -21,14 +21,19 @@ export function parentOf(pathname: string): string {
 
 const UNDER = '-28%' // the page underneath only moves a little, like iOS
 const SPRING = { type: 'spring', stiffness: 420, damping: 40, mass: 1 } as const
-const FADE = { duration: 0.16, ease: 'easeOut' } as const
 
-// direction: 1 = push (go deeper), -1 = pop (go back), 0 = same level (tabs): a quick cross-fade
+// direction: 1 = push (go deeper), -1 = pop (go back), 0 = no motion: switching tabs, or the browser going back by itself.
+// With 0 the new screen is simply there, as on an iOS tab bar. That also keeps us out of the way of the browser's own swipe-back
+// animation, which freezes page animations part-way and used to leave the old screen stuck on top.
+const NONE = { duration: 0 } as const
 const variants: Variants = {
-  enter: (d: number) => (d === 1 ? { x: '100%' } : d === -1 ? { x: UNDER } : { opacity: 0 }),
-  center: (d: number) => ({ x: 0, opacity: 1, transition: d === 0 ? FADE : SPRING }),
-  exit: (d: number) => (d === 1 ? { x: UNDER, transition: SPRING } : d === -1 ? { x: '100%', transition: SPRING } : { opacity: 0, transition: FADE }),
+  enter: (d: number) => (d === 1 ? { x: '100%' } : d === -1 ? { x: UNDER } : { opacity: 1 }),
+  center: (d: number) => ({ x: 0, opacity: 1, transition: d === 0 ? NONE : SPRING }),
+  exit: (d: number) => (d === 1 ? { x: UNDER, transition: SPRING } : d === -1 ? { x: '100%', transition: SPRING } : { opacity: 1, transition: NONE }),
 }
+
+/** Set while this app is the one taking the user back (the edge swipe), so that is told apart from the browser doing it. */
+const ours = { back: false }
 
 // Going back by swiping: it may begin this close to the left edge, is recognised once the finger has clearly moved sideways,
 // and lets go if the page was pulled a fifth of the way across or flicked even gently.
@@ -70,7 +75,7 @@ function Layer({ path, depth, children, ref }: LayerProps) {
 
   const back = () => {
     const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0
-    if (idx > 0) navigate(-1)
+    if (idx > 0) { ours.back = true; setTimeout(() => { ours.back = false }, 1500); navigate(-1) }
     else navigate(parentOf(path), { replace: true })
   }
   const swipe = useRef<{ id: number; x0: number; y0: number; active: boolean; trail: { x: number; t: number }[] } | null>(null)
@@ -131,18 +136,32 @@ function Layer({ path, depth, children, ref }: LayerProps) {
   )
 }
 
-/** Renders the current screen with iOS-style motion: deeper screens slide in over the top, "back" slides them out, and tabs cross-fade. */
+/** Renders the current screen with iOS-style motion: deeper screens slide in over the top and "back" slides them out. */
 export function PageTransition() {
   const { pathname } = useLocation()
+  const navType = useNavigationType()
   const outlet = useOutlet()
   const depth = depthOf(pathname)
-  const prev = useRef({ depth, pathname })
-  const dir = depth > prev.current.depth ? 1 : depth < prev.current.depth ? -1 : 0
 
-  useLayoutEffect(() => { prev.current = { depth, pathname } }, [depth, pathname])
+  // Work out the direction once per screen change. POP is the history moving: ours (the swipe) animates, the browser's own doesn't.
+  const seen = useRef({ path: pathname, depth, dir: 0 })
+  if (seen.current.path !== pathname) {
+    const byDepth = depth > seen.current.depth ? 1 : depth < seen.current.depth ? -1 : 0
+    seen.current = { path: pathname, depth, dir: navType === 'POP' && !ours.back ? 0 : byDepth }
+  }
+  const dir = seen.current.dir
+  useEffect(() => { ours.back = false }, [pathname])
+
+  // Safety net: the old screen should be gone a moment after the new one arrives. If it is not (something froze the
+  // animation), rebuild the screen rather than leave two stuck on top of each other.
+  const [epoch, setEpoch] = useState(0)
+  useEffect(() => {
+    const t = window.setTimeout(() => { if (document.querySelectorAll('.ss-layer').length > 1) setEpoch((n) => n + 1) }, 1200)
+    return () => window.clearTimeout(t)
+  }, [pathname])
 
   return (
-    <AnimatePresence mode="popLayout" custom={dir} initial={false}>
+    <AnimatePresence key={epoch} mode="popLayout" custom={dir} initial={false}>
       <Layer key={pathname} path={pathname} depth={depth}>{outlet}</Layer>
     </AnimatePresence>
   )
