@@ -151,13 +151,13 @@ textarea.input,.field textarea{min-height:96px;resize:vertical}
 /* sheet / dialog */
 .overlay{position:fixed;inset:0;z-index:100;background:var(--overlay);display:flex;align-items:flex-end;justify-content:center;animation:fade .18s var(--ease)}
 .sheet{width:100%;max-width:560px;max-height:90dvh;overflow:auto;background:var(--surface);border-radius:24px 24px 0 0;
-  padding:var(--s-3) var(--s-5) calc(var(--s-5) + var(--safe-bottom));box-shadow:var(--shadow-lg);animation:rise .24s var(--ease);display:flex;flex-direction:column;gap:var(--s-3)}
+  padding:var(--s-3) var(--s-5) calc(var(--s-5) + var(--safe-bottom));box-shadow:var(--shadow-lg);animation:rise .5s cubic-bezier(.32,1.1,.4,1);display:flex;flex-direction:column;gap:var(--s-3)}
 .sheet:focus{outline:none}
 .sheet-handle{width:44px;height:5px;border-radius:3px;background:var(--border);margin:0 auto var(--s-2)}
 .sheet-title{font-size:var(--fs-xl);font-weight:800}
 .sheet-actions{display:flex;gap:var(--s-2);margin-top:var(--s-2)} .sheet-actions>.btn{flex:1}
 .dialog{width:calc(100% - 2*var(--s-4));max-width:400px;background:var(--surface);border-radius:var(--radius);padding:var(--s-5);box-shadow:var(--shadow-lg);
-  display:flex;flex-direction:column;gap:var(--s-3);animation:pop .2s var(--ease)}
+  display:flex;flex-direction:column;gap:var(--s-3);animation:pop .4s cubic-bezier(.34,1.45,.5,1)}
 .overlay:has(>.dialog){align-items:center}
 
 /* toast */
@@ -188,6 +188,6 @@ textarea.input,.field textarea{min-height:96px;resize:vertical}
 .tabbar a[aria-current=page]{color:var(--brand-text)}
 .icon{flex:none}
 
-@keyframes fade{from{opacity:0}} @keyframes rise{from{transform:translateY(24px);opacity:0}} @keyframes pop{from{transform:scale(.94);opacity:0}}
+@keyframes fade{from{opacity:0}} @keyframes rise{from{transform:translateY(100%)}} @keyframes pop{from{transform:scale(1.1);opacity:0}}
 @keyframes shimmer{to{background-position:-200% 0}} @keyframes spin{to{transform:rotate(360deg)}} @keyframes pulse{50%{opacity:.35}}
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}

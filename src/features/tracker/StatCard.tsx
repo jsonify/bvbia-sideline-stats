@@ -36,7 +36,7 @@ export function StatCard({ id, title, hint, tally, periodTally, period, pct, but
         </div>
         <div className="tk-tally" role="status" aria-live="polite" aria-atomic="true" data-testid={`${id}-tally`}>
           <strong>{tally}</strong>
-          <span className="tk-sub">P{period}: {periodTally}</span>
+          <span className="tk-sub" key={period}>P{period}: {periodTally}</span>
         </div>
       </header>
       <div className="tk-bar" aria-hidden="true"><i style={{ width: `${pct ?? 0}%` }} /></div>

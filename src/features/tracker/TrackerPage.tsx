@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { summarize } from '../../lib/summary'
 import { canThank } from '../../lib/thanks'
@@ -74,7 +74,7 @@ export default function TrackerPage() {
             <i aria-hidden="true" />{syncLabel}
           </span>
         </div>
-        <div className="tk-periods" role="group" aria-label="Period">
+        <div className="tk-periods" role="group" aria-label="Period" style={{ '--n': game.periods, '--i': Math.max(0, t.period - 1) } as CSSProperties}>
           {Array.from({ length: game.periods }, (_, i) => i + 1).map((n) => (
             <button key={n} type="button" aria-pressed={t.period === n} onClick={() => t.setPeriod(n)}>
               {n === 1 ? '1st half' : '2nd half'}
