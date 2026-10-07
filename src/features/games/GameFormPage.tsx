@@ -4,6 +4,7 @@ import { useRepo } from '../../data/context'
 import type { Game } from '../../types'
 import '../shell/shell.css'
 import './games.css'
+import { PillGroup, PillItem } from '../../ui/PillGroup'
 
 export function todayISO(d = new Date()) {
   const p = (n: number) => String(n).padStart(2, '0')
@@ -25,11 +26,15 @@ function Seg<T extends string | number>({ name, legend, value, options, onChange
     <fieldset className="ss-field" style={{ border: 0, padding: 0, margin: '0 0 16px', position: 'relative' }}>
       <legend className="ss-label">{legend}</legend>
       <div className="ss-seg">
-        {options.map((o) => (
-          <label key={String(o.v)}>
-            <input type="radio" name={name} checked={value === o.v} onChange={() => onChange(o.v)} />{o.label}
-          </label>
-        ))}
+        <PillGroup value={String(value)} pillClassName="ss-seg-pill">
+          {options.map((o) => (
+            <PillItem key={String(o.v)} value={String(o.v)} className="ss-seg-item">
+              <label>
+                <input type="radio" name={name} checked={value === o.v} onChange={() => onChange(o.v)} />{o.label}
+              </label>
+            </PillItem>
+          ))}
+        </PillGroup>
       </div>
     </fieldset>
   )

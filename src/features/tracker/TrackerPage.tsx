@@ -10,6 +10,7 @@ import { StatCard } from './StatCard'
 import { agoText, eventLabel, isGood, tallyText } from './labels'
 import { useTracker, useWakeLock } from './useTracker'
 import './tracker.css'
+import { PillGroup, PillItem } from '../../ui/PillGroup'
 
 const SYNC_TEXT = { synced: 'Synced', syncing: 'Syncing', offline: 'Offline', error: 'Sync error' } as const
 
@@ -75,11 +76,15 @@ export default function TrackerPage() {
           </span>
         </div>
         <div className="tk-periods" role="group" aria-label="Period">
-          {Array.from({ length: game.periods }, (_, i) => i + 1).map((n) => (
-            <button key={n} type="button" aria-pressed={t.period === n} onClick={() => t.setPeriod(n)}>
-              {n === 1 ? '1st half' : '2nd half'}
-            </button>
-          ))}
+          <PillGroup value={String(t.period)} pillClassName="tk-period-pill">
+            {Array.from({ length: game.periods }, (_, i) => i + 1).map((n) => (
+              <PillItem key={n} value={String(n)} className="tk-period-item">
+                <button type="button" aria-pressed={t.period === n} onClick={() => t.setPeriod(n)}>
+                  {n === 1 ? '1st half' : '2nd half'}
+                </button>
+              </PillItem>
+            ))}
+          </PillGroup>
         </div>
       </header>
 
@@ -136,11 +141,15 @@ export default function TrackerPage() {
             periodTally={`${pf.clean}/${pf.total}`} period={t.period} pct={ft.cleanPct} {...cardProps(LANE_OF.first_contact)}
             extra={
               <div className="tk-seg" role="radiogroup" aria-label="Ball type">
-                {([['through_ball', 'Through ball', ft.throughBall], ['long_ball', 'Long ball', ft.longBall]] as const).map(([v, label, b]) => (
-                  <button key={v} type="button" role="radio" aria-checked={t.ballType === v} onClick={() => t.setBallType(v)}>
-                    {label}<small>{b.clean}/{b.clean + b.miss}</small>
-                  </button>
-                ))}
+                <PillGroup value={t.ballType} pillClassName="tk-seg-pill">
+                  {([['through_ball', 'Through ball', ft.throughBall], ['long_ball', 'Long ball', ft.longBall]] as const).map(([v, label, b]) => (
+                    <PillItem key={v} value={v} className="tk-seg-item">
+                      <button type="button" role="radio" aria-checked={t.ballType === v} onClick={() => t.setBallType(v)}>
+                        {label}<small>{b.clean}/{b.clean + b.miss}</small>
+                      </button>
+                    </PillItem>
+                  ))}
+                </PillGroup>
               </div>
             }
             buttons={[

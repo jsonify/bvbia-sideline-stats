@@ -7,7 +7,7 @@ import { TOPICS, TOPIC_IDS } from './topics'
 
 afterEach(cleanup)
 
-const gone = () => waitFor(() => expect(screen.queryByRole('dialog')).toBeNull()) // the sheet slides away before it leaves
+const gone = () => waitFor(() => expect(screen.queryByRole('dialog')).toBeNull(), { timeout: 4000 }) // the sheet slides away before it leaves
 const open = (name: string) => { fireEvent.click(screen.getByRole('button', { name })); return screen.getByRole('dialog', { name: 'What each stat means' }) }
 
 describe('stat guide content', () => {

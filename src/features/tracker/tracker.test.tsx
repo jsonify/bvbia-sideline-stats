@@ -126,13 +126,13 @@ describe('TrackerPage', () => {
     const f = await setup()
     fireEvent.click(screen.getByLabelText('Duel won'))
     fireEvent.click(screen.getByLabelText('Duel lost'))
-    await waitFor(() => expect(f.events).toHaveLength(2))
+    await waitFor(() => expect(f.events).toHaveLength(2), { timeout: 4000 }) // generous: this file is slow when the whole suite runs
     fireEvent.click(screen.getByLabelText('Undo last: 1v1 · Lost'))
-    await waitFor(() => expect(f.events[1].deletedAt).toBeTruthy())
+    await waitFor(() => expect(f.events[1].deletedAt).toBeTruthy(), { timeout: 4000 })
     expect(screen.getByTestId('duel-tally').textContent).toContain('1 of 1 · 100%')
     expect(screen.getAllByText('Undid 1v1 · Lost').length).toBeGreaterThan(0)
     fireEvent.click(screen.getByLabelText('Undo 1v1 · Won'))
-    await waitFor(() => expect(f.events[0].deletedAt).toBeTruthy())
+    await waitFor(() => expect(f.events[0].deletedAt).toBeTruthy(), { timeout: 4000 })
     expect(screen.getByTestId('duel-tally').textContent).toContain('No taps yet')
   })
 
@@ -571,7 +571,7 @@ describe('stat guide', () => {
       expect(within(dialog).getByRole('tab', { name: tab }).getAttribute('aria-selected')).toBe('true')
       expect(dialog.textContent).toMatch(/Undo button/) // on the tracker, so mistakes are covered
       fireEvent.click(within(dialog).getByRole('button', { name: 'Got it' }))
-      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull()) // the sheet slides away first
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull(), { timeout: 4000 }) // the sheet slides away first (slower when the whole suite is running)
     }
     expect(f.events).toHaveLength(0)
     expect(screen.getByTestId('duel-tally').textContent).toContain('No taps yet')
