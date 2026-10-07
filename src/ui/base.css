@@ -164,7 +164,7 @@ textarea.input,.field textarea{min-height:96px;resize:vertical}
 .sheet-title{font-size:var(--fs-xl);font-weight:800}
 .sheet-actions{display:flex;gap:var(--s-2);margin-top:var(--s-2)} .sheet-actions>.btn{flex:1}
 .dialog{width:calc(100% - 2*var(--s-4));max-width:400px;background:var(--surface);border-radius:var(--radius);padding:var(--s-5);box-shadow:var(--shadow-lg);
-  display:flex;flex-direction:column;gap:var(--s-3);animation:pop .2s var(--ease)}
+  display:flex;flex-direction:column;gap:var(--s-3);animation:pop .4s cubic-bezier(.34,1.45,.5,1)}
 .overlay:has(>.dialog){align-items:center}
 
 /* toast */
@@ -202,6 +202,6 @@ a,button,img{-webkit-touch-callout:none}
 .ss-tab:active,.ss-icon-btn:active,button.chip:active,.segmented button:active,.gd-tab:active{transform:scale(.94)}
 .ss-fab:active{transform:scale(.95)} .ss-card-link:active{transform:scale(.985)}
 
-@keyframes fade{from{opacity:0}} @keyframes rise{from{transform:translateY(24px);opacity:0}} @keyframes pop{from{transform:scale(.94);opacity:0}}
+@keyframes fade{from{opacity:0}} @keyframes rise{from{transform:translateY(24px);opacity:0}} @keyframes pop{from{transform:scale(1.1);opacity:0}}
 @keyframes shimmer{to{background-position:-200% 0}} @keyframes spin{to{transform:rotate(360deg)}} @keyframes pulse{50%{opacity:.35}}
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
