@@ -9,15 +9,19 @@
 .stats .sub{color:var(--muted);font-size:.9rem;margin:6px 0 0}
 .stats .back{color:var(--muted);text-decoration:none;font-size:.9rem}
 .stats .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
-.stats .hero{display:grid;gap:12px;grid-template-columns:1fr}
-@media(min-width:560px){.stats .hero{grid-template-columns:repeat(3,1fr)}}
-.stats .hero .card{border-top:4px solid var(--accent)}
-.stats .hero .label-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.stats .hero .label{font-size:.85rem;color:var(--muted);font-weight:600}
-.stats .hero .big{font-family:var(--font-display);font-size:3.2rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
-.stats .hero .of{color:var(--muted);font-size:.9rem}
-.stats .bar{height:8px;border-radius:4px;background:var(--border);margin-top:10px;overflow:hidden}
-.stats .bar>i{display:block;height:100%;background:var(--accent);border-radius:4px;transition:width .9s var(--ease)}
+.stats .hero{display:grid;gap:8px;grid-template-columns:repeat(3,minmax(0,1fr));padding:16px 8px 12px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+.stats .gauge{display:flex;flex-direction:column;align-items:center;text-align:center;min-width:0}
+.stats .gauge .dial{position:relative;width:100%;max-width:200px}
+.stats .gauge svg{display:block;width:100%;height:auto;overflow:visible}
+.stats .gauge path{fill:none;stroke-width:9;stroke-linecap:round}
+.stats .gauge .track{stroke:var(--border)}
+.stats .gauge .fill{stroke:var(--accent);transition:stroke-dasharray .9s var(--ease)}
+.stats .gauge .big{position:absolute;left:0;right:0;bottom:0;font-family:var(--font-display);font-size:clamp(1.6rem,8vw,2.6rem);font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.stats .gauge .label-row{display:flex;align-items:flex-start;justify-content:center;gap:2px;margin-top:6px}
+.stats .gauge .label{font-size:.75rem;line-height:1.2;color:var(--text);font-weight:700}
+.stats .gauge .gd-info{flex:none;margin:-8px -8px -8px 0}
+.stats .gauge .of{color:var(--muted);font-size:.75rem;margin-top:2px}
 .stats .actions{display:flex;flex-wrap:wrap;gap:8px}
 .stats .btn{appearance:none;border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit;font-weight:600;
   padding:10px 14px;min-height:44px;border-radius:12px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
