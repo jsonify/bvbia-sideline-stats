@@ -1,6 +1,7 @@
 import type { GameLanes } from '../../data/repository'
 import { LANES, ROLES, ROLE_BLURB, ROLE_LABEL, type Lane, type Role } from '../../lib/lanes'
 import { agoText } from './labels'
+import { PillGroup, PillItem } from '../../ui/PillGroup'
 
 interface Props {
   role: Role | null
@@ -18,11 +19,15 @@ export function RolePanel({ role, held, lanes, hint, onPick }: Props) {
     <section className="tk-roles" aria-label="What you track">
       <h2>What you track</h2>
       <div className="tk-seg" role="radiogroup" aria-label="What you track">
-        {ROLES.map((r) => (
-          <button key={r} type="button" role="radio" aria-checked={role === r} onClick={() => onPick(r)}>
-            {ROLE_LABEL[r]}<small>{ROLE_BLURB[r]}</small>
-          </button>
-        ))}
+        <PillGroup value={role} pillClassName="tk-seg-pill">
+          {ROLES.map((r) => (
+            <PillItem key={r} value={r} className="tk-seg-item">
+              <button type="button" role="radio" aria-checked={role === r} onClick={() => onPick(r)}>
+                {ROLE_LABEL[r]}<small>{ROLE_BLURB[r]}</small>
+              </button>
+            </PillItem>
+          ))}
+        </PillGroup>
       </div>
       {!solo && (
         <ul className="tk-lanes" aria-label="Who is tracking what">

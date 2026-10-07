@@ -8,13 +8,17 @@
 .tk-top-row{display:flex;align-items:center;gap:10px}
 .tk-back{font-size:32px;line-height:1;text-decoration:none;color:var(--text);width:40px;height:44px;display:grid;place-items:center}
 .tk-title{flex:1;min-width:0}.tk-title h1{margin:0;font-family:var(--font-display);text-transform:uppercase;font-size:28px;line-height:1.05;font-weight:800;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tk-status{font-size:13px;font-weight:700;color:var(--muted)}.tk-status.live{color:var(--tk-bad)}
-.tk-sync{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:6px 10px;border-radius:99px;background:var(--surface);border:1px solid var(--border)}
+/* the header must never change height (everything below would jump on each tap): the status stays on one line and is cut off with … if it is too long */
+.tk-status{display:block;font-size:13px;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tk-status.live{color:var(--tk-bad)}
+.tk-sync{flex:none;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:6px 10px;border-radius:99px;background:var(--surface);border:1px solid var(--border)}
 .tk-sync i{width:8px;height:8px;border-radius:50%;background:var(--good)}
+.tk-sync-n{font-weight:800;font-variant-numeric:tabular-nums;min-width:1.4em;padding:0 5px;border-radius:99px;background:var(--bg);text-align:center;line-height:1.5}
 .tk-sync.offline i{background:var(--warn)}.tk-sync.error i{background:var(--bad)}.tk-sync.syncing i{background:var(--brand);animation:tk-pulse 1s infinite}
 .tk-periods{display:flex;gap:6px;margin-top:8px}
-.tk-periods button{flex:1;min-height:44px;border-radius:12px;border:1px solid var(--border);background:var(--surface);font-weight:700}
-.tk-periods button[aria-pressed=true]{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.tk-period-item{flex:1;min-width:0;display:flex}
+.tk-period-pill{inset:0;border-radius:12px;background:var(--brand)}
+.tk-periods button{flex:1;min-height:44px;border-radius:12px;border:1px solid var(--border);background:var(--surface);font-weight:700;transition:background .2s,border-color .2s,color .2s}
+.tk-periods button[aria-pressed=true]{background:transparent;color:var(--brand-ink);border-color:transparent}
 .tk-start{width:100%;min-height:64px;margin-bottom:12px;border:0;border-radius:var(--radius);background:var(--brand);color:var(--brand-ink)!important;font-size:20px;font-weight:800}
 .tk-final{padding:12px;border-radius:12px;background:var(--surface);border:1px solid var(--border)}
 .tk-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow);padding:14px;margin-bottom:14px}
@@ -26,9 +30,11 @@
 .tk-bar{height:6px;border-radius:9px;background:var(--border);margin:10px 0 12px;overflow:hidden}
 .tk-bar i{display:block;height:100%;background:var(--brand);border-radius:9px;transition:width .3s}
 .tk-seg{display:flex;gap:6px;margin-bottom:10px;background:var(--bg);padding:4px;border-radius:14px}
+.tk-seg-item{flex:1;min-width:0;display:flex}
+.tk-seg-pill{inset:0;border-radius:10px;background:var(--surface);box-shadow:0 1px 4px rgba(0,0,0,.2);outline:2px solid var(--brand)}
 .tk-seg button{flex:1;min-height:48px;border:0;border-radius:10px;background:transparent;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .tk-seg small{font-weight:600;color:var(--muted);font-size:11px}
-.tk-seg button[aria-checked=true]{background:var(--surface);box-shadow:0 1px 4px rgba(0,0,0,.2);outline:2px solid var(--brand)}
+.tk-seg button[aria-checked=true]{background:transparent}
 .tk-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .tk-btn{min-height:88px;border-radius:18px;border:2px solid;font-size:22px;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:transform .08s}
 .tk-btn.good{background:var(--tk-good-bg);border-color:var(--tk-good);color:var(--tk-good)!important}

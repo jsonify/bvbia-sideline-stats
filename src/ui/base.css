@@ -9,10 +9,10 @@
  * BUTTONS               .btn (+ .btn-primary | .btn-ghost | .btn-danger | .btn-lg | .btn-block | .btn-icon) ; min 48px height. [disabled]/[aria-busy=true] supported.
  * CARDS                 .card (+ .card-pad-lg, .card-interactive for tappable cards/links) · .stat-tile (.stat-tile-label, .stat-tile-value, .stat-tile-sub)
  * CHIPS                 .chip (+ .chip-good | .chip-bad | .chip-warn | .chip-brand | .chip-live [pulsing dot]) ; button.chip is tappable, .chip[aria-pressed=true] selected
- * SEGMENTED             .segmented > button[aria-pressed|aria-checked=true] (or .is-active)
+ * SEGMENTED             .segmented > .seg-item > button[aria-pressed|aria-checked=true] — wrap each choice in <PillItem>, inside <PillGroup>, so the selected pill slides (ui/PillGroup.tsx)
  * FORMS                 .field (label wrapper) > .field-label + .input (also select/textarea) + .field-hint / .field-error
  * SHEET / DIALOG        .overlay > .sheet (bottom sheet; .sheet-handle, .sheet-title, .sheet-actions) or .dialog (centered)
- * TOAST                 .toast-region > .toast (+ .toast-good | .toast-bad) ; .toast-action
+ * TOAST                 .toast-region > .toast (+ .toast-good | .toast-bad) ; .toast-action — springs in, swipe down to dismiss (ui/Toast.tsx)
  * SKELETON              .skeleton (+ .skeleton-line, .skeleton-block) shimmering placeholder
  * FAB                   .fab (fixed bottom-right, safe-area aware; .fab-extended for label)
  * MISC                  .empty (empty state) · .bar (progress bar: .bar-fill) · .sr-only · .spinner · .tabbar (bottom nav, .tabbar a[aria-current=page])
@@ -134,9 +134,11 @@ button.chip{min-height:var(--touch);padding:0 var(--s-4);cursor:pointer;border-c
 
 /* segmented */
 .segmented{display:flex;padding:4px;gap:4px;background:var(--surface-2);border-radius:calc(var(--radius-sm) + 4px);border:1px solid var(--border)}
-.segmented>button{flex:1;min-height:calc(var(--touch) - 8px);border:0;border-radius:var(--radius-sm);background:transparent;color:var(--muted);
+.seg-item{flex:1;min-width:0;display:flex}
+.seg-pill{inset:0;border-radius:var(--radius-sm);background:var(--surface);box-shadow:var(--shadow)} /* slides to the selected choice */
+.segmented button{flex:1;min-height:calc(var(--touch) - 8px);border:0;border-radius:var(--radius-sm);background:transparent;color:var(--muted);
   font-weight:700;font-size:var(--fs-md);cursor:pointer;padding:0 var(--s-3);touch-action:manipulation;transition:background .15s,color .15s}
-.segmented>button[aria-pressed=true],.segmented>button[aria-checked=true],.segmented>button.is-active{background:var(--surface);color:var(--brand-text);box-shadow:var(--shadow)}
+.segmented button[aria-pressed=true],.segmented button[aria-checked=true],.segmented button.is-active{color:var(--brand-text)}
 
 /* forms */
 .field{display:flex;flex-direction:column;gap:6px}
@@ -196,8 +198,8 @@ textarea.input,.field textarea{min-height:96px;resize:vertical}
 /* iOS feel: a press shrinks things slightly, and long-pressing chrome does not pop up a callout or select text */
 a,button,img{-webkit-touch-callout:none}
 .ss-nav,.tabbar,.segmented,.sheet-grab,.gd-tabs{-webkit-user-select:none;user-select:none}
-.ss-tab,.ss-fab,.ss-card-link,button.chip,.gd-tab,.segmented>button,.ss-icon-btn{transition:transform .12s var(--ease),background .15s,color .15s}
-.ss-tab:active,.ss-icon-btn:active,button.chip:active,.segmented>button:active,.gd-tab:active{transform:scale(.94)}
+.ss-tab,.ss-fab,.ss-card-link,button.chip,.gd-tab,.segmented button,.ss-icon-btn{transition:transform .12s var(--ease),background .15s,color .15s}
+.ss-tab:active,.ss-icon-btn:active,button.chip:active,.segmented button:active,.gd-tab:active{transform:scale(.94)}
 .ss-fab:active{transform:scale(.95)} .ss-card-link:active{transform:scale(.985)}
 
 @keyframes fade{from{opacity:0}} @keyframes rise{from{transform:translateY(24px);opacity:0}} @keyframes pop{from{transform:scale(.94);opacity:0}}
