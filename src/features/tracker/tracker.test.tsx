@@ -112,7 +112,7 @@ describe('TrackerPage', () => {
     expect(f.events[3]).toMatchObject({ category: 'first_contact', outcome: 'miss', ballType: 'long_ball', period: 1 })
     expect(f.events[4]).toMatchObject({ category: 'box_entry', outcome: 'no_shot' })
     expect(screen.getByTestId('contact-tally').textContent).toContain('0 of 1 · 0%')
-    expect(screen.getByText(/Offline · 2 pending/)).toBeTruthy()
+    expect(screen.getByRole('status', { name: /Offline · 2 pending/ })).toBeTruthy()
   })
 
   it('records the selected period', async () => {

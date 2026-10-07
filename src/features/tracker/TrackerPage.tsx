@@ -72,7 +72,8 @@ export default function TrackerPage() {
             </span>
           </div>
           <span className={`tk-sync ${sync.state}`} role="status" aria-label={`Sync status: ${syncLabel}`}>
-            <i aria-hidden="true" />{syncLabel}
+            <i aria-hidden="true" />{SYNC_TEXT[sync.state]}
+            {sync.state !== 'synced' && sync.pending > 0 && <b className="tk-sync-n" aria-hidden="true">{sync.pending}</b>}
           </span>
         </div>
         <div className="tk-periods" role="group" aria-label="Period">

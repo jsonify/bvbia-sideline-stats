@@ -8,9 +8,11 @@
 .tk-top-row{display:flex;align-items:center;gap:10px}
 .tk-back{font-size:32px;line-height:1;text-decoration:none;color:var(--text);width:40px;height:44px;display:grid;place-items:center}
 .tk-title{flex:1;min-width:0}.tk-title h1{margin:0;font-family:var(--font-display);text-transform:uppercase;font-size:28px;line-height:1.05;font-weight:800;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tk-status{font-size:13px;font-weight:700;color:var(--muted)}.tk-status.live{color:var(--tk-bad)}
-.tk-sync{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:6px 10px;border-radius:99px;background:var(--surface);border:1px solid var(--border)}
+/* the header must never change height (everything below would jump on each tap): the status stays on one line and is cut off with … if it is too long */
+.tk-status{display:block;font-size:13px;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tk-status.live{color:var(--tk-bad)}
+.tk-sync{flex:none;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:6px 10px;border-radius:99px;background:var(--surface);border:1px solid var(--border)}
 .tk-sync i{width:8px;height:8px;border-radius:50%;background:var(--good)}
+.tk-sync-n{font-weight:800;font-variant-numeric:tabular-nums;min-width:1.4em;padding:0 5px;border-radius:99px;background:var(--bg);text-align:center;line-height:1.5}
 .tk-sync.offline i{background:var(--warn)}.tk-sync.error i{background:var(--bad)}.tk-sync.syncing i{background:var(--brand);animation:tk-pulse 1s infinite}
 .tk-periods{display:flex;gap:6px;margin-top:8px}
 .tk-period-item{flex:1;min-width:0;display:flex}
