@@ -5,7 +5,8 @@
 .ss-content{position:relative;overflow-x:clip}
 .ss-layer{position:relative;min-height:100dvh;box-sizing:border-box;background:var(--bg);padding-bottom:calc(76px + env(safe-area-inset-bottom));box-shadow:-10px 0 24px -8px rgba(0,0,0,.28)}
 .ss-no-nav .ss-layer{padding-bottom:0}
-.ss-nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--surface);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom);z-index:20}
+/* The shadow paints the bar's colour on below it, so if the installed app starts with a viewport a little short of the screen (iOS does this on a cold start) the bar still reaches the bottom edge instead of floating over the page colour. */
+.ss-nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--surface);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom);z-index:20;box-shadow:0 120px 0 0 var(--surface)}
 .ss-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 0 8px;min-height:56px;color:var(--muted);text-decoration:none;font-size:12px;font-weight:600}
 .ss-tab{position:relative}
 .ss-tab.active{color:var(--text)}
