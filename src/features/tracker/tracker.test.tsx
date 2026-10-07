@@ -571,7 +571,7 @@ describe('stat guide', () => {
       expect(within(dialog).getByRole('tab', { name: tab }).getAttribute('aria-selected')).toBe('true')
       expect(dialog.textContent).toMatch(/Undo button/) // on the tracker, so mistakes are covered
       fireEvent.click(within(dialog).getByRole('button', { name: 'Got it' }))
-      expect(screen.queryByRole('dialog')).toBeNull()
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull()) // the sheet slides away first
     }
     expect(f.events).toHaveLength(0)
     expect(screen.getByTestId('duel-tally').textContent).toContain('No taps yet')

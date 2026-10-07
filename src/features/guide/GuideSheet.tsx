@@ -39,6 +39,7 @@ export function GuideSheet({ topic, tracking, onClose }: Props) {
 
   return (
     <Sheet open onClose={onClose} label="What each stat means" className="gd-sheet">
+      {(close) => (<>
       <div className="gd-bar">
         <Tabs className="gd-tabs-root" value={id} onValueChange={(v) => pick(v as TopicId)}>
           <TabsHighlight className="gd-tab-pill">
@@ -51,7 +52,7 @@ export function GuideSheet({ topic, tracking, onClose }: Props) {
             </TabsList>
           </TabsHighlight>
         </Tabs>
-        <button type="button" className="gd-x" aria-label="Close" onClick={onClose}><Icon name="x" size={22} /></button>
+        <button type="button" className="gd-x" aria-label="Close" onClick={close}><Icon name="x" size={22} /></button>
       </div>
 
       <div ref={body} className="gd-body" role="tabpanel" id="gd-panel" aria-labelledby={`gd-tab-${id}`}>
@@ -88,8 +89,9 @@ export function GuideSheet({ topic, tracking, onClose }: Props) {
             ? 'Tapped the wrong one? No problem. Every tap can be undone with the big Undo button at the bottom of the screen.'
             : 'These numbers come from taps parents made on the sideline. Each one is a quick judgment call, so use them to spot trends, not as an exact record.'}
         </p>
-        <Button variant="primary" size="lg" block onClick={onClose}>Got it</Button>
+        <Button variant="primary" size="lg" block onClick={close}>Got it</Button>
       </div>
+      </>)}
     </Sheet>
   )
 }

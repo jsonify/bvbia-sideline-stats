@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { InfoButton } from './InfoButton'
 import { SCENE_IDS, Scene } from './Scene'
 import { TOPICS, TOPIC_IDS } from './topics'
 
 afterEach(cleanup)
 
+const gone = () => waitFor(() => expect(screen.queryByRole('dialog')).toBeNull()) // the sheet slides away before it leaves
 const open = (name: string) => { fireEvent.click(screen.getByRole('button', { name })); return screen.getByRole('dialog', { name: 'What each stat means' }) }
 
 describe('stat guide content', () => {
@@ -29,7 +30,7 @@ describe('stat guide content', () => {
 })
 
 describe('InfoButton', () => {
-  it('opens the guide on its own stat and closes with the button, Escape, or a tap outside', () => {
+  it('opens the guide on its own stat and closes with the button, Escape, or a tap outside', async () => {
     render(<InfoButton topic="first_contact" />)
     const trigger = screen.getByRole('button', { name: 'About First contact' })
     const dialog = open('About First contact')
@@ -39,20 +40,20 @@ describe('InfoButton', () => {
     expect(within(dialog).getAllByRole('img')).toHaveLength(4) // clean and miss, for each kind of ball
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }))
-    expect(screen.queryByRole('dialog')).toBeNull()
+    await gone()
     expect(document.activeElement).toBe(trigger) // back where the parent was
 
     open('About First contact')
     fireEvent.keyDown(window, { key: 'Escape' })
-    expect(screen.queryByRole('dialog')).toBeNull()
+    await gone()
 
     open('About First contact')
     fireEvent.click(screen.getByRole('dialog').parentElement!) // the dimmed area around the sheet
-    expect(screen.queryByRole('dialog')).toBeNull()
+    await gone()
 
     open('About First contact')
     fireEvent.click(screen.getByRole('button', { name: 'Got it' }))
-    expect(screen.queryByRole('dialog')).toBeNull()
+    await gone()
   })
 
   it('lets you read about the other stats without closing it', () => {
