@@ -5,6 +5,7 @@ import { useRepo } from '../../data/context'
 import { useRemembered } from '../../data/remember'
 import { heartsFor } from '../../lib/thanks'
 import { summarize } from '../../lib/summary'
+import { Sheet } from '../../ui/Sheet'
 import { ThanksTag } from '../thanks/ThanksHeart'
 import { useThanks } from '../thanks/useThanks'
 import type { Game, StatSummary } from '../../types'
@@ -117,18 +118,18 @@ export default function GamesPage() {
       {final.length > 0 && <><h2 className="ss-h2">Final</h2><ul className="gm-list">{final.map(card)}</ul></>}
       {games.length > 0 && <Link to="/games/new" className="ss-fab" aria-label="New game"><span aria-hidden="true">＋</span> New game</Link>}
 
-      {confirm && (
-        <div className="gm-sheet-bg" onClick={() => setConfirm(null)}>
-          <div className="gm-sheet" role="alertdialog" aria-modal="true" aria-labelledby="del-t" onClick={(e) => e.stopPropagation()}>
-            <h2 id="del-t">Delete this game?</h2>
+      {/* On the shared Sheet, which is drawn on the body: inside the page it sat under the tab bar and its buttons were off screen. */}
+      <Sheet open={!!confirm} onClose={() => setConfirm(null)} title="Delete this game?">
+        {(close) => confirm && (
+          <>
             <p className="ss-hint">{confirm.opponent} on {fmtDate(confirm.date)} and all its stats will be removed for everyone.</p>
-            <div className="ss-row" style={{ marginTop: 12 }}>
-              <button className="ss-btn" autoFocus onClick={() => setConfirm(null)}>Cancel</button>
-              <button className="ss-btn ss-btn-danger" onClick={async () => { const g = confirm; setConfirm(null); await repo.deleteGame(g.id); void load() }}>Delete</button>
+            <div className="ss-row">
+              <button className="ss-btn" onClick={close}>Cancel</button>
+              <button className="ss-btn ss-btn-danger" onClick={async () => { const g = confirm; close(); await repo.deleteGame(g.id); void load() }}>Delete</button>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Sheet>
     </main>
   )
 }

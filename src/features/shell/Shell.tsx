@@ -3,6 +3,7 @@ import { Navigate, NavLink, useLocation } from 'react-router-dom'
 import { Highlight, HighlightItem } from '@/components/animate-ui/primitives/effects/highlight'
 import { useTeam } from './useTeam'
 import { hidesNav, PageTransition } from './PageTransition'
+import { NamePrompt } from './NamePrompt'
 
 /** Redirects to /welcome when this device has no team yet. */
 export function RequireTeam({ children }: { children: ReactNode }) {
@@ -43,6 +44,7 @@ export function Shell() {
             </Highlight>
           </nav>
         )}
+        <NamePrompt />
       </div>
     </RequireTeam>
   )
