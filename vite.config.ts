@@ -4,8 +4,17 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath } from 'node:url'
+import { execSync } from 'node:child_process'
+
+// Which build this is, shown at the bottom of Settings so you can tell a phone picked up a deploy.
+// Vercel passes the commit; locally it comes from git.
+function commitSha(): string {
+  if (process.env.VERCEL_GIT_COMMIT_SHA) return process.env.VERCEL_GIT_COMMIT_SHA
+  try { return execSync('git rev-parse HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() } catch { return 'dev' }
+}
 
 export default defineConfig({
+  define: { __APP_COMMIT__: JSON.stringify(commitSha().slice(0, 7)), __APP_BUILT__: JSON.stringify(new Date().toISOString()) },
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   plugins: [
     react(),
