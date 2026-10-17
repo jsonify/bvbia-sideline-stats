@@ -385,6 +385,7 @@ test('delete a game: the confirmation sits above the tab bar and its buttons can
 
 test('tap on the field: box entry, our half, and the field turns round at halftime', async ({ page }) => {
   await page.addInitScript(() => { sessionStorage.setItem('e2e-field', '1'); localStorage.removeItem('sideline.tapStyle') })
+  await page.setViewportSize({ width: 390, height: 664 }) // an iPhone with Safari's bars showing: everything must be in reach without scrolling
   await page.goto('/')
   await page.getByRole('button', { name: /Create my team/ }).click()
   await page.getByLabel('Team name').fill('U10 Thunder')
@@ -399,12 +400,15 @@ test('tap on the field: box entry, our half, and the field turns round at halfti
   const field = page.getByRole('region', { name: 'Field' })
   await expect(field).toBeVisible()
   await shot(page, '20-field')
+  await expect(field.getByRole('button', { name: /^Their box: Right, close to goal/ })).toBeInViewport({ ratio: 1 })
   await field.getByRole('button', { name: /^Their box: Centre, close to goal/ }).click()
+  await expect(page.getByRole('button', { name: 'Box entry with shot' })).toBeInViewport({ ratio: 1 })
   await shot(page, '21-field-box-entry')
   await page.getByRole('button', { name: 'Box entry with shot' }).click()
   await expect(page.getByTestId('box-tally')).toContainText('1 of 1')
 
   await field.getByRole('button', { name: /^Our half: Left, deep in our half/ }).click()
+  await expect(page.getByRole('button', { name: 'Long ball miss' })).toBeInViewport({ ratio: 1 })
   await shot(page, '22-field-our-half')
   await page.getByRole('button', { name: 'Through ball clean' }).click()
   await expect(page.getByTestId('contact-tally')).toContainText('1 of 1')
@@ -414,4 +418,10 @@ test('tap on the field: box entry, our half, and the field turns round at halfti
   await field.getByRole('button', { name: /^Their box: Right, edge of the box/ }).click()
   await expect(page.getByTestId('box-tally')).toContainText('1 of 2', { timeout: 12_000 }) // no answer: saved as No shot
   await shot(page, '23-field-second-half')
+
+  // Offense only: just the box, across the whole width.
+  await page.getByRole('radio', { name: /^Offense/ }).click()
+  await expect(field.getByRole('button', { name: /^Our half:/ })).toHaveCount(0)
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await shot(page, '24-field-offense-only')
 })

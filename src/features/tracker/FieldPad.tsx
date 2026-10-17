@@ -127,21 +127,33 @@ export function FieldPad({ events, period, attacksLeft, defense, offense, onSwap
     </div>
   )
 
+  // Only show the sides this phone taps: a phone on offense gets the whole width for the box. A phone that taps
+  // neither (watching) sees both, with the counts.
+  const showOurs = defense.enabled || !offense.enabled
+  const showTheirs = offense.enabled || !defense.enabled
+  const labels = [showOurs && 'Our half', attacksLeft ? '← Attacking' : 'Attacking →', showTheirs && 'Their box'].filter(Boolean) as string[]
+
   return (
-    <section className={`fp${attacksLeft ? ' flip' : ''}`} aria-label="Field">
+    <section className={`fp${attacksLeft ? ' flip' : ''}${showOurs && showTheirs ? '' : ' one'}`} aria-label="Field">
       <div className="fp-head">
-        <div className="fp-labels" aria-hidden="true">
-          <span>Our half</span>
-          <span>{attacksLeft ? '← Attacking' : 'Attacking →'}</span>
-          <span>Their box</span>
-        </div>
+        <div className="fp-labels" aria-hidden="true">{labels.map((l) => <span key={l}>{l}</span>)}</div>
         <button type="button" className="fp-swap" onClick={onSwap} aria-label={`Swap ends: we are attacking to the ${attacksLeft ? 'left' : 'right'}`}>⇄ Swap</button>
       </div>
-      <div className="fp-field">{ours}{theirs}</div>
+      <div className="fp-field">{showOurs && ours}{showTheirs && theirs}</div>
+      {!pending && (
+        <p className="fp-hint">
+          {offense.enabled && defense.enabled ? 'Tap where the play happened: our half for 1v1s and first contact, their box for box entries.'
+            : offense.enabled ? 'Tap the zone of their box where we got in.'
+            : defense.enabled ? 'Tap the zone of our half where the play happened.'
+            : 'Taps show up here as they happen.'}
+        </p>
+      )}
 
+      {/* What happened is asked in a sheet pinned to the bottom of the screen (over the Undo bar), so the parent never
+          has to scroll to answer, wherever the page is. */}
       {pending?.kind === 'box' ? (
         <div className="fp-pick" role="group" aria-label={`Box entry, ${zoneText(pending.zone)}`} key={pending.key}>
-          <p className="fp-pick-h"><b>Box entry</b> · {zoneText(pending.zone)}</p>
+          <p className="fp-pick-h"><span><b>Box entry</b> · {zoneText(pending.zone)}</span><button type="button" onClick={done}>Cancel</button></p>
           <div className="fp-row">
             <button type="button" className="tk-btn good" aria-label="Box entry with shot" onClick={() => { onBox(pending.zone, 'shot', pending.period); done() }}>
               <span className="tk-ico" aria-hidden="true">◎</span><span>Shot</span>
@@ -151,14 +163,11 @@ export function FieldPad({ events, period, attacksLeft, defense, offense, onSwap
             </button>
           </div>
           <div className="fp-wait" aria-hidden="true"><i style={{ animationDuration: `${BOX_WAIT_MS}ms` }} /></div>
-          <p className="fp-pick-foot">
-            <span>No tap saves it as No shot</span>
-            <button type="button" onClick={done}>Cancel</button>
-          </p>
+          <p className="fp-pick-foot">No tap saves it as No shot</p>
         </div>
       ) : pending?.kind === 'def' ? (
         <div className="fp-pick" role="group" aria-label={`Our half, ${zoneText(pending.zone)}`}>
-          <p className="fp-pick-h"><b>Our half</b> · {zoneText(pending.zone)}</p>
+          <p className="fp-pick-h"><span><b>Our half</b> · {zoneText(pending.zone)}</span><button type="button" onClick={done}>Cancel</button></p>
           {([
             ['1v1', [['Won', '✓', 'good', 'Duel won', { category: 'duel', outcome: 'won' }], ['Lost', '✕', 'bad', 'Duel lost', { category: 'duel', outcome: 'lost' }]]],
             ['Through ball', [
@@ -177,16 +186,8 @@ export function FieldPad({ events, period, attacksLeft, defense, offense, onSwap
               ))}
             </div>
           ))}
-          <p className="fp-pick-foot"><span /><button type="button" onClick={done}>Cancel</button></p>
         </div>
-      ) : (
-        <p className="fp-hint">
-          {offense.enabled && defense.enabled ? 'Tap where the play happened: our half for 1v1s and first contact, their box for box entries.'
-            : offense.enabled ? 'Tap the zone of their box where we got in.'
-            : defense.enabled ? 'Tap the zone of our half where the play happened.'
-            : 'Taps show up here as they happen.'}
-        </p>
-      )}
+      ) : null}
     </section>
   )
 }

@@ -696,9 +696,9 @@ describe('tapping on the field', () => {
     expect(localStorage.getItem('sideline.swapEnds.g1')).toBe('1')
   })
 
-  it('only lets a phone tap its own side of the field', async () => {
+  it('only shows a phone its own side of the field', async () => {
     await setup('live', { defense: sam(), offense: NOBODY })
-    expect((zone(/^Our half: Left, deep in our half/) as HTMLButtonElement).disabled).toBe(true)
+    expect(screen.queryByRole('button', { name: /^Our half:/ })).toBeNull() // offense only: the box gets the whole width
     expect((zone(/^Their box: Left, edge of the box/) as HTMLButtonElement).disabled).toBe(false)
     expect(screen.getAllByText('Sam is tracking this').length).toBeGreaterThan(0)
   })

@@ -129,23 +129,10 @@ export default function TrackerPage() {
         </section>
       )}
 
-      {!locked && !t.checking && (
-        <RolePanel role={t.role} held={t.held} lanes={t.lanes} hint={t.events.length === 0} onPick={pick} />
-      )}
-
       {game.status === 'scheduled' && t.canTrack && (
         <button type="button" className="tk-start" onClick={() => t.setStatus('live')}>▶ Start game</button>
       )}
       {locked && <p className="tk-final">Game is final. <Link to={`/games/${game.id}`}>View summary</Link></p>}
-
-      {!locked && (
-        <div className="tk-style" role="group" aria-label="Tap on">
-          <span>Tap on</span>
-          {TAP_STYLES.map((v) => (
-            <button key={v} type="button" aria-pressed={tapStyle === v} onClick={() => setTapStyle(v)}>{v === 'field' ? 'Field' : 'Buttons'}</button>
-          ))}
-        </div>
-      )}
 
       {!locked && onField && (
         <FieldPad events={t.events} period={t.period} attacksLeft={attacksLeft(t.period, game.periods, swapped === '1')}
@@ -154,6 +141,20 @@ export default function TrackerPage() {
           offense={{ enabled: t.canTap('offense'), note: cardProps('offense').note }}
           onDefense={(zone, pick) => (pick.category === 'duel' ? t.recordDuel(pick.outcome, zone) : t.recordContact(pick.outcome, zone, pick.ballType))}
           onBox={(zone, outcome, at) => t.recordBox(outcome, zone, at)} />
+      )}
+
+      {/* What this phone tracks and how it taps are set once, so they sit below the field, which must be in reach. */}
+      {!locked && !t.checking && (
+        <RolePanel role={t.role} held={t.held} lanes={t.lanes} hint={t.events.length === 0} onPick={pick} />
+      )}
+
+      {!locked && (
+        <div className="tk-style" role="group" aria-label="Tap on">
+          <span>Tap on</span>
+          {TAP_STYLES.map((v) => (
+            <button key={v} type="button" aria-pressed={tapStyle === v} onClick={() => setTapStyle(v)}>{v === 'field' ? 'Field' : 'Buttons'}</button>
+          ))}
+        </div>
       )}
 
       {[
