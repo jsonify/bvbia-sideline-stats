@@ -10,6 +10,8 @@ import { canThank } from '../../lib/thanks'
 import { ThanksHeart } from '../thanks/ThanksHeart'
 import { InfoButton } from '../guide/InfoButton'
 import { FieldMap } from './FieldMap'
+import { ZoneBreakdown } from './ZoneBreakdown'
+import { zonedEvents, zoneNotes } from './zoneStats'
 import { StatHero } from './StatHero'
 import { PeriodTable } from './PeriodTable'
 import { ShareImage } from './ShareImage'
@@ -62,7 +64,8 @@ export default function GameSummaryPage() {
   const s = summarize(events)
   const notes = takeaways(s)
   const live = events.filter((e) => !e.deletedAt).sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-  const text = gameSummaryToText(game, s, notes)
+  const where = zoneNotes(events)
+  const text = gameSummaryToText(game, s, [...notes, ...where])
   const fc = s.firstContact
   const before = season ? meetings(game, season.games, season.events) : []
 
@@ -111,6 +114,13 @@ export default function GameSummaryPage() {
         <section className="card" aria-labelledby="map">
           <h2 id="map">Game map</h2>
           <FieldMap events={events} periods={periodBreakdown(live, game.periods)} />
+        </section>
+      )}
+
+      {CATS.some((c) => zonedEvents(events, c).length > 0) && (
+        <section className="card" aria-labelledby="zones">
+          <h2 id="zones">Where it happened</h2>
+          <ZoneBreakdown events={events} />
         </section>
       )}
 
