@@ -1,6 +1,8 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { Shell } from './features/shell/Shell'
+import { AppUpdate } from './features/shell/AppUpdate'
+import { LaunchHandler } from './features/shell/LaunchHandler'
 
 const GamesPage = lazy(() => import('./features/games/GamesPage'))
 const GameFormPage = lazy(() => import('./features/games/GameFormPage'))
@@ -14,6 +16,8 @@ const SeasonPage = lazy(() => import('./features/stats/SeasonPage'))
 export default function App() {
   return (
     <BrowserRouter>
+      <LaunchHandler />
+      <AppUpdate />
       <Suspense fallback={<div className="ss-loading" role="status">Loading…</div>}>
         <Routes>
           <Route path="/welcome" element={<OnboardingPage />} />

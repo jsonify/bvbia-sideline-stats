@@ -40,5 +40,6 @@ The team page shows a **join code**. Other volunteers open the app, choose "Join
 
 - **Blank page or 404 on refresh**: SPA rewrite missing (see the Vercel/Netlify sections).
 - **App stays in demo mode**: the `VITE_*` variables were not present at *build* time; set them and redeploy.
-- **Updates do not appear**: the service worker updates on next load; close and reopen the app once.
+- **Updates do not appear**: the app checks for a new deploy hourly and whenever it comes back to the front, then shows "A new version is ready" with an Update button (not on the tracker or game form, so it never interrupts a game). Closing and reopening the app also picks it up.
+- **iOS launch screens**: `public/splash/` is generated from the app icon by `scripts/gen-splash.sh` (needs ImageMagick). Re-run it and paste the printed `<link>` tags into `index.html` if the icon changes or a new iPhone screen size comes out.
 - **Sign-in errors**: confirm Anonymous sign-ins are enabled in Supabase.

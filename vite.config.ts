@@ -11,7 +11,8 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt', // AppUpdate shows "new version ready"; never swap code under a parent mid-game
+      injectRegister: false,
       includeAssets: ['Borussia_Dortmund_logo.svg', 'apple-touch-icon.png'],
       manifest: {
         id: '/',
@@ -23,9 +24,24 @@ export default defineConfig({
         theme_color: '#000000',
         background_color: '#000000',
         display: 'standalone',
+        display_override: ['standalone'],
         orientation: 'portrait',
         start_url: '/',
         scope: '/',
+        // a tap on the icon goes back to the open window (and whatever game is on screen) instead of restarting it;
+        // shortcuts and invite links reach that window through LaunchHandler
+        launch_handler: { client_mode: ['focus-existing', 'auto'] },
+        handle_links: 'preferred',
+        shortcuts: [
+          { name: 'New game', short_name: 'New game', url: '/games/new', icons: [{ src: 'pwa-192.png', sizes: '192x192', type: 'image/png' }] },
+          { name: 'Season stats', short_name: 'Season', url: '/season', icons: [{ src: 'pwa-192.png', sizes: '192x192', type: 'image/png' }] },
+        ],
+        screenshots: [
+          { src: 'screenshots/games.png', sizes: '541x1101', type: 'image/png', form_factor: 'narrow', label: 'Your team\'s games' },
+          { src: 'screenshots/tracker.png', sizes: '541x1101', type: 'image/png', form_factor: 'narrow', label: 'Track stats live from the sideline' },
+          { src: 'screenshots/summary.png', sizes: '541x1101', type: 'image/png', form_factor: 'narrow', label: 'Game summary' },
+          { src: 'screenshots/season.png', sizes: '541x1101', type: 'image/png', form_factor: 'narrow', label: 'Season trends' },
+        ],
         icons: [
           { src: 'pwa-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa-512.png', sizes: '512x512', type: 'image/png' },
@@ -35,6 +51,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        globIgnores: ['splash/**', 'screenshots/**'], // only fetched by the OS at install time, not needed offline
         navigateFallback: '/index.html',
         cleanupOutdatedCaches: true,
       },
