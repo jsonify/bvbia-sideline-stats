@@ -23,9 +23,6 @@
 .gm-empty svg{width:200px;max-width:70%;height:auto}
 .gm-empty h2{font-size:22px;margin:12px 0 6px}
 .gm-empty p{color:var(--muted);margin:0 0 20px}
-.gm-sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:50}
-.gm-sheet{background:var(--surface);width:100%;max-width:520px;border-radius:22px 22px 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom))}
-.gm-sheet h2{margin:0 0 6px}
 .gm-actions{position:sticky;bottom:0;background:linear-gradient(transparent,var(--bg) 24%);padding:24px 0 calc(12px + env(safe-area-inset-bottom));display:grid;gap:10px}
 .gm-topbar{display:flex;align-items:center;gap:8px}
 .gm-back{color:var(--brand-text);font-weight:700;text-decoration:none;min-height:44px;display:inline-flex;align-items:center}

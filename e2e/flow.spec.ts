@@ -2,6 +2,13 @@ import { expect, test, type Locator, type Page } from '@playwright/test'
 
 const shot = (page: Page, name: string) => page.screenshot({ path: `e2e/screenshots/${name}.png`, fullPage: false })
 
+/** First time in the app it asks for your name (shown to other parents while you track). */
+const giveName = async (page: Page, name = 'Sam') => {
+  await page.getByRole('dialog', { name: "What's your name?" }).getByLabel('Your name').fill(name)
+  await page.getByRole('button', { name: 'Save name' }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+}
+
 test('team -> game -> track -> undo -> end -> summary -> season', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', (e) => errors.push(e.message))
@@ -16,6 +23,7 @@ test('team -> game -> track -> undo -> end -> summary -> season', async ({ page 
   await expect(page.getByRole('heading', { name: /all set/i })).toBeVisible()
   await shot(page, '02-team-created')
   await page.getByRole('button', { name: /Let's go/ }).click()
+  await giveName(page)
 
   // Empty games list -> new game
   await expect(page.getByRole('heading', { name: 'Games', exact: true })).toBeVisible()
@@ -146,6 +154,7 @@ test('branding is fixed: BVB yellow and the crest, no Team look section, old cus
   await page.getByLabel('Team name').fill('BVB Fans')
   await page.getByRole('button', { name: 'Create team' }).click()
   await page.getByRole('button', { name: /Let's go/ }).click()
+  await giveName(page)
 
   // The crest is in the team bar and actually loaded
   const crest = page.locator('.bd-teambar img[src="/Borussia_Dortmund_logo.svg"]')
@@ -177,6 +186,7 @@ test('multiple teams: add, switch, keep games + season stats separate, remove', 
   await page.getByLabel('Team name').fill('U10 Thunder')
   await page.getByRole('button', { name: 'Create team' }).click()
   await page.getByRole('button', { name: /Let's go/ }).click()
+  await giveName(page)
   await page.getByRole('link', { name: /Add your first game/ }).click()
   await page.getByLabel('Opponent').fill('Rapids')
   await page.getByRole('button', { name: /Save & start tracking/ }).click()
@@ -276,19 +286,22 @@ test('invite: Share code sends the app link, the code and the steps; the link op
   expect(errors).toEqual([])
 })
 
-test('your name: set in Settings, saved on this device', async ({ page }) => {
+test('your name: asked for on first open, saved on this device, changeable in Settings', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: /Create my team/ }).click()
   await page.getByLabel('Team name').fill('U10 Thunder')
   await page.getByRole('button', { name: 'Create team' }).click()
   await page.getByRole('button', { name: /Let's go/ }).click()
-  await page.getByRole('link', { name: 'Settings' }).click()
-  await page.getByLabel('Your name').fill('Sam')
-  await page.getByRole('button', { name: 'Save name' }).click()
-  await expect(page.getByText('Saved', { exact: true })).toBeVisible()
-  await page.screenshot({ path: 'e2e/screenshots/18-your-name.png', fullPage: true })
+  const prompt = page.getByRole('dialog', { name: "What's your name?" })
+  await expect(prompt).toBeVisible()
+  await page.screenshot({ path: 'e2e/screenshots/18-your-name.png', fullPage: false })
+  await prompt.getByLabel('Your name').fill('Sam')
+  await prompt.getByRole('button', { name: 'Save name' }).click()
+  await expect(prompt).toHaveCount(0)
   await page.reload()
+  await page.getByRole('link', { name: 'Settings' }).click()
   await expect(page.getByLabel('Your name')).toHaveValue('Sam')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
 })
 
 test('split roles: track everything by default, or just defense or offense', async ({ page }) => {
@@ -299,6 +312,7 @@ test('split roles: track everything by default, or just defense or offense', asy
   await page.getByLabel('Team name').fill('U10 Thunder')
   await page.getByRole('button', { name: 'Create team' }).click()
   await page.getByRole('button', { name: /Let's go/ }).click()
+  await giveName(page)
   await page.getByRole('link', { name: /Add your first game/ }).click()
   await page.getByLabel('Opponent').fill('Rapids U10')
   await page.getByRole('button', { name: /Save & start tracking/ }).click()
@@ -339,4 +353,27 @@ test('split roles: track everything by default, or just defense or offense', asy
   await expect(page.getByRole('alertdialog')).toHaveCount(0)
   await expect(duel).toBeEnabled()
   expect(errors).toEqual([])
+})
+
+test('delete a game: the confirmation sits above the tab bar and its buttons can be tapped', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: /Create my team/ }).click()
+  await page.getByLabel('Team name').fill('U10 Thunder')
+  await page.getByRole('button', { name: 'Create team' }).click()
+  await page.getByRole('button', { name: /Let's go/ }).click()
+  await giveName(page)
+  await page.getByRole('link', { name: /Add your first game/ }).click()
+  await page.getByLabel('Opponent').fill('Rapids')
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await page.getByRole('button', { name: 'Options for Rapids' }).click()
+  await page.getByRole('menuitem', { name: 'Delete' }).click()
+  const sheet = page.getByRole('dialog', { name: 'Delete this game?' })
+  await expect(sheet).toBeVisible()
+  const del = sheet.getByRole('button', { name: 'Delete' })
+  await expect(del).toBeInViewport({ ratio: 1 })
+  await page.waitForTimeout(500) // let the sheet finish springing up
+  await page.screenshot({ path: 'e2e/screenshots/22-delete-game.png', fullPage: false })
+  await del.click() // a click is refused if the tab bar or anything else covers the button
+  await expect(sheet).toHaveCount(0)
+  await expect(page.getByText('No games yet')).toBeVisible()
 })

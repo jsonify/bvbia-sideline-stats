@@ -4,6 +4,13 @@ import { expect, test, type Page } from '@playwright/test'
 const SHOTS = process.env.E2E_SHOTS || 'test-results/shots'
 const shot = (page: Page, name: string) => page.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: false })
 
+/** First time in the app it asks for your name (shown to other parents while you track). */
+const giveName = async (page: Page, name = 'Sam') => {
+  await page.getByRole('dialog', { name: "What's your name?" }).getByLabel('Your name').fill(name)
+  await page.getByRole('button', { name: 'Save name' }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+}
+
 const tap = async (page: Page, name: string, times: number) => {
   for (let i = 0; i < times; i++) await page.getByRole('button', { name, exact: true }).click()
 }
@@ -38,6 +45,7 @@ test('targets -> halftime numbers -> share image -> season trends', async ({ pag
   await page.getByLabel('Team name').fill('U10 Thunder')
   await page.getByRole('button', { name: 'Create team' }).click()
   await page.getByRole('button', { name: /Let's go/ }).click()
+  await giveName(page)
 
   // The coach sets targets once, for the whole team.
   await page.goto('/settings')
