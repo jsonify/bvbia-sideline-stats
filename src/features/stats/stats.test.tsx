@@ -7,6 +7,7 @@ import type { GameThanks, Repository } from '../../data/repository'
 import { RepoContext } from '../../data/context'
 import GameSummaryPage from './GameSummaryPage'
 import SeasonPage from './SeasonPage'
+import { HalftimeSheet } from './HalftimeSheet'
 
 afterEach(cleanup)
 globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as never
@@ -99,6 +100,31 @@ describe('GameSummaryPage', () => {
     renderGame(fakeRepo([{ ...mkGame('g1', 'Bears', '2026-01-01'), periods: 4 }], events), 'g1')
     await screen.findByRole('img', { name: /Game map/ })
     expect(screen.getAllByRole('radio').map((r) => r.textContent)).toEqual(['All', 'Q1', 'Q2', 'Q3', 'Q4'])
+  })
+  it('breaks taps made on the field down by zone, with notes on where things went wrong', async () => {
+    const lost = (zone: string) => ev('g1', 'duel', 'lost', { zone })
+    const events = [
+      lost('def_l'), lost('def_l'), lost('def_l'), ev('g1', 'duel', 'won', { zone: 'def_l' }), ev('g1', 'duel', 'won', { zone: 'mid_c' }),
+      ev('g1', 'duel', 'won'), // made with the buttons: on the map, not in the zones
+      ev('g1', 'box_entry', 'shot', { zone: 'near_c' }),
+    ]
+    renderGame(fakeRepo([mkGame('g1', 'Bears', '2026-01-01')], events), 'g1')
+    const card = await screen.findByRole('region', { name: 'Where it happened' })
+    const table = within(card).getByRole('table', { name: /1v1s by zone/ })
+    const left = within(table).getByRole('row', { name: /^Left/ })
+    expect(within(left).getAllByRole('cell').map((c) => c.getAttribute('aria-label'))).toEqual(['1 of 4 won', 'none', '1 of 4 won'])
+    expect(within(card).getByText(/1 tap made with the buttons doesn't say where/)).toBeTruthy()
+    expect(within(card).getByText('All 3 lost 1v1s came on the left, deep in our half (we won 1 of 4 there), so that is the area to cover.')).toBeTruthy()
+
+    fireEvent.click(within(card).getByRole('radio', { name: 'Box entries' }))
+    const box = within(card).getByRole('table', { name: /Box entries by zone/ })
+    expect(within(box).getByRole('columnheader', { name: 'Close to goal' })).toBeTruthy()
+    expect(within(within(box).getByRole('row', { name: /^Centre/ })).getAllByRole('cell')[1].getAttribute('aria-label')).toBe('1 of 1 with a shot')
+  })
+  it('has no zone card when nothing was tapped on the field', async () => {
+    renderGame(fakeRepo([mkGame('g1', 'Bears', '2026-01-01')], [ev('g1', 'duel', 'won')]), 'g1')
+    await screen.findByRole('img', { name: /Game map/ })
+    expect(screen.queryByRole('region', { name: 'Where it happened' })).toBeNull()
   })
   it('handles zero events gracefully and hides continue for final', async () => {
     renderGame(fakeRepo([mkGame('g1', 'Bears', '2026-01-01')], []), 'g1')
@@ -201,6 +227,21 @@ describe('GameSummaryPage', () => {
 
 const renderSeason = (repo: Repository) => render(
   <RepoContext.Provider value={repo}><MemoryRouter><SeasonPage /></MemoryRouter></RepoContext.Provider>)
+
+describe('HalftimeSheet', () => {
+  it('adds the zone notes for the latest half to its takeaways', () => {
+    const lost = (zone: string, period: number) => ev('g1', 'duel', 'lost', { zone }, period)
+    const events = [
+      lost('def_r', 1), lost('def_r', 1), lost('def_r', 1), lost('def_r', 1), ev('g1', 'duel', 'won', { zone: 'def_c' }, 1), // 1st half: not shown in the 2nd
+      lost('mid_l', 2), lost('mid_l', 2), lost('mid_l', 2), ev('g1', 'duel', 'won', { zone: 'mid_l' }, 2), ev('g1', 'duel', 'won', { zone: 'def_c' }, 2),
+    ]
+    render(<HalftimeSheet game={{ periods: 2 }} events={events} />)
+    fireEvent.click(screen.getByRole('button', { name: /Halftime numbers/ }))
+    const notes = within(screen.getByRole('list', { name: 'Takeaways from the 2nd half' })).getAllByRole('listitem').map((li) => li.textContent)
+    expect(notes).toContain('All 3 lost 1v1s came on the left, near halfway (we won 1 of 4 there), so that is the area to cover.')
+    expect(notes.join(' ')).not.toMatch(/on the right/)
+  })
+})
 
 describe('SeasonPage', () => {
   it('empty state', async () => {

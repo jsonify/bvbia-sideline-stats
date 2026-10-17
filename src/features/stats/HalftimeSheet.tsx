@@ -5,6 +5,7 @@ import { Sheet } from '../../ui'
 import { periodBreakdown, periodLabel, takeaways } from './insights'
 import { PeriodTable } from './PeriodTable'
 import { StatHero } from './StatHero'
+import { zoneNotes } from './zoneStats'
 import './stats.css'
 
 /** The period to talk about at a break: the latest one anything was recorded in. */
@@ -13,8 +14,8 @@ export function focusPeriod(events: StatEvent[]): number {
 }
 
 /**
- * "Halftime numbers" for the tracker: the latest period's three stats and takeaways, and every period side by side,
- * on one screen the coach can glance at during the break. It is a sheet over the tracker, never a page of its own,
+ * "Halftime numbers" for the tracker: the latest period's three stats and takeaways (with the zone notes, from taps
+ * made on the field), and every period side by side, on one screen the coach can glance at during the break. It is a sheet over the tracker, never a page of its own,
  * because leaving the tracker hands this phone's lanes back.
  */
 export function HalftimeSheet({ game, events, goals = {} }: { game: Pick<Game, 'periods'>; events: StatEvent[]; goals?: TeamGoals }) {
@@ -24,7 +25,8 @@ export function HalftimeSheet({ game, events, goals = {} }: { game: Pick<Game, '
   if (live.length === 0) return null
   const focus = focusPeriod(live)
   const name = periodLabel(focus, game.periods)
-  const s = summarize(live.filter((e) => e.period === focus))
+  const inFocus = live.filter((e) => e.period === focus)
+  const s = summarize(inFocus)
   const periods = periodBreakdown(live, game.periods).filter((p) => p <= focus)
 
   return (
@@ -41,7 +43,7 @@ export function HalftimeSheet({ game, events, goals = {} }: { game: Pick<Game, '
               <StatHero cls="f" label="Clean first contact" pct={s.firstContact.cleanPct} n={s.firstContact.clean} d={s.firstContact.total} unit="balls" goal={goals.first_contact} />
               <StatHero cls="b" label="Entries with a shot" pct={s.boxEntries.shotPct} n={s.boxEntries.shot} d={s.boxEntries.total} unit="entries" goal={goals.box_entry} />
             </section>
-            <ul className="take" aria-label={`Takeaways from the ${name}`}>{takeaways(s).map((t) => <li key={t}>{t}</li>)}</ul>
+            <ul className="take" aria-label={`Takeaways from the ${name}`}>{[...takeaways(s), ...zoneNotes(inFocus)].map((t) => <li key={t}>{t}</li>)}</ul>
             {periods.length > 1 && (
               <PeriodTable events={live} periods={periods} count={game.periods} goals={goals} total="Game so far" caption="Every period so far" />
             )}

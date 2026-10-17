@@ -84,3 +84,7 @@
 .stats .chg.up{color:var(--good)} .stats .chg.down{color:var(--bad)}
 .stats .ht-h{margin:0;font-family:var(--font-display);text-transform:uppercase;font-size:1.4rem;font-weight:800}
 .halftime-sheet .stats .hero{padding:8px 0}
+.stats .zones td.heat{background:color-mix(in srgb,var(--accent) var(--heat),transparent)}
+.stats .zones tr.total th,.stats .zones tr.total td{font-weight:800;border-top:2px solid var(--border)}
+.stats .zone-notes{margin-top:10px}
+.stats .zones th,.stats .zones td{padding:8px 4px}
