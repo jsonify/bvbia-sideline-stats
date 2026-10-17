@@ -52,3 +52,7 @@ textarea.ss-input{padding:12px 14px;min-height:88px;resize:vertical}
 .ss-invite-link{margin-top:10px;font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--muted);word-break:break-all;user-select:all}
 .ss-team-name{font-family:var(--font-display);text-transform:uppercase;font-size:32px;line-height:1.05;font-weight:800;letter-spacing:.01em;margin:4px 0 10px}
 .ss-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+/* "new version ready": a pill floating above the tab bar */
+.ss-update{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom));z-index:30;display:flex;align-items:center;gap:12px;width:max-content;max-width:calc(100% - 32px);box-sizing:border-box;padding:8px 8px 8px 16px;border-radius:999px;background:var(--text);color:var(--bg);font-weight:700;font-size:15px;box-shadow:var(--shadow)}
+.ss-update-btn{appearance:none;border:0;border-radius:999px;min-height:40px;padding:0 16px;background:var(--brand);color:var(--brand-ink);font:inherit;font-weight:800;cursor:pointer}
+.ss-update-btn:focus-visible{outline:3px solid var(--ring);outline-offset:2px}

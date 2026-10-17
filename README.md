@@ -44,6 +44,7 @@ Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (copy `.env.example` to `.e
 
 - **Anonymous sign-in**: no passwords. The first volunteer creates a team and gets a short **join code**. **Share code** sends other parents a message with the app link, the code and three steps to join. Opening the link lands on the join screen with the code already filled in; they can also paste the code by hand.
 - **Append-only events**: each tap is an immutable event; "undo" is a soft delete. That makes merging taps from several phones conflict-free.
+- **Installable app**: Add to Home Screen opens it full screen with a launch screen, a "New game" / "Season" long-press shortcut, an icon badge for stats not yet synced, and an Update banner for new versions. Settings walks iPhone users through installing.
 - **Offline-first**: events are written to a local IndexedDB cache and an outbox first, then pushed to Supabase when there is signal. Realtime subscriptions keep other phones up to date.
 
 ### Tracking a game with several parents
