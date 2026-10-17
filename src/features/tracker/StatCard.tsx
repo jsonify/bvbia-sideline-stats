@@ -23,9 +23,11 @@ interface Props {
   info?: ReactNode
   /** Why the buttons are off when it is not this phone's stat, e.g. "Sam is tracking this". */
   note?: string
+  /** The team's target for this stat (whole %), marked on the bar. */
+  goal?: number
 }
 
-export function StatCard({ id, title, hint, tally, periodTally, period, pct, buttons, disabled, extra, info, note }: Props) {
+export function StatCard({ id, title, hint, tally, periodTally, period, pct, buttons, disabled, extra, info, note, goal }: Props) {
   return (
     <section className="tk-card" aria-labelledby={`${id}-h`}>
       <header className="tk-card-head">
@@ -39,7 +41,11 @@ export function StatCard({ id, title, hint, tally, periodTally, period, pct, but
           <span className="tk-sub" key={period}>P{period}: {periodTally}</span>
         </div>
       </header>
-      <div className="tk-bar" aria-hidden="true"><i style={{ width: `${pct ?? 0}%` }} /></div>
+      <div className="tk-bar" aria-hidden="true">
+        <i style={{ width: `${pct ?? 0}%` }} />
+        {goal !== undefined && <b className={`tk-goal${pct !== null && pct >= goal - 0.5 ? ' met' : ''}`} style={{ left: `${goal}%` }} />}
+      </div>
+      {goal !== undefined && <p className="tk-goal-txt">Target {goal}%</p>}
       {extra}
       <div className="tk-btns">
         {buttons.map((b) => (

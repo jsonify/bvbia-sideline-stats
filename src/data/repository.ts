@@ -1,5 +1,5 @@
 // SHARED CONTRACT — the only way UI code touches data. Implemented by the data-layer agent.
-import type { Game, NewStatEvent, StatEvent, Team, TeamBranding, Uuid } from '../types'
+import type { Game, NewStatEvent, StatEvent, Team, TeamBranding, TeamGoals, Uuid } from '../types'
 import type { Lane } from '../lib/lanes'
 
 export type SyncState = 'synced' | 'syncing' | 'offline' | 'error'
@@ -44,6 +44,8 @@ export interface Repository {
   joinTeam(joinCode: string): Promise<Team>
   /** Save the team's logo + colors (shared with every member). Needs a connection in cloud mode. */
   saveBranding(branding: TeamBranding): Promise<Team>
+  /** Save the coach's per-stat targets (shared with every member). Needs a connection in cloud mode. */
+  saveGoals(goals: TeamGoals): Promise<Team>
 
   listGames(): Promise<Game[]>
   getGame(id: Uuid): Promise<Game | null>

@@ -31,7 +31,9 @@ export function Sheet({ open, onClose, title, label, className = '', children }:
   const dismiss = useCallback(() => setShown(false), [])
 
   const y = useMotionValue(0)
-  const dim = useTransform(y, [0, 400], [1, 0.35]) // the backdrop lightens as the sheet is pulled down
+  // The backdrop lightens as the sheet is pulled down. While it slides in or out, y holds a string ('100%'), which
+  // would make the opacity NaN on a second opening, so anything but a pixel offset counts as fully dimmed.
+  const dim = useTransform(y, (v: number | string) => (typeof v === 'number' && Number.isFinite(v) ? 1 - 0.65 * Math.min(Math.max(v, 0), 400) / 400 : 1))
   const drag = useRef<{ id: number; y0: number; last: number; lastT: number; v: number } | null>(null)
 
   useEffect(() => {

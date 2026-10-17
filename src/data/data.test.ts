@@ -239,6 +239,7 @@ function fakeCloud() {
       return t
     },
     saveBranding: async (id, branding) => { const t = { ...teams.get(id)!, branding }; teams.set(id, t); return t },
+    saveGoals: async (id, goals) => { const t = { ...teams.get(id)!, goals }; teams.set(id, t); return t },
     push: async (op) => {
       const row = op.row as any
       if (!teams.has(row.teamId)) throw Object.assign(new Error('fk violation'), { permanent: true })
@@ -317,6 +318,24 @@ describe('multiple teams on one device', () => {
     await r.switchTeam(a.id)
     expect((await r.getTeam())?.branding?.accent).toBe('#E11D2A')
     expect(b.id).not.toBe(a.id)
+  })
+
+  it('keeps team targets, dropping anything that is not a whole percentage from 1 to 100', async () => {
+    const r = repo()
+    await r.createTeam('A')
+    await r.saveGoals({ duel: 60, first_contact: 70.4, box_entry: 0 })
+    expect((await r.getTeam())?.goals).toEqual({ duel: 60, first_contact: 70 })
+    await r.saveGoals({})
+    expect((await r.getTeam())?.goals).toBeUndefined()
+  })
+
+  it('shares team targets through the cloud', async () => {
+    const cloud = fakeCloud()
+    const r = new LocalRepository({ dbName: 'goals-cloud', remote: cloud.api(), baseDelayMs: 1 })
+    await r.createTeam('A')
+    const t = await r.saveGoals({ duel: 55, box_entry: 101 })
+    expect(t.goals).toEqual({ duel: 55 })
+    expect((await r.getTeam())?.goals).toEqual({ duel: 55 })
   })
 
   it('removes a team from the device, falls back to another, and can re-join with the code', async () => {
