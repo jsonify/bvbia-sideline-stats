@@ -7,6 +7,8 @@ import { TeamLogo } from '../branding/TeamLogo'
 import '../branding/branding.css'
 import '../shell/shell.css'
 
+const built = new Date(__APP_BUILT__).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+
 /** Admin for the team you're currently viewing: your name, invite code, sync. Adding/removing teams lives in Teams. */
 export default function SettingsPage() {
   const { team } = useTeam()
@@ -29,6 +31,7 @@ export default function SettingsPage() {
           <YourName />
           <JoinCodeCard teamName={team.name} code={team.joinCode} />
           <p className="st-version">Sideline Stats · stats are saved to the cloud and shared with everyone on this team</p>
+          <p className="st-version" style={{ marginTop: 4 }}>Version {__APP_COMMIT__} · updated {built}</p>
         </>
       )}
     </main>
