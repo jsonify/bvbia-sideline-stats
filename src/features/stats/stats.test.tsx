@@ -7,6 +7,7 @@ import type { GameThanks, Repository } from '../../data/repository'
 import { RepoContext } from '../../data/context'
 import GameSummaryPage from './GameSummaryPage'
 import SeasonPage from './SeasonPage'
+import { HalftimeSheet } from './HalftimeSheet'
 
 afterEach(cleanup)
 globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} } as never
@@ -226,6 +227,21 @@ describe('GameSummaryPage', () => {
 
 const renderSeason = (repo: Repository) => render(
   <RepoContext.Provider value={repo}><MemoryRouter><SeasonPage /></MemoryRouter></RepoContext.Provider>)
+
+describe('HalftimeSheet', () => {
+  it('adds the zone notes for the latest half to its takeaways', () => {
+    const lost = (zone: string, period: number) => ev('g1', 'duel', 'lost', { zone }, period)
+    const events = [
+      lost('def_r', 1), lost('def_r', 1), lost('def_r', 1), lost('def_r', 1), ev('g1', 'duel', 'won', { zone: 'def_c' }, 1), // 1st half: not shown in the 2nd
+      lost('mid_l', 2), lost('mid_l', 2), lost('mid_l', 2), ev('g1', 'duel', 'won', { zone: 'mid_l' }, 2), ev('g1', 'duel', 'won', { zone: 'def_c' }, 2),
+    ]
+    render(<HalftimeSheet game={{ periods: 2 }} events={events} />)
+    fireEvent.click(screen.getByRole('button', { name: /Halftime numbers/ }))
+    const notes = within(screen.getByRole('list', { name: 'Takeaways from the 2nd half' })).getAllByRole('listitem').map((li) => li.textContent)
+    expect(notes).toContain('All 3 lost 1v1s came on the left, near halfway (we won 1 of 4 there), so that is the area to cover.')
+    expect(notes.join(' ')).not.toMatch(/on the right/)
+  })
+})
 
 describe('SeasonPage', () => {
   it('empty state', async () => {
