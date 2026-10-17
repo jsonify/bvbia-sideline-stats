@@ -424,4 +424,19 @@ test('tap on the field: box entry, our half, and the field turns round at halfti
   await expect(field.getByRole('button', { name: /^Our half:/ })).toHaveCount(0)
   await page.evaluate(() => window.scrollTo(0, 0))
   await shot(page, '24-field-offense-only')
+
+  // Defense only: just our half, and its choices in reach.
+  await page.getByRole('radio', { name: /^Defense/ }).click()
+  await expect(field.getByRole('button', { name: /^Their box:/ })).toHaveCount(0)
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await shot(page, '25-field-defense-only')
+  await field.getByRole('button', { name: /^Our half: Right, near halfway/ }).click()
+  // The "Now tracking defense" message must not cover the choices.
+  const sheet = await page.getByRole('group', { name: /^Our half, / }).boundingBox()
+  const toast = await page.getByText('Now tracking defense').boundingBox()
+  if (toast && sheet) expect(toast.y + toast.height).toBeLessThan(sheet.y)
+  for (const name of ['Duel won', 'Duel lost', 'Through ball clean', 'Through ball miss', 'Long ball clean', 'Long ball miss', 'Cancel']) {
+    await expect(page.getByRole('button', { name, exact: true })).toBeInViewport({ ratio: 1 })
+  }
+  await shot(page, '26-field-defense-pick')
 })

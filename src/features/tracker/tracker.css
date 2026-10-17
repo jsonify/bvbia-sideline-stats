@@ -147,3 +147,6 @@
 @keyframes fp-wait{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 @keyframes fp-in{from{opacity:0;transform:translateY(40px)}}
 @media (prefers-reduced-motion:reduce){.fp-pitch,.fp-zone,.fp-pick{transition:none;animation:none}}
+/* a message must never sit on the buttons of an open choice sheet: it moves to the top of the screen, and never takes a tap */
+.tk-toast{pointer-events:none}
+.tk:has(.fp-pick) .tk-toast{top:calc(12px + env(safe-area-inset-top));bottom:auto}
