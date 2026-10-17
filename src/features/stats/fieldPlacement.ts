@@ -1,7 +1,10 @@
 import type { StatCategory, StatEvent } from '../../types'
+import { channelOf, depthOf, isZone, zoneFits, type Zone as FieldZone } from '../../lib/zones'
 
-// We record what happened, not where, so the game map invents a position for every event. The invention is
-// deterministic (a function of the event id) so the picture is the same on every reload and every phone.
+// A tap made on the field says which zone it happened in, but not the exact spot; a tap made with the buttons (and
+// every tap from before the field) doesn't say where at all. So the game map invents a position for every event:
+// inside its zone when it has one, anywhere in its end when it doesn't. The invention is deterministic (a function of
+// the event id) so the picture is the same on every reload and every phone.
 
 /** Pitch size in metres. x runs from our goal line (0) to theirs, y across the width. */
 export const PITCH_W = 105
@@ -24,6 +27,21 @@ const ZONES: Record<End, Zone> = {
   defending: { x: [EDGE, PITCH_W / 2 - EDGE], y: [EDGE, PITCH_H - EDGE] },
   attacking: { x: [PITCH_W - BOX_W + BOX_EDGE, PITCH_W - BOX_EDGE], y: [BOX_TOP + BOX_EDGE, BOX_TOP + BOX_H - BOX_EDGE] },
 }
+
+/** Where a dot may land for a tapped zone (left = our left as we attack to the right, i.e. the top of the map). */
+function zoneArea(z: FieldZone): Zone {
+  const ch = ['l', 'c', 'r'].indexOf(channelOf(z))
+  if (z.startsWith('def_') || z.startsWith('mid_')) {
+    const third = PITCH_H / 3, half = PITCH_W / 2
+    const x0 = depthOf(z) === 'def' ? EDGE : half / 2 + EDGE / 2
+    return { x: [x0, x0 + half / 2 - EDGE * 1.5], y: [ch * third + EDGE, (ch + 1) * third - EDGE] }
+  }
+  const third = BOX_H / 3, x0 = PITCH_W - BOX_W + (depthOf(z) === 'near' ? BOX_W / 2 : 0)
+  return { x: [x0 + BOX_EDGE, x0 + BOX_W / 2 - BOX_EDGE], y: [BOX_TOP + ch * third + BOX_EDGE, BOX_TOP + (ch + 1) * third - BOX_EDGE] }
+}
+
+/** Where this event's dot may land: its zone if it has a (sensible) one, else anywhere in its end. */
+const areaOf = (e: StatEvent): Zone => (isZone(e.zone) && zoneFits(e.category, e.zone) ? zoneArea(e.zone) : ZONES[END_OF[e.category]])
 
 /** Random spots tried per event; the one furthest from the dots already there wins, so dots spread out. */
 const CANDIDATES = 100
@@ -56,7 +74,7 @@ export function placeEvents(events: StatEvent[]): Placed[] {
   const taken: Record<End, { x: number; y: number }[]> = { defending: [], attacking: [] }
   const out: Placed[] = []
   for (const event of ordered) {
-    const end = END_OF[event.category], zone = ZONES[end], rand = random(hash(event.id))
+    const end = END_OF[event.category], zone = areaOf(event), rand = random(hash(event.id))
     let best = { x: 0, y: 0 }, bestGap = -1
     for (let i = 0; i < CANDIDATES; i++) {
       const p = { x: zone.x[0] + rand() * (zone.x[1] - zone.x[0]), y: zone.y[0] + rand() * (zone.y[1] - zone.y[0]) }

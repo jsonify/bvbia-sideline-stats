@@ -51,8 +51,9 @@ function Shape({ category, good }: { category: StatCategory; good: boolean }) {
 }
 
 /**
- * A line drawing of the field with every event of the game on it. Positions are simulated: 1v1s and first contact
- * land at random in our half, box entries inside the attacking box, so the picture shows the shape of the game.
+ * A line drawing of the field with every event of the game on it. Positions are simulated: a tap made on the field
+ * lands at random inside the zone it was tapped in; any other tap lands at random in its end (1v1s and first contact
+ * in our half, box entries inside the attacking box), so the picture shows the shape of the game.
  * `periods` are the game's periods; the toggle narrows the map to one of them without moving any dot.
  */
 export function FieldMap({ events, periods }: { events: StatEvent[]; periods: number[] }) {
@@ -66,7 +67,8 @@ export function FieldMap({ events, periods }: { events: StatEvent[]; periods: nu
     ...periods.map((p) => ({ value: p, label: periodLabel(p, periods.length) })),
   ]
   const scope = period === 0 ? '' : ` (${periodLabel(period, periods.length)})`
-  const label = `Game map, simulated positions${scope}. Defending end: ${of('duel')} 1v1s, ${of('first_contact')} first contacts. Attacking end: ${of('box_entry')} box entries.`
+  const zoned = placed.filter((p) => p.event.zone).length, all = placed.length
+  const label = `Game map, ${zoned === all && all ? 'positions by zone' : 'simulated positions'}${scope}. Defending end: ${of('duel')} 1v1s, ${of('first_contact')} first contacts. Attacking end: ${of('box_entry')} box entries.`
 
   return (
     <>
@@ -94,7 +96,11 @@ export function FieldMap({ events, periods }: { events: StatEvent[]; periods: nu
         ))}
         <span>Filled = good outcome, outline = not</span>
       </div>
-      <p className="sub">We record what happened, not where, so each dot is placed at random: 1v1s and first contacts in our half, box entries inside the attacking box. It shows the shape of the game, not exact spots.</p>
+      <p className="sub">
+        {zoned === 0
+          ? 'These taps were made with the buttons, which record what happened but not where, so each dot is placed at random: 1v1s and first contacts in our half, box entries inside the attacking box. It shows the shape of the game, not exact spots.'
+          : `Taps made on the field are placed inside the zone they were tapped in (we attack to the right, in both halves)${zoned < all ? '; taps made with the buttons, which don\'t say where, anywhere in their end' : ''}. Each dot is somewhere in its zone, not the exact spot.`}
+      </p>
     </>
   )
 }

@@ -5,6 +5,7 @@ import type { BallType, Game, NewStatEvent, StatEvent } from '../../types'
 import { summarize } from '../../lib/summary'
 import { LANES, LANE_OF, ROLE_LANES, lanesText, roleOf, type Lane, type Role } from '../../lib/lanes'
 import { eventLabel } from './labels'
+import type { Zone } from '../../lib/zones'
 
 const byTime = (a: StatEvent, b: StatEvent) => a.createdAt.localeCompare(b.createdAt)
 
@@ -251,9 +252,13 @@ export function useTracker(gameId: string) {
     try { await repo.undoEvent(realId) } catch { removed.current.delete(realId); say('Undo failed'); refresh() }
   }, [mine, held, repo, say, refresh])
 
-  const recordDuel = (outcome: 'won' | 'lost') => record({ gameId, category: 'duel', outcome, period })
-  const recordContact = (outcome: 'clean' | 'miss') => record({ gameId, category: 'first_contact', outcome, ballType, period })
-  const recordBox = (outcome: 'shot' | 'no_shot') => record({ gameId, category: 'box_entry', outcome, period })
+  // A tap on the field also says where (`zone`), picks its own ball type, and, for a box entry saved a few seconds after
+  // it was tapped, keeps the half it was tapped in (`at`).
+  const where = (zone?: Zone) => (zone ? { zone } : {})
+  const recordDuel = (outcome: 'won' | 'lost', zone?: Zone) => record({ gameId, category: 'duel', outcome, period, ...where(zone) })
+  const recordContact = (outcome: 'clean' | 'miss', zone?: Zone, type: BallType = ballType) =>
+    record({ gameId, category: 'first_contact', outcome, ballType: type, period, ...where(zone) })
+  const recordBox = (outcome: 'shot' | 'no_shot', zone?: Zone, at = period) => record({ gameId, category: 'box_entry', outcome, period: at, ...where(zone) })
 
   return {
     game, loaded, events, summary, periodSummary, period, setPeriod: choosePeriod, ballType, setBallType, sync, toast,

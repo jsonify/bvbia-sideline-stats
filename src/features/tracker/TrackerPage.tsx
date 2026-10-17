@@ -6,7 +6,10 @@ import { ThanksHeart } from '../thanks/ThanksHeart'
 import { InfoButton } from '../guide/InfoButton'
 import { LANES, LANE_OF, ROLE_LABEL, lanesText, roleOf, type Lane, type Role } from '../../lib/lanes'
 import { RolePanel } from './RolePanel'
-import { StatCard } from './StatCard'
+import { StatCard, type StatButton } from './StatCard'
+import { FieldPad } from './FieldPad'
+import { TAP_STYLES, TAP_STYLE_KEY, swapKey, usePref } from './prefs'
+import { attacksLeft, zoneText } from '../../lib/zones'
 import { agoText, eventLabel, isGood, tallyText } from './labels'
 import { useTracker, useWakeLock } from './useTracker'
 import './tracker.css'
@@ -25,11 +28,16 @@ export default function TrackerPage() {
   const [confirmRole, setConfirmRole] = useState<Role | null>(null) // asking before taking a lane from someone
   const { game, summary: s, periodSummary: p } = t
   const goals = useTeam().team?.goals ?? {}
+  const [tapStyle, setTapStyle] = usePref(TAP_STYLE_KEY, TAP_STYLES, 'field')
+  const [swapped, setSwapped] = usePref(swapKey(id), ['0', '1'] as const, '0')
 
   if (!t.loaded) return <main className="tk"><p className="tk-empty">Loading game…</p></main>
   if (!game) return <main className="tk"><p className="tk-empty">Game not found. <Link to="/">Back to games</Link></p></main>
 
   const locked = game.status === 'final'
+  const onField = tapStyle === 'field'
+  /** In buttons mode a card carries its own buttons; on the field the taps happen there and the card just keeps score. */
+  const btns = (b: [StatButton, StatButton]) => (onField ? undefined : b)
   const readOnly = !t.canTrack // final, still checking, or someone else has every lane
   const sync = t.sync
   const syncLabel = sync.state !== 'synced' && sync.pending > 0 ? `${SYNC_TEXT[sync.state]} · ${sync.pending} pending` : SYNC_TEXT[sync.state]
@@ -121,30 +129,51 @@ export default function TrackerPage() {
         </section>
       )}
 
-      {!locked && !t.checking && (
-        <RolePanel role={t.role} held={t.held} lanes={t.lanes} hint={t.events.length === 0} onPick={pick} />
-      )}
-
       {game.status === 'scheduled' && t.canTrack && (
         <button type="button" className="tk-start" onClick={() => t.setStatus('live')}>▶ Start game</button>
       )}
       {locked && <p className="tk-final">Game is final. <Link to={`/games/${game.id}`}>View summary</Link></p>}
+
+      {!locked && onField && (
+        <FieldPad events={t.events} period={t.period} attacksLeft={attacksLeft(t.period, game.periods, swapped === '1')}
+          onSwap={() => setSwapped(swapped === '1' ? '0' : '1')}
+          defense={{ enabled: t.canTap('defense'), note: cardProps('defense').note }}
+          offense={{ enabled: t.canTap('offense'), note: cardProps('offense').note }}
+          onDefense={(zone, pick) => (pick.category === 'duel' ? t.recordDuel(pick.outcome, zone) : t.recordContact(pick.outcome, zone, pick.ballType))}
+          onBox={(zone, outcome, at) => t.recordBox(outcome, zone, at)} />
+      )}
+
+      {/* What this phone tracks and how it taps are set once, so they sit below the field, which must be in reach. */}
+      {!locked && !t.checking && (
+        <RolePanel role={t.role} held={t.held} lanes={t.lanes} hint={t.events.length === 0} onPick={pick} />
+      )}
+
+      {!locked && (
+        <div className="tk-style" role="group" aria-label="Tap on">
+          <span>Tap on</span>
+          {TAP_STYLES.map((v) => (
+            <button key={v} type="button" aria-pressed={tapStyle === v} onClick={() => setTapStyle(v)}>{v === 'field' ? 'Field' : 'Buttons'}</button>
+          ))}
+        </div>
+      )}
 
       {[
         { lane: LANE_OF.duel, el: (
           <StatCard key="duel" id="duel" title="Defensive 1v1s" hint="Did we win the duel?" info={<InfoButton topic="duel" tracking />}
             tally={tallyText(s.duels.won, s.duels.total, s.duels.winPct)}
             periodTally={`${p.duels.won}/${p.duels.total}`} period={t.period} pct={s.duels.winPct} goal={goals.duel} {...cardProps(LANE_OF.duel)}
-            buttons={[
+            buttons={btns([
               { label: 'Won', icon: '✓', tone: 'good', aria: 'Duel won', onTap: () => t.recordDuel('won') },
               { label: 'Lost', icon: '✕', tone: 'bad', aria: 'Duel lost', onTap: () => t.recordDuel('lost') },
-            ]} />
+            ])} />
         ) },
         { lane: LANE_OF.first_contact, el: (
           <StatCard key="contact" id="contact" title="First contact" hint="Through balls and long balls" info={<InfoButton topic="first_contact" tracking />}
             tally={tallyText(ft.clean, ft.total, ft.cleanPct)}
             periodTally={`${pf.clean}/${pf.total}`} period={t.period} pct={ft.cleanPct} goal={goals.first_contact} {...cardProps(LANE_OF.first_contact)}
-            extra={
+            extra={onField ? (
+              <p className="tk-split">Through ball {ft.throughBall.clean}/{ft.throughBall.clean + ft.throughBall.miss} · Long ball {ft.longBall.clean}/{ft.longBall.clean + ft.longBall.miss}</p>
+            ) : (
               <div className="tk-seg" role="radiogroup" aria-label="Ball type">
                 <PillGroup value={t.ballType} pillClassName="tk-seg-pill">
                   {([['through_ball', 'Through ball', ft.throughBall], ['long_ball', 'Long ball', ft.longBall]] as const).map(([v, label, b]) => (
@@ -156,20 +185,20 @@ export default function TrackerPage() {
                   ))}
                 </PillGroup>
               </div>
-            }
-            buttons={[
+            )}
+            buttons={btns([
               { label: 'Clean', icon: '✓', tone: 'good', aria: 'First contact clean', onTap: () => t.recordContact('clean') },
               { label: 'Miss', icon: '✕', tone: 'bad', aria: 'First contact miss', onTap: () => t.recordContact('miss') },
-            ]} />
+            ])} />
         ) },
         { lane: LANE_OF.box_entry, el: (
           <StatCard key="box" id="box" title="Box entries" hint="Got into the box: did we shoot?" info={<InfoButton topic="box_entry" tracking />}
             tally={tallyText(s.boxEntries.shot, s.boxEntries.total, s.boxEntries.shotPct)}
             periodTally={`${p.boxEntries.shot}/${p.boxEntries.total}`} period={t.period} pct={s.boxEntries.shotPct} goal={goals.box_entry} {...cardProps(LANE_OF.box_entry)}
-            buttons={[
+            buttons={btns([
               { label: 'Shot', icon: '◎', tone: 'good', aria: 'Box entry with shot', onTap: () => t.recordBox('shot') },
               { label: 'No shot', icon: '⊘', tone: 'bad', aria: 'Box entry, no shot', onTap: () => t.recordBox('no_shot') },
-            ]} />
+            ])} />
         ) },
       ]
         // This phone's stats first: someone tracking offense shouldn't have to scroll past the 1v1s to reach their buttons.
@@ -183,7 +212,7 @@ export default function TrackerPage() {
             {recent.map((e) => (
               <li key={e.id} className={isGood(e) ? 'good' : 'bad'}>
                 <span className="tk-ico" aria-hidden="true">{isGood(e) ? '✓' : '✕'}</span>
-                <span className="lbl">{eventLabel(e)}</span>
+                <span className="lbl">{eventLabel(e)}{e.zone && <small>{zoneText(e.zone)}</small>}</span>
                 <span className="per">P{e.period}</span>
                 {t.canTap(LANE_OF[e.category]) && <button type="button" aria-label={`Undo ${eventLabel(e)}`} onClick={() => t.undo(e)}>Undo</button>}
               </li>

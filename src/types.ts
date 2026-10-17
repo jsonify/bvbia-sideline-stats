@@ -1,4 +1,5 @@
 // SHARED CONTRACT — do not change without coordinating. All features build on these types.
+import type { Zone } from './lib/zones'
 
 export type Uuid = string
 
@@ -46,6 +47,8 @@ export type BallType = 'through_ball' | 'long_ball'
  *  duel          outcome: 'won' | 'lost'        (defensive 1v1s)
  *  first_contact outcome: 'clean' | 'miss'      + ballType (cleared/controlled vs missed/poor touch)
  *  box_entry     outcome: 'shot' | 'no_shot'    (got into/around the box: did we get a shot off?)
+ *
+ * A tap made on the field also says where (`zone`): box entries in a zone of the box, the rest in a zone of our half.
  */
 export type StatEvent =
   | BaseEvent<'duel', 'won' | 'lost'>
@@ -61,6 +64,7 @@ interface BaseEvent<C extends StatCategory, O extends string> {
   createdAt: string // ISO timestamp (client time)
   deletedAt?: string | null // set when undone
   keeperId?: string // device/user that recorded it
+  zone?: Zone | null // where it happened, when it was tapped on the field (see src/lib/zones.ts); older taps have none
 }
 
 export type NewStatEvent = DistributiveOmit<StatEvent, 'id' | 'createdAt' | 'deletedAt' | 'keeperId'>

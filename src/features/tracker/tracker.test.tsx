@@ -7,6 +7,8 @@ import { LANES, type Lane } from '../../lib/lanes'
 import type { Game, StatEvent, Team } from '../../types'
 import TrackerPage from './TrackerPage'
 import { CLAIM_WAIT_MS, LEASE_TICK_MS } from './useTracker'
+import { BOX_WAIT_MS } from './FieldPad'
+import { TAP_STYLE_KEY } from './prefs'
 
 const ME: GameTracker = { holder: 'me', idleSeconds: 0, name: null }
 const OTHER: GameTracker = { holder: 'other', idleSeconds: 12, name: null }
@@ -97,7 +99,12 @@ function setupNoWait(status?: Game['status'], initial?: GameTracker | GameLanes,
   return { ...f, unmount: view.unmount }
 }
 
-beforeEach(() => { (navigator as any).vibrate = () => true })
+beforeEach(() => {
+  (navigator as any).vibrate = () => true
+  // Most of this file is about lanes, halves and undo, so it taps with the buttons; the field has its own tests below.
+  localStorage.clear()
+  localStorage.setItem(TAP_STYLE_KEY, 'buttons')
+})
 afterEach(cleanup)
 
 describe('TrackerPage', () => {
@@ -613,5 +620,94 @@ describe('stat guide', () => {
     fireEvent.click(screen.getByLabelText('Duel won'))
     fireEvent.click(screen.getByRole('button', { name: /Halftime numbers/ }))
     expect(within(screen.getByRole('dialog', { name: 'Halftime numbers' })).getByText(/Target 60% · met/)).toBeTruthy()
+  })
+})
+
+describe('tapping on the field', () => {
+  beforeEach(() => localStorage.removeItem(TAP_STYLE_KEY)) // the field is the default
+  const zone = (name: RegExp) => screen.getByRole('button', { name })
+
+  it('logs a box entry in the zone tapped, then Shot', async () => {
+    const f = await setup()
+    expect(screen.queryByLabelText('Box entry with shot')).toBeNull() // no Shot button until a zone is tapped
+    fireEvent.click(zone(/^Their box: Centre, close to goal/))
+    fireEvent.click(screen.getByLabelText('Box entry with shot'))
+    await waitFor(() => expect(f.events).toHaveLength(1))
+    expect(f.events[0]).toMatchObject({ category: 'box_entry', outcome: 'shot', zone: 'near_c', period: 1 })
+    expect(screen.getByTestId('box-tally').textContent).toContain('1 of 1 · 100%')
+    expect(zone(/^Their box: Centre, close to goal, 1 so far/)).toBeTruthy()
+    expect(screen.getByText('Centre, close to goal', { selector: '.lbl small' })).toBeTruthy()
+  })
+
+  it('saves a box entry as No shot when nobody answers, in the half it was tapped in', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      const f = await setup()
+      fireEvent.click(zone(/^Their box: Left, edge of the box/))
+      fireEvent.click(screen.getByText('2nd half'))
+      expect(f.events).toHaveLength(0)
+      await act(async () => { vi.advanceTimersByTime(BOX_WAIT_MS + 50) })
+      await waitFor(() => expect(f.events).toHaveLength(1))
+      expect(f.events[0]).toMatchObject({ category: 'box_entry', outcome: 'no_shot', zone: 'edge_l', period: 1 })
+      expect(screen.queryByLabelText('Box entry with shot')).toBeNull()
+    } finally { vi.useRealTimers() }
+  })
+
+  it('saves a waiting box entry as No shot when the next play is tapped', async () => {
+    const f = await setup()
+    fireEvent.click(zone(/^Their box: Right, close to goal/))
+    fireEvent.click(zone(/^Their box: Centre, edge of the box/))
+    await waitFor(() => expect(f.events).toHaveLength(1))
+    expect(f.events[0]).toMatchObject({ outcome: 'no_shot', zone: 'near_r' })
+    fireEvent.click(screen.getByLabelText('Box entry with shot'))
+    await waitFor(() => expect(f.events).toHaveLength(2))
+    expect(f.events[1]).toMatchObject({ outcome: 'shot', zone: 'edge_c' })
+  })
+
+  it('cancels a mis-tap without saving anything', async () => {
+    const f = await setup()
+    fireEvent.click(zone(/^Their box: Centre, close to goal/))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    await act(async () => {})
+    expect(f.events).toHaveLength(0)
+    expect(screen.queryByLabelText('Box entry with shot')).toBeNull()
+  })
+
+  it('logs 1v1s and first contact from a zone of our half', async () => {
+    const f = await setup()
+    fireEvent.click(zone(/^Our half: Left, deep in our half/))
+    fireEvent.click(screen.getByLabelText('Long ball miss'))
+    fireEvent.click(zone(/^Our half: Centre, near halfway/))
+    fireEvent.click(screen.getByLabelText('Duel won'))
+    await waitFor(() => expect(f.events).toHaveLength(2))
+    expect(f.events[0]).toMatchObject({ category: 'first_contact', outcome: 'miss', ballType: 'long_ball', zone: 'def_l' })
+    expect(f.events[1]).toMatchObject({ category: 'duel', outcome: 'won', zone: 'mid_c' })
+    expect(screen.queryByLabelText('Duel won')).toBeNull() // the choices close after a pick
+  })
+
+  it('turns the field round for the second half, and the parent can swap it back', async () => {
+    await setup()
+    const field = () => screen.getByRole('region', { name: 'Field' })
+    expect(field().classList.contains('flip')).toBe(false)
+    fireEvent.click(screen.getByText('2nd half'))
+    expect(field().classList.contains('flip')).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: /^Swap ends/ }))
+    expect(field().classList.contains('flip')).toBe(false)
+    expect(localStorage.getItem('sideline.swapEnds.g1')).toBe('1')
+  })
+
+  it('only shows a phone its own side of the field', async () => {
+    await setup('live', { defense: sam(), offense: NOBODY })
+    expect(screen.queryByRole('button', { name: /^Our half:/ })).toBeNull() // offense only: the box gets the whole width
+    expect((zone(/^Their box: Left, edge of the box/) as HTMLButtonElement).disabled).toBe(false)
+    expect(screen.getAllByText('Sam is tracking this').length).toBeGreaterThan(0)
+  })
+
+  it('can go back to the buttons', async () => {
+    await setup()
+    fireEvent.click(screen.getByRole('button', { name: 'Buttons' }))
+    expect(screen.getByLabelText('Duel won')).toBeTruthy()
+    expect(screen.queryByRole('region', { name: 'Field' })).toBeNull()
+    expect(localStorage.getItem(TAP_STYLE_KEY)).toBe('buttons')
   })
 })

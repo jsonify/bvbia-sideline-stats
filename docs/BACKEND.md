@@ -82,3 +82,9 @@ After `0006`, run `supabase/migrations/0007_team_goals.sql`. It adds a `goals` j
 
 It also adds `teams` to the realtime publication if `0002` didn't already, so other phones pick up new targets straight away. Targets are only a marker on the gauges and charts: `summarize()` never reads them. Without the migration, saving targets fails with a message in Settings and nothing else changes.
 
+
+## Field zones: run `0008_event_zones.sql`
+
+After `0007`, run `supabase/migrations/0008_event_zones.sql`. It adds a nullable `zone` text column to `stat_events`, with a check that a box entry's zone is one of the six box zones (`edge_l|c|r`, `near_l|c|r`) and a 1v1's or first contact's is one of the six zones of our half (`def_l|c|r`, `mid_l|c|r`). Zones are relative to the goal we attack (left = our left as we attack), so they need no flipping between halves. Buttons-mode taps, and every tap from before, have no zone.
+
+The app only sends `zone` when a tap has one. If the column is missing, the server answers `PGRST204` and the app sends the same tap again without its zone, so an un-migrated server never blocks the write queue; it just doesn't keep where the play happened.

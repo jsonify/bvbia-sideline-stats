@@ -33,12 +33,12 @@ describe('eventsToCsv', () => {
   it('has header, skips deleted, sorts by date, escapes', () => {
     const lines = eventsToCsv(events, games).trim().split('\r\n')
     expect(lines).toHaveLength(3)
-    expect(lines[0]).toBe('game_id,date,opponent,period,category,outcome,ball_type,recorded_at')
+    expect(lines[0]).toBe('game_id,date,opponent,period,category,outcome,ball_type,recorded_at,zone')
     expect(lines[1]).toContain('g1,2026-01-01,Bears,1,first_contact,clean,long_ball')
     expect(lines[2]).toContain('"Lions, FC"')
   })
   it('handles empty', () => {
-    expect(eventsToCsv([], [])).toBe('game_id,date,opponent,period,category,outcome,ball_type,recorded_at\r\n')
+    expect(eventsToCsv([], [])).toBe('game_id,date,opponent,period,category,outcome,ball_type,recorded_at,zone\r\n')
   })
 })
 

@@ -16,7 +16,8 @@ interface Props {
   periodTally: string
   period: number
   pct: number | null
-  buttons: [StatButton, StatButton]
+  /** Left out when the taps are made on the field instead: the card then only shows the numbers. */
+  buttons?: [StatButton, StatButton]
   disabled?: boolean
   extra?: ReactNode
   /** The ⓘ that explains this stat, shown beside its name. */
@@ -47,7 +48,7 @@ export function StatCard({ id, title, hint, tally, periodTally, period, pct, but
       </div>
       {goal !== undefined && <p className="tk-goal-txt">Target {goal}%</p>}
       {extra}
-      <div className="tk-btns">
+      {buttons && <div className="tk-btns">
         {buttons.map((b) => (
           <button key={b.label} type="button" className={`tk-btn ${b.tone}`} disabled={disabled} aria-label={b.aria}
             onClick={(ev) => {
@@ -59,7 +60,7 @@ export function StatCard({ id, title, hint, tally, periodTally, period, pct, but
             <span>{b.label}</span>
           </button>
         ))}
-      </div>
+      </div>}
     </section>
   )
 }
