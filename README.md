@@ -86,7 +86,7 @@ Schema, row-level security and setup steps are in [docs/BACKEND.md](docs/BACKEND
 
 ## Deploy in 5 steps (Vercel or Netlify)
 
-1. Create a free Supabase project and run the SQL in `supabase/migrations/`, in order (`0001`, then `0003` to `0007`; `0002` is no longer needed; see [docs/BACKEND.md](docs/BACKEND.md)). Enable **Anonymous sign-ins** under Authentication.
+1. Create a free Supabase project and run the SQL in `supabase/migrations/`, in order (`0001`, then `0003` to `0008`; `0002` is no longer needed; see [docs/BACKEND.md](docs/BACKEND.md)). Enable **Anonymous sign-ins** under Authentication.
 2. Push this repo to GitHub.
 3. Import it in Vercel (or Netlify). Framework preset: **Vite**. Build command `npm run build`, output `dist`. `vercel.json` already contains the SPA rewrites.
 4. Add environment variables `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.

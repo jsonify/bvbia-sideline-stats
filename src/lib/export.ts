@@ -28,13 +28,13 @@ export function eventsToCsv(events: StatEvent[], games: Game[]): string {
       const da = byId.get(a.gameId)?.date ?? '', db = byId.get(b.gameId)?.date ?? ''
       return da.localeCompare(db) || a.gameId.localeCompare(b.gameId) || a.createdAt.localeCompare(b.createdAt)
     })
-  const out = [csvRow(['game_id', 'date', 'opponent', 'period', 'category', 'outcome', 'ball_type', 'recorded_at'])]
+  const out = [csvRow(['game_id', 'date', 'opponent', 'period', 'category', 'outcome', 'ball_type', 'recorded_at', 'zone'])]
   for (const e of rows) {
     const g = byId.get(e.gameId)
     out.push([
       csvCell(e.gameId), csvCell(g?.date), csvCell(g?.opponent, { text: true }), csvCell(e.period),
       csvCell(e.category), csvCell(e.outcome), csvCell(e.category === 'first_contact' ? e.ballType : ''),
-      csvCell(e.createdAt),
+      csvCell(e.createdAt), csvCell(e.zone),
     ].join(','))
   }
   return out.join('\r\n') + '\r\n'

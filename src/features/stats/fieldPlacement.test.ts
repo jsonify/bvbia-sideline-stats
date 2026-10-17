@@ -32,6 +32,27 @@ describe('placeEvents', () => {
     }
   })
 
+  it('puts a tapped zone inside that zone (left = top, as we attack to the right)', () => {
+    const boxTop = (PITCH_H - BOX_H) / 2
+    const [nearLeft] = placeEvents([ev('box_entry', 'shot', { zone: 'near_l' })])
+    expect(nearLeft.x).toBeGreaterThan(PITCH_W - BOX_W / 2); expect(nearLeft.x).toBeLessThan(PITCH_W)
+    expect(nearLeft.y).toBeGreaterThan(boxTop); expect(nearLeft.y).toBeLessThan(boxTop + BOX_H / 3)
+    const [edgeRight] = placeEvents([ev('box_entry', 'no_shot', { zone: 'edge_r' })])
+    expect(edgeRight.x).toBeGreaterThan(PITCH_W - BOX_W); expect(edgeRight.x).toBeLessThan(PITCH_W - BOX_W / 2)
+    expect(edgeRight.y).toBeGreaterThan(boxTop + (BOX_H * 2) / 3)
+    const [deepCentre] = placeEvents([ev('duel', 'won', { zone: 'def_c' })])
+    expect(deepCentre.x).toBeLessThan(PITCH_W / 4)
+    expect(deepCentre.y).toBeGreaterThan(PITCH_H / 3); expect(deepCentre.y).toBeLessThan((PITCH_H * 2) / 3)
+    const [nearHalfway] = placeEvents([ev('first_contact', 'miss', { ballType: 'long_ball', zone: 'mid_r' })])
+    expect(nearHalfway.x).toBeGreaterThan(PITCH_W / 4); expect(nearHalfway.x).toBeLessThan(PITCH_W / 2)
+    expect(nearHalfway.y).toBeGreaterThan((PITCH_H * 2) / 3)
+  })
+
+  it('ignores a zone that does not fit the stat', () => {
+    const [p] = placeEvents([ev('box_entry', 'shot', { zone: 'def_l' })])
+    expect(p.x).toBeGreaterThan(PITCH_W - BOX_W)
+  })
+
   it('gives the same picture every time, whatever order the events arrive in', () => {
     expect(spots(game.slice().reverse())).toEqual(spots(game))
     expect(spots(game)).toEqual(spots(game))

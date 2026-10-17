@@ -2,6 +2,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Game, StatEvent, Team, TeamBranding, TeamGoals } from '../types'
 import { cleanGoals, hasGoals } from '../lib/goals'
+import { isZone } from '../lib/zones'
 import type { GameRec } from './db'
 import { PermanentError, type QueueOp } from './queue'
 import type { GameLanes, GameThanks, GameTracker } from './repository'
@@ -41,6 +42,7 @@ const gameFromRow = (r: any): GameRec => ({
 const eventFromRow = (r: any): StatEvent => ({
   id: r.id, gameId: r.game_id, category: r.category, outcome: r.outcome,
   ...(r.ball_type ? { ballType: r.ball_type } : {}),
+  ...(isZone(r.zone) ? { zone: r.zone } : {}),
   period: r.period, createdAt: r.created_at, deletedAt: r.deleted_at, keeperId: r.keeper_id ?? undefined,
 }) as StatEvent
 
@@ -56,8 +58,13 @@ export function toEventRow(e: StatEvent & { teamId?: string }) {
     id: e.id, game_id: e.gameId, team_id: e.teamId, category: e.category, outcome: e.outcome,
     ball_type: 'ballType' in e ? e.ballType : null, period: e.period, created_at: e.createdAt,
     deleted_at: e.deletedAt ?? null, keeper_id: e.keeperId ?? null,
+    // Only sent when there is one, so taps without a zone still sync to a server that hasn't run 0008_event_zones.sql.
+    ...(e.zone ? { zone: e.zone } : {}),
   }
 }
+
+/** PostgREST's answer when a row names a column the server doesn't have (here: `zone`, before 0008_event_zones.sql). */
+const missingZone = (error: { code?: string; message: string } | null) => !!error && error.code === 'PGRST204' && /zone/.test(error.message)
 
 const trackerFromRow = (r: any): GameTracker => ({ holder: r.holder, idleSeconds: r.idle_seconds ?? null, name: r.name ?? null })
 /** The tracker functions answer with one row per lane; a lane missing from the answer is simply nobody's. */
@@ -131,7 +138,10 @@ export function createSupabaseRemote(url: string, key: string): RemoteApi {
     async push(op) {
       await userId()
       const row: Record<string, unknown> = op.table === 'games' ? toGameRow(op.row as any) : toEventRow(op.row as any)
-      const { error } = await sb.from(op.table).upsert(row, { onConflict: 'id' })
+      let { error } = await sb.from(op.table).upsert(row, { onConflict: 'id' })
+      // Without the migration a zoned tap would be refused for ever and block every tap behind it. Send it without the
+      // zone instead: the stat is what matters, and this phone still has the zone for its own map.
+      if (missingZone(error)) ({ error } = await sb.from(op.table).upsert({ ...row, zone: undefined }, { onConflict: 'id' }))
       wrap(error)
     },
     async pull(teamId) {

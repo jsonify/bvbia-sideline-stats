@@ -4,6 +4,11 @@ import { expect, test, type Page } from '@playwright/test'
 const SHOTS = process.env.E2E_SHOTS || 'test-results/shots'
 const shot = (page: Page, name: string) => page.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: false })
 
+// These walk-throughs tap with the buttons; the field has its own test (flow.spec.ts, 'tap on the field').
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => { if (!sessionStorage.getItem('e2e-field')) localStorage.setItem('sideline.tapStyle', 'buttons') })
+})
+
 /** First time in the app it asks for your name (shown to other parents while you track). */
 const giveName = async (page: Page, name = 'Sam') => {
   await page.getByRole('dialog', { name: "What's your name?" }).getByLabel('Your name').fill(name)
