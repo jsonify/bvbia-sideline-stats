@@ -19,3 +19,7 @@
 .tm-add{width:100%;margin-top:14px}
 .tm-note{color:var(--muted);font-size:14px;margin:6px 0 14px}
 .st-version{margin-top:22px;text-align:center;color:var(--muted);font-size:12px}
+.st-target{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0}
+.st-target label{font-size:15px;font-weight:600;min-width:0}
+.st-target-in{display:flex;align-items:center;gap:6px;flex:none;color:var(--muted);font-weight:700}
+.st-target-in .ss-input{width:76px;text-align:center;font-variant-numeric:tabular-nums}

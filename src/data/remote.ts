@@ -1,6 +1,7 @@
 // Thin Supabase adapter: maps between app (camelCase) and DB (snake_case) shapes.
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import type { Game, StatEvent, Team, TeamBranding } from '../types'
+import type { Game, StatEvent, Team, TeamBranding, TeamGoals } from '../types'
+import { cleanGoals, hasGoals } from '../lib/goals'
 import type { GameRec } from './db'
 import { PermanentError, type QueueOp } from './queue'
 import type { GameLanes, GameThanks, GameTracker } from './repository'
@@ -12,6 +13,7 @@ export interface RemoteApi {
   createTeam(name: string): Promise<Team>
   joinTeam(code: string): Promise<Team>
   saveBranding(teamId: string, branding: TeamBranding): Promise<Team>
+  saveGoals(teamId: string, goals: TeamGoals): Promise<Team>
   push(op: QueueOp): Promise<void>
   pull(teamId: string): Promise<{ games: GameRec[]; events: StatEvent[] }>
   watch(teamId: string, onChange: () => void, onTeamChange?: () => void): () => void
@@ -29,6 +31,7 @@ export interface RemoteApi {
 const teamFromRow = (r: any): Team => ({
   id: r.id, name: r.name, joinCode: r.join_code,
   ...(r.branding && r.branding.accent ? { branding: r.branding as TeamBranding } : {}),
+  ...(hasGoals(cleanGoals(r.goals)) ? { goals: cleanGoals(r.goals) } : {}),
 })
 const gameFromRow = (r: any): GameRec => ({
   id: r.id, teamId: r.team_id, opponent: r.opponent, date: r.date,
@@ -115,6 +118,13 @@ export function createSupabaseRemote(url: string, key: string): RemoteApi {
     async saveBranding(teamId, branding) {
       await userId()
       const { data, error } = await sb.rpc('set_team_branding', { team: teamId, b: branding })
+      wrap(error)
+      return teamFromRow(Array.isArray(data) ? data[0] : data)
+    },
+    async saveGoals(teamId, goals) {
+      await userId()
+      const { data, error } = await sb.rpc('set_team_goals', { team: teamId, g: cleanGoals(goals) })
+      if (error && /set_team_goals|schema cache/i.test(error.message)) throw new Error('Targets need the 0007_team_goals.sql migration on the server')
       wrap(error)
       return teamFromRow(Array.isArray(data) ? data[0] : data)
     },

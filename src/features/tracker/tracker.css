@@ -30,7 +30,12 @@
 .tk-card h2{margin:0;font-size:18px}.tk-hint{margin:2px 0 0;color:var(--muted);font-size:13px}
 .tk-tally{text-align:right;display:flex;flex-direction:column}.tk-tally strong{font-size:18px;font-variant-numeric:tabular-nums}
 .tk-sub{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;display:inline-block;transform-origin:right center;animation:tk-tally .4s var(--tk-spring)} /* pops when the half changes */
-.tk-bar{height:6px;border-radius:9px;background:var(--border);margin:10px 0 12px;overflow:hidden}
+.tk-bar{position:relative;height:6px;border-radius:9px;background:var(--border);margin:10px 0 12px;overflow:hidden}
+.tk-goal{position:absolute;top:0;bottom:0;width:3px;margin-left:-1.5px;background:var(--text);opacity:.7}
+.tk-goal.met{background:var(--good);opacity:1}
+.tk-goal-txt{margin:-8px 0 10px;font-size:12px;font-weight:700;color:var(--muted);text-align:right}
+.tk-halftime{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:44px;margin-top:8px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit;font-weight:700}
+.tk-halftime:active{transform:scale(.97)}
 .tk-bar i{display:block;height:100%;background:var(--brand);border-radius:9px;transition:width .55s var(--tk-spring)}
 .tk-seg{display:flex;gap:6px;margin-bottom:10px;background:var(--bg);padding:4px;border-radius:14px}
 .tk-seg-item{flex:1;min-width:0;display:flex}

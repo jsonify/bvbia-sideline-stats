@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import type { Game, StatEvent } from '../../types'
+import type { Game, StatEvent, Team } from '../../types'
 import type { GameThanks, Repository } from '../../data/repository'
 import { RepoContext } from '../../data/context'
 import GameSummaryPage from './GameSummaryPage'
@@ -17,7 +17,7 @@ let n = 0
 const ev = (gameId: string, category: string, outcome: string, extra: object = {}, period = 1) =>
   ({ id: `e${n++}`, gameId, category, outcome, period, createdAt: `2026-01-01T00:00:${String(n % 60).padStart(2, '0')}Z`, ...extra }) as StatEvent
 
-function fakeRepo(games: Game[], events: StatEvent[], hearts: GameThanks[] = []): Repository {
+function fakeRepo(games: Game[], events: StatEvent[], hearts: GameThanks[] = [], team: Team | null = null): Repository {
   const notImpl = () => { throw new Error('nope') }
   const subs = new Set<() => void>()
   return {
@@ -26,7 +26,7 @@ function fakeRepo(games: Game[], events: StatEvent[], hearts: GameThanks[] = [])
       hearts = [...hearts.filter((h) => !h.mine), ...(on ? [{ gameId: id, name: null, mine: true, createdAt: 'x' }] : [])]
       subs.forEach((f) => f())
     },
-    getTeam: async () => null, createTeam: notImpl, joinTeam: notImpl,
+    getTeam: async () => team, createTeam: notImpl, joinTeam: notImpl,
     listGames: async () => games, getGame: async (id: string) => games.find((g) => g.id === id) ?? null,
     saveGame: notImpl, deleteGame: notImpl,
     listEvents: async (id: string) => events.filter((e) => e.gameId === id), listAllEvents: async () => events,
@@ -138,6 +138,61 @@ describe('GameSummaryPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Thanks/ }))
     await waitFor(() => expect(screen.queryByText(/Thanked by/)).toBeNull())
   })
+  it('marks the team targets on the gauges and the by-half table', async () => {
+    const team: Team = { id: 't', name: 'Lions', joinCode: 'ABC234', goals: { duel: 60, box_entry: 50 } }
+    const events = [ev('g1', 'duel', 'won'), ev('g1', 'duel', 'won'), ev('g1', 'duel', 'lost'), ev('g1', 'box_entry', 'no_shot')]
+    renderGame(fakeRepo([mkGame('g1', 'Bears', '2026-01-01')], events, [], team), 'g1')
+    const hero = await screen.findByRole('region', { name: 'Key stats' })
+    expect(await within(within(hero).getByRole('group', { name: 'Defensive 1v1s won' })).findByText(/Target 60% · met/)).toBeTruthy()
+    expect(within(within(hero).getByRole('group', { name: 'Box entries with a shot' })).getByText('Target 50% · 50 pts short')).toBeTruthy()
+    expect(within(hero).getByRole('group', { name: 'Clean first contact' }).textContent).not.toMatch(/Target/)
+    expect(screen.getByRole('row', { name: /1st half 2\/3 67%, Target 60% · met/ })).toBeTruthy()
+  })
+  it('compares with earlier games against the same opponent, and only earlier ones', async () => {
+    const games = [
+      mkGame('g0', 'bears ', '2025-11-01'), mkGame('g1', 'Bears', '2026-01-01'),
+      mkGame('g2', 'Bears', '2026-02-01'), mkGame('g3', 'Hawks', '2025-12-01'),
+    ]
+    const events = [
+      ev('g0', 'duel', 'won'), ev('g0', 'duel', 'lost'), // 50%
+      ev('g1', 'duel', 'won'), ev('g1', 'duel', 'won'), ev('g1', 'duel', 'won'), ev('g1', 'duel', 'lost'), // 75%
+      ev('g2', 'duel', 'lost'), ev('g3', 'duel', 'won'),
+    ]
+    renderGame(fakeRepo(games, events), 'g1')
+    const card = await screen.findByRole('region', { name: 'Against Bears before' })
+    const rows = within(card).getAllByRole('row').map((r) => r.textContent)
+    expect(rows).toHaveLength(3) // header, this game, the November game: not February's, not the Hawks
+    expect(rows[1]).toMatch(/^This game3\/4 75% ▲25/)
+    expect(rows[2]).toMatch(/1\/2 50%/)
+  })
+  it('has no opponent history card the first time you play someone', async () => {
+    renderGame(fakeRepo([mkGame('g1', 'Bears', '2026-01-01')], [ev('g1', 'duel', 'won')]), 'g1')
+    await screen.findByText('1 of 1 1v1s')
+    expect(screen.queryByRole('region', { name: /before$/ })).toBeNull()
+  })
+  it('draws a share image and offers to save it when files cannot be shared', async () => {
+    const ctx = new Proxy({}, { get: (_t, k) => (k === 'measureText' ? () => ({ width: 10 }) : () => {}) })
+    const getContext = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as never)
+    const toBlob = vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation(function (cb) { cb(new Blob(['png'], { type: 'image/png' })) })
+    URL.createObjectURL = vi.fn(() => 'blob:card'); URL.revokeObjectURL = vi.fn()
+    try {
+      renderGame(fakeRepo([mkGame('g1', 'Bears', '2026-01-01')], [ev('g1', 'duel', 'won')]), 'g1')
+      fireEvent.click(await screen.findByRole('button', { name: 'Share image' }))
+      const sheet = screen.getByRole('dialog', { name: 'Share the summary' })
+      const img = await within(sheet).findByRole('img', { name: 'Summary card for the game vs Bears' })
+      expect(img.getAttribute('src')).toBe('blob:card')
+      expect(within(sheet).queryByRole('button', { name: 'Share' })).toBeNull() // jsdom can't share files
+      expect((within(sheet).getByRole('button', { name: 'Save image' }) as HTMLButtonElement).disabled).toBe(false)
+    } finally { getContext.mockRestore(); toBlob.mockRestore() }
+  })
+  it("says so when the browser can't draw the share image", async () => {
+    const getContext = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null)
+    try {
+      renderGame(fakeRepo([mkGame('g1', 'Bears', '2026-01-01')], []), 'g1')
+      fireEvent.click(await screen.findByRole('button', { name: 'Share image' }))
+      expect(await screen.findByText(/can't draw the image/)).toBeTruthy()
+    } finally { getContext.mockRestore() }
+  })
   it('shows not found', async () => {
     renderGame(fakeRepo([], []), 'zzz')
     expect(await screen.findByText('Game not found.')).toBeTruthy()
@@ -166,5 +221,21 @@ describe('SeasonPage', () => {
     expect(screen.getByRole('img', { name: /Defensive 1v1s won by game.*Jan 1 vs Bears: 25%/ })).toBeTruthy()
     expect(screen.getByText(/best vs Lions \(100%/)).toBeTruthy()
     expect(screen.getByText(/toughest vs Bears \(25%/)).toBeTruthy()
+    expect(screen.queryByRole('region', { name: 'By opponent' })).toBeNull() // nobody played twice
+  })
+  it('shows recent form, targets on the charts, and opponents played more than once', async () => {
+    const games = ['Bears', 'Hawks', 'bears', 'Owls', 'Hawks'].map((o, i) => mkGame(`g${i}`, o, `2026-01-0${i + 1}`))
+    const duels = [[1, 5], [2, 5], [4, 5], [4, 5], [5, 5]] // won of total, per game
+    const events = duels.flatMap(([w, t], i) => Array.from({ length: t }, (_, k) => ev(`g${i}`, 'duel', k < w ? 'won' : 'lost')))
+    const team: Team = { id: 't', name: 'Lions', joinCode: 'ABC234', goals: { duel: 70 } }
+    renderSeason(fakeRepo(games, events, [], team))
+    const chart = await screen.findByRole('region', { name: 'Defensive 1v1s won by game' })
+    // Last 3 games 13/15 = 87%, the 2 before 3/10 = 30%.
+    expect(within(chart).getByText('Last 3 games: 87%').parentElement?.textContent).toBe('Last 3 games: 87%, up 57 pts on the games before (30%).')
+    expect(await within(chart).findByRole('img', { name: /by game, target 70%/ })).toBeTruthy()
+    expect(within(chart).getByText('3-game average')).toBeTruthy()
+    const opp = screen.getByRole('region', { name: 'By opponent' })
+    const rows = within(opp).getAllByRole('row').map((r) => r.textContent)
+    expect(rows.slice(1)).toEqual(['Bears250% 5/10— — ', 'Hawks270% 7/10— — ', 'Owls180% 4/5— — '])
   })
 })

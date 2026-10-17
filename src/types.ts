@@ -9,11 +9,15 @@ export interface TeamBranding {
   logo?: string | null // small PNG/WebP data URL (resized client-side)
 }
 
+/** The coach's target for each stat, as a whole percentage (e.g. 70 = "70% of 1v1s won"). A missing stat has no target. */
+export type TeamGoals = Partial<Record<StatCategory, number>>
+
 export interface Team {
   id: Uuid
   name: string
   joinCode: string // short code parents use to join the team's data
   branding?: TeamBranding
+  goals?: TeamGoals // shared by everyone on the team (stored on the team row)
 }
 
 export interface Game {

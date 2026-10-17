@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { RepoContext } from '../../data/context'
 import type { GameLanes, GameThanks, GameTracker, Repository } from '../../data/repository'
 import { LANES, type Lane } from '../../lib/lanes'
-import type { Game, StatEvent } from '../../types'
+import type { Game, StatEvent, Team } from '../../types'
 import TrackerPage from './TrackerPage'
 import { CLAIM_WAIT_MS, LEASE_TICK_MS } from './useTracker'
 
@@ -19,6 +19,7 @@ const sam = (idleSeconds = 3): GameTracker => ({ holder: 'other', idleSeconds, n
 function fakeRepo(status: Game['status'] = 'live', initial: GameTracker | GameLanes = ME) {
   let game: Game = { id: 'g1', teamId: 't', opponent: 'Rovers', date: '2026-01-01', home: true, periods: 2, status, createdAt: '', updatedAt: '' }
   const events: StatEvent[] = []
+  const team: Team = { id: 't', name: 'Lions', joinCode: 'ABC234' }
   const hearts: GameThanks[] = []
   const subs = new Set<() => void>()
   const nudges = new Set<() => void>()
@@ -39,6 +40,7 @@ function fakeRepo(status: Game['status'] = 'live', initial: GameTracker | GameLa
   })
   const repo = {
     claimLanes, getLanes, releaseLanes,
+    getTeam: async () => team,
     onTrackerChange: (cb: () => void) => { nudges.add(cb); return () => nudges.delete(cb) },
     listThanks: async () => hearts.slice(),
     setThanks: vi.fn(async (_id: string, on: boolean) => {
@@ -54,7 +56,7 @@ function fakeRepo(status: Game['status'] = 'live', initial: GameTracker | GameLa
     onSyncState: (cb: any) => { cb('offline', 2); return () => {} },
   } as unknown as Repository
   return {
-    repo, events, lease, claimLanes, getLanes, releaseLanes, hearts,
+    repo, events, team, lease, claimLanes, getLanes, releaseLanes, hearts,
     /** Another parent gave a heart. */
     giveHeart: (name: string | null) => { hearts.push({ gameId: 'g1', name, mine: false, createdAt: `2026-01-01T00:00:${String(hearts.length).padStart(2, '0')}Z` }); subs.forEach((f) => f()) },
     notify: () => subs.forEach((f) => f()),
@@ -583,5 +585,33 @@ describe('stat guide', () => {
     fireEvent.click(screen.getByRole('button', { name: 'About First contact' }))
     expect(screen.getByRole('dialog', { name: 'What each stat means' })).toBeTruthy()
   })
-})
 
+  it('shows halftime numbers for the latest half over the tracker, and every half side by side', async () => {
+    const f = await setup()
+    expect(screen.queryByRole('button', { name: /Halftime numbers/ })).toBeNull() // nothing to show yet
+    fireEvent.click(screen.getByLabelText('Duel won'))
+    fireEvent.click(screen.getByLabelText('Duel lost'))
+    fireEvent.click(screen.getByLabelText('Box entry with shot'))
+    fireEvent.click(screen.getByRole('button', { name: '2nd half' }))
+    fireEvent.click(screen.getByLabelText('Duel won'))
+    fireEvent.click(screen.getByRole('button', { name: /Halftime numbers/ }))
+    const sheet = screen.getByRole('dialog', { name: 'Halftime numbers' })
+    const hero = within(sheet).getByRole('region', { name: '2nd half stats' })
+    expect(within(hero).getByText('1 of 1 1v1s')).toBeTruthy()
+    const rows = within(sheet).getAllByRole('row').map((r) => r.textContent)
+    expect(rows[1]).toMatch(/^1st half1\/2 50%/)
+    expect(rows[2]).toMatch(/^2nd half1\/1 100%/)
+    expect(rows[3]).toMatch(/^Game so far2\/3 67%/)
+    expect(f.releaseLanes).not.toHaveBeenCalled() // still on the tracker, still tracking
+    expect(screen.getByLabelText('Duel won')).toBeTruthy()
+  })
+
+  it("marks the team's targets on the stat bars and the halftime gauges", async () => {
+    setupNoWait(undefined, undefined, (f) => { f.team.goals = { duel: 60 } })
+    await screen.findByText('vs Rovers')
+    expect(await screen.findByText('Target 60%')).toBeTruthy()
+    fireEvent.click(screen.getByLabelText('Duel won'))
+    fireEvent.click(screen.getByRole('button', { name: /Halftime numbers/ }))
+    expect(within(screen.getByRole('dialog', { name: 'Halftime numbers' })).getByText(/Target 60% · met/)).toBeTruthy()
+  })
+})

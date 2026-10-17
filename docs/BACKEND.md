@@ -73,3 +73,12 @@ After `0005`, run `supabase/migrations/0006_game_thanks.sql`. It adds a `game_th
 The table has read-only row-level security for team members; all changes go through the function. Taking a heart back is a soft delete (`deleted_at`), like undoing a tap, so the change reaches other phones over realtime (Realtime cannot filter hard deletes by team). The table is in the realtime publication on its own channel, so a missing migration cannot affect live stats.
 
 **It never touches the stats.** Hearts are read and written apart from `games`, `stat_events` and the write queue, so a heart that can't be sent (no signal, or this migration not run) can't hold up a single tap. The app sends it directly: it shows at once, and if the cloud can't be reached it un-does itself and tells the parent. Run the migration at the same time you deploy this version of the app; until then the heart simply doesn't save.
+
+## Team targets: run `0007_team_goals.sql`
+
+After `0006`, run `supabase/migrations/0007_team_goals.sql`. It adds a `goals` jsonb column to `teams` (e.g. `{"duel": 60, "box_entry": 50}`) and one function the app calls:
+
+- `set_team_goals(team, g)`: team members only. It keeps just the three stat keys (`duel`, `first_contact`, `box_entry`), each a whole percentage from 1 to 100, and drops anything else. An empty object clears every target.
+
+It also adds `teams` to the realtime publication if `0002` didn't already, so other phones pick up new targets straight away. Targets are only a marker on the gauges and charts: `summarize()` never reads them. Without the migration, saving targets fails with a message in Settings and nothing else changes.
+

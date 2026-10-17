@@ -1,6 +1,7 @@
 // Local-first Repository. Always reads/writes IndexedDB; if a `remote` is supplied,
 // writes are also queued for cloud upsert and remote changes are pulled into the cache.
-import type { Game, NewStatEvent, StatEvent, Team, TeamBranding, Uuid } from '../types'
+import type { Game, NewStatEvent, StatEvent, Team, TeamBranding, TeamGoals, Uuid } from '../types'
+import { cleanGoals, hasGoals } from '../lib/goals'
 import type { GameLanes, GameThanks, GameTracker, Repository, SyncState } from './repository'
 import { LANES, type Lane } from '../lib/lanes'
 import { openLocalDB, idbQueueStore, uuid, type GameRec, type LocalDB } from './db'
@@ -122,7 +123,8 @@ export class LocalRepository implements Repository {
         try {
           const cloud = await this.remote.createTeam(old.name)
           if (old.branding) await this.remote.saveBranding(cloud.id, old.branding).catch(() => {})
-          const fresh: Team = { ...cloud, branding: old.branding ?? cloud.branding }
+          if (old.goals) await this.remote.saveGoals(cloud.id, old.goals).catch(() => {})
+          const fresh: Team = { ...cloud, branding: old.branding ?? cloud.branding, goals: old.goals ?? cloud.goals }
           for (const g of await db.getAll('games')) if (g.teamId === id) await db.put('games', { ...g, teamId: fresh.id })
           teams = teams.map((t) => (t.id === id ? fresh : t))
           if (active === id) active = fresh.id
@@ -214,7 +216,7 @@ export class LocalRepository implements Repository {
     } catch { /* retried next launch: the flag is only set after everything was queued */ }
   }
 
-  /** Pick up team name/branding changes made on another phone. */
+  /** Pick up team name/branding/target changes made on another phone. */
   private async refreshTeam() {
     if (!this.remote) return
     try {
@@ -224,7 +226,8 @@ export class LocalRepository implements Repository {
       const next = teams.map((t) => {
         const f = fresh.find((x) => x.id === t.id)
         if (!f) return t
-        if (f.name !== t.name || JSON.stringify(f.branding ?? null) !== JSON.stringify(t.branding ?? null)) { changed = true; return f }
+        const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
+        if (f.name !== t.name || !same(f.branding, t.branding) || !same(f.goals, t.goals)) { changed = true; return f }
         return t
       })
       if (changed) { await this.writeTeams(next); this.emit() }
@@ -235,6 +238,16 @@ export class LocalRepository implements Repository {
     await this.ready
     const cur = await this.requireTeam()
     const team: Team = this.remote ? await this.remote.saveBranding(cur.id, branding) : { ...cur, branding }
+    await this.writeTeams((await this.readTeams()).map((t) => (t.id === team.id ? team : t)))
+    this.emit()
+    return team
+  }
+
+  async saveGoals(goals: TeamGoals): Promise<Team> {
+    await this.ready
+    const cur = await this.requireTeam()
+    const clean = cleanGoals(goals)
+    const team: Team = this.remote ? await this.remote.saveGoals(cur.id, clean) : { ...cur, goals: hasGoals(clean) ? clean : undefined }
     await this.writeTeams((await this.readTeams()).map((t) => (t.id === team.id ? team : t)))
     this.emit()
     return team

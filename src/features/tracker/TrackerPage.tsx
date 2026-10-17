@@ -11,6 +11,8 @@ import { agoText, eventLabel, isGood, tallyText } from './labels'
 import { useTracker, useWakeLock } from './useTracker'
 import './tracker.css'
 import { PillGroup, PillItem } from '../../ui/PillGroup'
+import { HalftimeSheet } from '../stats/HalftimeSheet'
+import { useTeam } from '../shell/useTeam'
 
 const SYNC_TEXT = { synced: 'Synced', syncing: 'Syncing', offline: 'Offline', error: 'Sync error' } as const
 
@@ -22,6 +24,7 @@ export default function TrackerPage() {
   const [confirmEnd, setConfirmEnd] = useState(false)
   const [confirmRole, setConfirmRole] = useState<Role | null>(null) // asking before taking a lane from someone
   const { game, summary: s, periodSummary: p } = t
+  const goals = useTeam().team?.goals ?? {}
 
   if (!t.loaded) return <main className="tk"><p className="tk-empty">Loading game…</p></main>
   if (!game) return <main className="tk"><p className="tk-empty">Game not found. <Link to="/">Back to games</Link></p></main>
@@ -87,6 +90,7 @@ export default function TrackerPage() {
             ))}
           </PillGroup>
         </div>
+        <HalftimeSheet game={game} events={t.events} goals={goals} />
       </header>
 
       {/* The parent tracking is the one being thanked, so they see the hearts; everyone else can give one. */}
@@ -130,7 +134,7 @@ export default function TrackerPage() {
         { lane: LANE_OF.duel, el: (
           <StatCard key="duel" id="duel" title="Defensive 1v1s" hint="Did we win the duel?" info={<InfoButton topic="duel" tracking />}
             tally={tallyText(s.duels.won, s.duels.total, s.duels.winPct)}
-            periodTally={`${p.duels.won}/${p.duels.total}`} period={t.period} pct={s.duels.winPct} {...cardProps(LANE_OF.duel)}
+            periodTally={`${p.duels.won}/${p.duels.total}`} period={t.period} pct={s.duels.winPct} goal={goals.duel} {...cardProps(LANE_OF.duel)}
             buttons={[
               { label: 'Won', icon: '✓', tone: 'good', aria: 'Duel won', onTap: () => t.recordDuel('won') },
               { label: 'Lost', icon: '✕', tone: 'bad', aria: 'Duel lost', onTap: () => t.recordDuel('lost') },
@@ -139,7 +143,7 @@ export default function TrackerPage() {
         { lane: LANE_OF.first_contact, el: (
           <StatCard key="contact" id="contact" title="First contact" hint="Through balls and long balls" info={<InfoButton topic="first_contact" tracking />}
             tally={tallyText(ft.clean, ft.total, ft.cleanPct)}
-            periodTally={`${pf.clean}/${pf.total}`} period={t.period} pct={ft.cleanPct} {...cardProps(LANE_OF.first_contact)}
+            periodTally={`${pf.clean}/${pf.total}`} period={t.period} pct={ft.cleanPct} goal={goals.first_contact} {...cardProps(LANE_OF.first_contact)}
             extra={
               <div className="tk-seg" role="radiogroup" aria-label="Ball type">
                 <PillGroup value={t.ballType} pillClassName="tk-seg-pill">
@@ -161,7 +165,7 @@ export default function TrackerPage() {
         { lane: LANE_OF.box_entry, el: (
           <StatCard key="box" id="box" title="Box entries" hint="Got into the box: did we shoot?" info={<InfoButton topic="box_entry" tracking />}
             tally={tallyText(s.boxEntries.shot, s.boxEntries.total, s.boxEntries.shotPct)}
-            periodTally={`${p.boxEntries.shot}/${p.boxEntries.total}`} period={t.period} pct={s.boxEntries.shotPct} {...cardProps(LANE_OF.box_entry)}
+            periodTally={`${p.boxEntries.shot}/${p.boxEntries.total}`} period={t.period} pct={s.boxEntries.shotPct} goal={goals.box_entry} {...cardProps(LANE_OF.box_entry)}
             buttons={[
               { label: 'Shot', icon: '◎', tone: 'good', aria: 'Box entry with shot', onTap: () => t.recordBox('shot') },
               { label: 'No shot', icon: '⊘', tone: 'bad', aria: 'Box entry, no shot', onTap: () => t.recordBox('no_shot') },

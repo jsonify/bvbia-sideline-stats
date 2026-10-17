@@ -2,6 +2,7 @@ import { useTeam } from '../shell/useTeam'
 import { JoinCodeCard } from '../shell/JoinCodeCard'
 import { YourName } from './YourName'
 import { InstallCard } from './InstallCard'
+import { TeamTargets } from './TeamTargets'
 import { SyncChip } from '../shell/SyncChip'
 import { TeamLogo } from '../branding/TeamLogo'
 import '../branding/branding.css'
@@ -29,6 +30,7 @@ export default function SettingsPage() {
           </section>
           <InstallCard />
           <YourName />
+          <TeamTargets team={team} />
           <JoinCodeCard teamName={team.name} code={team.joinCode} />
           <p className="st-version">Sideline Stats · stats are saved to the cloud and shared with everyone on this team</p>
           <p className="st-version" style={{ marginTop: 4 }}>Version {__APP_COMMIT__} · updated {built}</p>
