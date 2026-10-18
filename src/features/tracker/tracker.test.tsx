@@ -760,36 +760,37 @@ describe('game clock: each half against its length, adding up to the game', () =
   afterEach(() => vi.useRealTimers())
   const withHalves = (f: ReturnType<typeof fakeRepo>) => { void f.repo.saveGame({ ...f.getGame(), halfMinutes: [25, 25] }) }
 
-  it('kicks off the 1st half, counts into added time, and the 2nd half adds to the game', async () => {
+  it('kicks off the 1st half, stops by itself at halftime, and the 2nd half adds to the game', async () => {
     const f = setupNoWait('scheduled', ME, withHalves)
     await screen.findByText('vs Rovers')
     await waitFor(() => expect(f.claimLanes).toHaveBeenCalled())
     await act(async () => {})
     expect(screen.getByRole('timer').getAttribute('aria-label')).toMatch(/0:00 of 25:00, not started\. Game: 0:00 of 50:00/)
 
-    fireEvent.click(screen.getByRole('button', { name: '▶ Kick off' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Kick off' }))
     await waitFor(() => expect(f.getGame().status).toBe('live')) // kicking off makes the game live
     const started = Date.parse(f.getGame().clock![0].since!)
-    // 26 minutes in (the clock runs from when it was started, whatever this phone's timer does).
+    expect(screen.queryByRole('button', { name: /Pause/ })).toBeNull() // a running clock: no pause
+    // 26 minutes in (the clock runs from when it was started, whatever this phone's timer does): it stopped at 25:00.
     await f.repo.saveGame({ ...f.getGame(), clock: [{ ms: 0, since: new Date(started - 26 * 60_000).toISOString() }] })
     act(() => f.notify())
-    await waitFor(() => expect(screen.getByRole('timer').textContent).toMatch(/25:00 \+1:0\d/))
+    await waitFor(() => expect(screen.getByRole('timer').textContent).toBe('25:00HalftimeGame 25:00 / 50:00'))
 
     fireEvent.click(screen.getByRole('button', { name: '2nd half' }))
-    fireEvent.click(screen.getByRole('button', { name: '▶ Start 2nd half' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Start 2nd half' }))
     await waitFor(() => expect(f.getGame().clock?.[1]?.since).toBeTruthy())
     expect(f.getGame().clock![0].since).toBeNull() // the 1st half stopped when the 2nd kicked off
-    expect(f.getGame().clock![0].ms).toBeGreaterThanOrEqual(26 * 60_000)
-    expect(screen.getByRole('timer').getAttribute('aria-label')).toMatch(/2nd half clock: 0:0\d of 25:00, running\. Game: 26:0\d of 50:00/)
+    expect(screen.getByRole('timer').getAttribute('aria-label')).toMatch(/2nd half clock: 0:0\d of 25:00, running\. Game: 25:0\d of 50:00/)
 
-    fireEvent.click(screen.getByRole('button', { name: /Pause the 2nd half clock/ }))
-    await waitFor(() => expect(f.getGame().clock![1].since).toBeNull())
-    expect(screen.getByRole('button', { name: '▶ Resume' })).toBeTruthy()
+    // And the 2nd half stops by itself at full time.
+    await f.repo.saveGame({ ...f.getGame(), clock: [f.getGame().clock![0], { ms: 0, since: new Date(Date.now() - 30 * 60_000).toISOString() }] })
+    act(() => f.notify())
+    await waitFor(() => expect(screen.getByRole('timer').textContent).toBe('25:00Full timeGame 50:00 / 50:00'))
   })
 
   it('stops when the game ends', async () => {
     const f = await setup('live')
-    fireEvent.click(screen.getByRole('button', { name: '▶ Kick off' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Kick off' }))
     await waitFor(() => expect(f.getGame().clock?.[0]?.since).toBeTruthy())
     fireEvent.click(await screen.findByText('End game'))
     fireEvent.click(screen.getAllByText('End game')[1])
@@ -799,7 +800,7 @@ describe('game clock: each half against its length, adding up to the game', () =
 
   it('can be reset after asking, if it was started by mistake', async () => {
     const f = await setup('live')
-    await f.repo.saveGame({ ...f.getGame(), clock: [{ ms: 90_000, since: null }] })
+    await f.repo.saveGame({ ...f.getGame(), clock: [{ ms: 90_000, since: new Date().toISOString() }] })
     act(() => f.notify())
     fireEvent.click(await screen.findByRole('button', { name: 'Reset' }))
     fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Reset' }))
@@ -813,6 +814,6 @@ describe('game clock: each half against its length, adding up to the game', () =
     await screen.findByText(/Moved to the 2nd half: it has kicked off/)
     expect(screen.getByRole('button', { name: '2nd half' }).getAttribute('aria-pressed')).toBe('true')
     expect(screen.getByRole('timer').getAttribute('aria-label')).toMatch(/running/)
-    expect(screen.queryByRole('button', { name: /Pause|Kick off|Resume/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Kick off|Start|Reset/ })).toBeNull()
   })
 })

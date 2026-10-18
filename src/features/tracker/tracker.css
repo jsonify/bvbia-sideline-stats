@@ -150,13 +150,13 @@
 /* a message must never sit on the buttons of an open choice sheet: it moves to the top of the screen, and never takes a tap */
 .tk-toast{pointer-events:none}
 .tk:has(.fp-pick) .tk-toast{top:calc(12px + env(safe-area-inset-top));bottom:auto}
-.tk-score{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:44px;margin-top:8px;padding:4px 12px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit}
+.tk-score{display:grid;grid-template-columns:1fr 1fr;grid-template-areas:"us them" "n n" "add add";align-content:center;justify-items:center;row-gap:2px;column-gap:6px;width:100%;min-height:44px;padding:6px 8px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit}
 button.tk-score:active{transform:scale(.97)}
-.tk-sc-team{flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tk-sc-team:first-child{text-align:right}
-.tk-sc-n{flex:none;display:flex;gap:6px;font-family:var(--font-display);font-size:24px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.tk-sc-team{max-width:100%;min-width:0;font-size:12px;font-weight:600;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tk-sc-team.us{grid-area:us}.tk-sc-team.them{grid-area:them}
+.tk-sc-n{grid-area:n;display:flex;gap:8px;font-family:var(--font-display);font-size:28px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
 .tk-sc-n span{color:var(--muted)}
-.tk-sc-add{flex:none;font-size:12px;font-weight:700;padding:4px 8px;border-radius:999px;background:var(--brand);color:var(--brand-ink)}
+.tk-sc-add{grid-area:add;font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--brand);color:var(--brand-ink)}
 /* not .tk-goal: that is the target marker on the stat bars (above), and it would squash this sheet into a 3px strip */
 .tk-goal-sheet{display:flex;flex-direction:column}
 .tk-goal-now{text-align:center;margin:0 0 12px;color:var(--muted);font-weight:600}
@@ -169,15 +169,19 @@ button.tk-score:active{transform:scale(.97)}
 .tk-goal-fix{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .tk-goal-fix button{min-height:44px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--text);font:inherit;font-size:14px;font-weight:600;padding:6px}
 .tk-goal-fix button:disabled{opacity:.4}
+/* the score and the game clock, side by side in their own boxes (the clock alone, full width, before kick-off) */
+.tk-board{display:flex;gap:8px;margin-top:8px}
+.tk-board>*{flex:1 1 0;min-width:0}
+.tk-board:empty{display:none}
 /* game clock: the half on screen against its length, and the whole game */
-.tk-clock{display:flex;align-items:center;gap:10px;min-height:52px;margin-top:8px;padding:6px 8px 6px 14px;border-radius:12px;border:1px solid var(--border);background:var(--surface)}
+.tk-clock{display:flex;align-items:center;gap:8px;min-width:0;padding:6px 8px 6px 12px;border-radius:12px;border:1px solid var(--border);background:var(--surface)}
 .tk-clock-time{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.15}
-.tk-clock-time b{font-family:var(--font-display);font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
-.tk-clock-time small{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.tk-clock-time b{font-family:var(--font-display);font-size:28px;font-weight:800;line-height:1.05;font-variant-numeric:tabular-nums}
+.tk-clock-time small{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tk-clock.running .tk-clock-time b{color:var(--brand-text)}
-.tk-clock.over .tk-clock-time b{color:var(--bad)}
-.tk-clock-btns{flex:none;display:flex;gap:6px}
-.tk-clock-btns button{min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);font:inherit;font-weight:800;transition:transform .3s var(--tk-spring)}
-.tk-clock-btns button:active{transform:scale(.94)}
-.tk-clock-btns button.primary{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
-.tk-clock-btns .tk-clock-reset{padding:0 10px;font-weight:600;color:var(--muted)}
+.tk-clock.done .tk-clock-time small:nth-of-type(1){color:var(--text);font-weight:700}
+.tk-clock-btns{flex:none;display:flex;flex-direction:column;align-items:center;gap:2px}
+.tk-clock-btns .tk-clock-go{width:48px;height:48px;border-radius:12px;border:1px solid var(--border);background:var(--bg);color:var(--text);font:inherit;font-size:18px;font-weight:800;transition:transform .3s var(--tk-spring)}
+.tk-clock-btns .tk-clock-go:active{transform:scale(.94)}
+.tk-clock-btns .tk-clock-go.primary{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.tk-clock-btns .tk-clock-reset{min-height:24px;padding:0 4px;border:0;background:none;font:inherit;font-size:12px;font-weight:600;color:var(--muted);text-decoration:underline}

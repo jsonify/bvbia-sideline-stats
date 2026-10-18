@@ -92,8 +92,11 @@ export default function TrackerPage() {
             {sync.state !== 'synced' && sync.pending > 0 && <b className="tk-sync-n" aria-hidden="true">{sync.pending}</b>}
           </span>
         </div>
-        {game.status !== 'scheduled' && <ScoreBar game={game} teamName={team?.name ?? ''} canEdit={t.canTrack} onChange={t.changeScore} />}
-        {(!locked || gameMs(game.clock) > 0) && <ClockBar game={game} period={t.period} canEdit={t.canTrack} onChange={t.changeClock} />}
+        {/* The score and the clock share a row, each in its own box. */}
+        <div className="tk-board">
+          {game.status !== 'scheduled' && <ScoreBar game={game} teamName={team?.name ?? ''} canEdit={t.canTrack} onChange={t.changeScore} />}
+          {(!locked || gameMs(game.clock) > 0) && <ClockBar game={game} period={t.period} canEdit={t.canTrack} onChange={t.changeClock} />}
+        </div>
         <div className="tk-periods" role="group" aria-label="Period">
           <PillGroup value={String(t.period)} pillClassName="tk-period-pill">
             {Array.from({ length: game.periods }, (_, i) => i + 1).map((n) => (
