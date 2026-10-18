@@ -2,6 +2,7 @@ import type { Game, StatCategory, StatEvent, Team, TeamGoals } from '../../types
 import { summarize } from '../../lib/summary'
 import { fmtPct } from '../../lib/export'
 import { goalStatus } from '../../lib/goals'
+import { cleanScore, resultOf, RESULT_WORD, type Result } from '../../lib/score'
 import { periodBreakdown, periodLabel, POSITIVE } from './insights'
 import { BOX_H, BOX_W, PITCH_H, PITCH_W, placeEvents } from './fieldPlacement'
 import { COUNT_OF, pctOf } from './trends'
@@ -22,10 +23,12 @@ const STATS: { cat: StatCategory; label: string; unit: string }[] = [
   { cat: 'first_contact', label: 'Clean first contact', unit: 'balls' },
   { cat: 'box_entry', label: 'Entries with a shot', unit: 'entries' },
 ]
+const RESULT_COLOR: Record<Result, string> = { W: GOOD, D: '#5f6672', L: '#b91c1c' }
+const BANNER_H = 84, BANNER_GAP = 12 // final score banner under the header, when the game has a score
 const COL_X = [250, 560, 870] // centre of each stat's column
 
 export interface CardInput {
-  game: Pick<Game, 'opponent' | 'date' | 'home' | 'status' | 'periods' | 'location'>
+  game: Pick<Game, 'opponent' | 'date' | 'home' | 'status' | 'periods' | 'location' | 'score'>
   events: StatEvent[]
   team?: Pick<Team, 'name' | 'branding'> | null
   goals?: TeamGoals
@@ -139,10 +142,28 @@ export async function drawShareCard(input: CardInput, canvas: HTMLCanvasElement 
   ctx.fillStyle = MUTED; ctx.font = `500 30px ${BODY}`
   ctx.fillText(ellipsize(ctx, [date, game.location, state].filter(Boolean).join(' · '), CARD_W - 120), 60, 232)
 
+  // Final score banner. Everything below moves down to make room, so a game without a score keeps the old layout.
+  const score = cleanScore(game.score), result = resultOf(game)
+  const off = score && result ? BANNER_H + BANNER_GAP : 0
+  if (score && result) {
+    const by = 262, bx = 60, bw = CARD_W - 120
+    ctx.fillStyle = RESULT_COLOR[result]
+    const r = 16
+    ctx.beginPath()
+    ctx.moveTo(bx + r, by); ctx.arcTo(bx + bw, by, bx + bw, by + BANNER_H, r); ctx.arcTo(bx + bw, by + BANNER_H, bx, by + BANNER_H, r)
+    ctx.arcTo(bx, by + BANNER_H, bx, by, r); ctx.arcTo(bx, by, bx + bw, by, r); ctx.closePath(); ctx.fill()
+    ctx.fillStyle = PAPER; ctx.textBaseline = 'middle'
+    ctx.textAlign = 'left'; ctx.font = `700 30px ${BODY}`
+    ctx.fillText(`${game.status === 'final' ? 'FINAL' : 'SCORE'} · ${RESULT_WORD[result].toUpperCase()}`, bx + 32, by + BANNER_H / 2)
+    ctx.textAlign = 'right'; ctx.font = `800 68px ${DISPLAY}`
+    ctx.fillText(`${score.us} – ${score.them}`, bx + bw - 32, by + BANNER_H / 2 + 2)
+    ctx.textBaseline = 'alphabetic'
+  }
+
   // Three gauges.
   ctx.textAlign = 'center'
   STATS.forEach((st, i) => {
-    const n = COUNT_OF[st.cat](s), pct = pctOf(n), cx = COL_X[i], cy = 450
+    const n = COUNT_OF[st.cat](s), pct = pctOf(n), cx = COL_X[i], cy = 450 + off
     gauge(ctx!, cx, cy, 112, pct, goals[st.cat], COLOR[st.cat])
     ctx!.fillStyle = INK; ctx!.font = `800 92px ${DISPLAY}`
     ctx!.fillText(fmtPct(pct), cx, cy - 4)
@@ -159,7 +180,7 @@ export async function drawShareCard(input: CardInput, canvas: HTMLCanvasElement 
 
   // One row per period.
   const periods = periodBreakdown(live, game.periods)
-  let y = 640
+  let y = 640 + off
   ctx.strokeStyle = LINE; ctx.lineWidth = 2
   ctx.beginPath(); ctx.moveTo(60, y); ctx.lineTo(CARD_W - 60, y); ctx.stroke()
   y += 50
