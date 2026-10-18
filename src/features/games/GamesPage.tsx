@@ -50,7 +50,8 @@ function Chips({ s }: { s: StatSummary }) {
 function GameCard({ g, s, hearts, open, next, today, onMenu, onDelete }: {
   g: Game; s?: StatSummary; hearts: number; open: boolean; next?: boolean; today: string; onMenu: () => void; onDelete: () => void
 }) {
-  const to = g.status === 'live' ? `/games/${g.id}/track` : `/games/${g.id}`
+  // An upcoming game opens the tracker too: locked until game day, then ready to start.
+  const to = g.status === 'final' ? `/games/${g.id}` : `/games/${g.id}/track`
   return (
     <li className={`gm-card${next ? ' gm-next' : ''}`}>
       <div className="ss-card">

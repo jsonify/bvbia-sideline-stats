@@ -555,16 +555,19 @@ test('a game later in the season: the tracker is shown locked until game day', a
   await page.getByLabel(/Kick-off/).fill('10:30')
   await page.getByRole('button', { name: 'Save', exact: true }).click()
 
-  await page.getByText('@ Washington Rush').or(page.getByText('vs Washington Rush')).click()
-  await expect(page.getByText('Tracking opens on game day.')).toBeVisible()
-  await expect(page.getByRole('link', { name: /tracking/i })).toHaveCount(0)
-
-  const id = page.url().split('/').pop()
-  await page.goto(`/games/${id}/track`)
+  // Tapping the game opens the tracker, locked.
+  await page.getByText('@ Washington Rush').click()
+  await expect(page).toHaveURL(/\/games\/[^/]+\/track$/)
   await expect(page.getByRole('status', { name: 'Tracking is locked' })).toBeVisible()
   await expect(page.locator('.tk-title h1')).toHaveText('@ Washington Rush')
   await page.waitForTimeout(400)
   await shot(page, '29-tracker-locked')
   await page.getByRole('link', { name: /Back to games/ }).click()
   await expect(page.getByRole('heading', { name: 'Games', exact: true })).toBeVisible()
+
+  // Its summary offers no tracking either.
+  const id = (await page.locator('.gm-card a.ss-card-link').first().getAttribute('href'))!.split('/')[2]
+  await page.goto(`/games/${id}`)
+  await expect(page.getByText('Tracking opens on game day.')).toBeVisible()
+  await expect(page.getByRole('link', { name: /tracking/i })).toHaveCount(0)
 })
