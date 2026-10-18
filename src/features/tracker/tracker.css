@@ -198,3 +198,18 @@ button.tk-score:active{transform:scale(.97)}
 .tk-cs-row .left b{color:var(--brand-text)}
 .tk-cs-row.game b{font-size:30px}
 .tk-cs-note{margin:0;font-size:13px;color:var(--muted);text-align:center}
+/* Before game day: the tracker shows through a lock, fading to the page colour so the note reads cleanly */
+.tk-lockwrap{position:relative}
+.tk-lock{position:fixed;inset:0;z-index:40;display:flex;align-items:flex-end;justify-content:center;padding:16px 16px calc(32px + env(safe-area-inset-bottom));
+  background:linear-gradient(180deg,color-mix(in srgb,var(--bg) 30%,transparent) 0%,color-mix(in srgb,var(--bg) 80%,transparent) 40%,var(--bg) 75%);
+  -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.tk-lock-card{width:100%;max-width:420px;text-align:center;display:grid;justify-items:center;gap:10px}
+.tk-lock-eyebrow{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-display);font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.tk-lock-opp{margin:0;max-width:100%;font-family:var(--font-display);text-transform:uppercase;font-size:clamp(30px,9vw,40px);line-height:1;font-weight:800;letter-spacing:.01em;overflow-wrap:anywhere}
+.tk-lock-when{margin:6px 0 0;display:flex;gap:8px;width:100%}
+.tk-lock-when>div{flex:1;min-width:0;padding:10px 12px;border-radius:14px;background:var(--surface);border:1px solid var(--border)}
+.tk-lock-when dt{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.tk-lock-when dd{margin:2px 0 0;font-weight:700;font-size:17px;font-variant-numeric:tabular-nums}
+.tk-lock-where{margin:0;color:var(--muted);font-size:14px}
+.tk-lock-back{margin-top:12px;min-height:48px;display:inline-flex;align-items:center;padding:0 22px;border-radius:999px;background:var(--brand);color:var(--brand-ink);font-weight:800;text-decoration:none}
+.tk-lock-back:focus-visible{outline:3px solid var(--ring);outline-offset:2px}

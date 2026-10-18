@@ -8,12 +8,9 @@ import { PillGroup, PillItem } from '../../ui/PillGroup'
 import { Icon } from '../../ui/Icon'
 import { locateField } from './locate'
 import { cleanMinutes, HALF_LENGTHS } from '../../lib/clock'
-import { cleanKickoff, nextWeek } from '../../lib/schedule'
+import { cleanKickoff, nextWeek, todayISO } from '../../lib/schedule'
 
-export function todayISO(d = new Date()) {
-  const p = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
-}
+export { todayISO }
 
 /** `half` is the length of each half in minutes, as picked ('' = not set). Both halves are always the same length. `kickoff` is "HH:MM" or ''. */
 export interface GameDraft { opponent: string; date: string; kickoff: string; home: boolean; location: string; notes: string; half: string }

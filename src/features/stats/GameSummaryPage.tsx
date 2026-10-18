@@ -7,6 +7,7 @@ import { summarize } from '../../lib/summary'
 import { categoryLabel, eventsToCsv, fmtPct, gameSummaryToText, outcomeLabel } from '../../lib/export'
 import { CLS, download, periodBreakdown, POSITIVE, slug, takeaways } from './insights'
 import { canThank } from '../../lib/thanks'
+import { canStartTracking } from '../../lib/schedule'
 import { ThanksHeart } from '../thanks/ThanksHeart'
 import { InfoButton } from '../guide/InfoButton'
 import { FieldMap } from './FieldMap'
@@ -104,12 +105,13 @@ export default function GameSummaryPage() {
       <ScoreCard game={game} teamName={team?.name ?? ''} onSaved={setGame} />
 
       <div className="actions">
-        {game.status !== 'final' && <Link className="btn primary" to={`/games/${game.id}/track`}>Continue tracking</Link>}
+        {canStartTracking(game) && <Link className="btn primary" to={`/games/${game.id}/track`}>{game.status === 'live' ? 'Continue tracking' : 'Start tracking'}</Link>}
         <Link className="btn" to={`/games/${game.id}/edit`}>Edit</Link>
         <ShareImage input={{ game, events, team, goals }} onStatus={setStatus} />
         <button className="btn" onClick={share}>Share summary</button>
         <button className="btn" onClick={() => download(`${slug(game.opponent)}-${game.date}-events.csv`, eventsToCsv(events, [game]))}>Export CSV</button>
       </div>
+      {game.status === 'scheduled' && !canStartTracking(game) && <p className="sub">Tracking opens on game day.</p>}
       <div className="status" role="status" aria-live="polite">{status}</div>
 
       <section className="hero" aria-label="Key stats">

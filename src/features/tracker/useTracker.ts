@@ -7,6 +7,7 @@ import { resetHalf, runningHalf, startHalf, stopClock } from '../../lib/clock'
 import { summarize } from '../../lib/summary'
 import { LANES, LANE_OF, ROLE_LANES, lanesText, roleOf, type Lane, type Role } from '../../lib/lanes'
 import { eventLabel } from './labels'
+import { canStartTracking } from '../../lib/schedule'
 import type { Zone } from '../../lib/zones'
 
 const byTime = (a: StatEvent, b: StatEvent) => a.createdAt.localeCompare(b.createdAt)
@@ -93,7 +94,9 @@ export function useTracker(gameId: string) {
   // The lease is coordination, not security: if the server can't be reached we assume we hold the lanes,
   // so a bad signal never stops a parent from recording the game.
   const isFinal = game?.status === 'final'
-  const active = loaded && !!game && !isFinal
+  // Tracking opens on game day: before it the screen is shown locked, and nothing is claimed, tapped or started.
+  const early = !!game && game.status === 'scheduled' && !canStartTracking(game)
+  const active = loaded && !!game && !isFinal && !early
 
   /** Take the server's word for who holds what. Returns the lanes we hold that nobody holds any more, to renew at once. */
   const applyLanes = useCallback((v: GameLanes): Lane[] => {
@@ -197,9 +200,9 @@ export function useTracker(gameId: string) {
     .filter((l) => ROLE_LANES[role].includes(l) && !held.includes(l) && lanes?.[l].holder === 'other')
     .map((l) => ({ lane: l, name: lanes![l].name, idleSeconds: lanes![l].idleSeconds })), [held, lanes])
 
-  const canTap = useCallback((lane: Lane) => !isFinal && held.includes(lane), [isFinal, held])
-  const canTrack = !isFinal && held.length > 0 // holding at least one lane
-  const watching = !isFinal && !checking && held.length === 0 // someone else has the game (or nobody yet): view-only
+  const canTap = useCallback((lane: Lane) => !isFinal && !early && held.includes(lane), [isFinal, early, held])
+  const canTrack = !isFinal && !early && held.length > 0 // holding at least one lane
+  const watching = !isFinal && !early && !checking && held.length === 0 // someone else has the game (or nobody yet): view-only
 
   const summary = useMemo(() => summarize(events), [events])
   const periodSummary = useMemo(() => summarize(events.filter((e) => e.period === period)), [events, period])
@@ -318,7 +321,7 @@ export function useTracker(gameId: string) {
   const recordBox = (outcome: 'shot' | 'no_shot', zone?: Zone, at = period) => record({ gameId, category: 'box_entry', outcome, period: at, ...where(zone) })
 
   return {
-    game, loaded, events, summary, periodSummary, period, setPeriod: choosePeriod, ballType, setBallType, sync, toast,
+    game, loaded, early, events, summary, periodSummary, period, setPeriod: choosePeriod, ballType, setBallType, sync, toast,
     checking, held, role: roleOf(held), lanes, lost, canTrack, canTap, watching, pickRole, blockersFor,
     recordDuel, recordContact, recordBox, undo, setStatus, changeScore, changeClock, last: mine[mine.length - 1] as StatEvent | undefined,
   }

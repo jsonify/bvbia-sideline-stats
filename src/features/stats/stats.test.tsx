@@ -6,6 +6,7 @@ import type { Game, StatEvent, Team } from '../../types'
 import type { GameThanks, Repository } from '../../data/repository'
 import { RepoContext } from '../../data/context'
 import GameSummaryPage from './GameSummaryPage'
+import { todayISO } from '../../lib/schedule'
 import SeasonPage from './SeasonPage'
 import { HalftimeSheet } from './HalftimeSheet'
 
@@ -150,6 +151,19 @@ describe('GameSummaryPage', () => {
     renderGame(fakeRepo([mkGame('g1', 'Bears', '2026-01-01')], [ev('g1', 'duel', 'won')]), 'g1')
     await screen.findByRole('img', { name: /Game map/ })
     expect(screen.queryByRole('region', { name: 'Where it happened' })).toBeNull()
+  })
+  it('an upcoming game says Start tracking on game day, and offers no tracking before it', async () => {
+    const today = { ...mkGame('g1', 'Bears', todayISO()), status: 'scheduled' as const }
+    const later = { ...mkGame('g2', 'Lions', '2099-10-24'), status: 'scheduled' as const }
+    const repo = fakeRepo([today, later], [])
+    const first = renderGame(repo, 'g1')
+    expect((await screen.findByRole('link', { name: 'Start tracking' })).getAttribute('href')).toBe('/games/g1/track')
+    expect(screen.queryByRole('link', { name: 'Continue tracking' })).toBeNull()
+    first.unmount()
+    renderGame(repo, 'g2')
+    await screen.findByText('vs Lions')
+    expect(screen.queryByRole('link', { name: /tracking/i })).toBeNull()
+    expect(screen.getByText('Tracking opens on game day.')).toBeTruthy()
   })
   it('handles zero events gracefully and hides continue for final', async () => {
     renderGame(fakeRepo([mkGame('g1', 'Bears', '2026-01-01')], []), 'g1')

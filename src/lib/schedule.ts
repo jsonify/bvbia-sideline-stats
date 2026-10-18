@@ -1,5 +1,15 @@
 import type { Game } from '../types'
 
+/** Today on this phone, as YYYY-MM-DD (local time, like a game's date). */
+export function todayISO(d = new Date()) {
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+
+/** Tracking opens on game day: a game can't be started before its date. A live game can always be carried on with. */
+export const canStartTracking = (g: Pick<Game, 'status' | 'date'>, today = todayISO()) =>
+  g.status === 'live' || (g.status === 'scheduled' && g.date <= today)
+
 /** A kick-off time as "HH:MM" (24 h), or null. Takes Postgres' "HH:MM:SS" too. */
 export function cleanKickoff(v: unknown): string | null {
   if (typeof v !== 'string') return null
