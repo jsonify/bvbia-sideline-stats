@@ -18,7 +18,7 @@ import { ShareImage } from './ShareImage'
 import { ScoreCard } from './ScoreCard'
 import { COUNT_OF, opponentKey, pctOf } from './trends'
 import { useTeam } from '../shell/useTeam'
-import { cleanClock, clockText, gameMs, halfMs, lengthText } from '../../lib/clock'
+import { cleanClock, clockText, lengthText, playedGameMs, playedMs } from '../../lib/clock'
 import './stats.css'
 
 const LETTER = { duel: 'D', first_contact: 'F', box_entry: 'B' } as const
@@ -28,10 +28,10 @@ const shortDate = (d: string) => new Date(d + 'T12:00:00').toLocaleDateString(un
 
 /** "Played 25:40 + 26:02 = 51:42 (set for 2 × 25 = 50 min)": the clock from the tracker, and the half lengths from the form. */
 function timeText(g: Game) {
-  const halves = cleanClock(g.clock)?.map((_, i) => halfMs(g.clock, i + 1)).filter((ms) => ms > 0) ?? []
+  const halves = cleanClock(g.clock)?.map((_, i) => playedMs(g, i + 1)).filter((ms) => ms > 0) ?? []
   const planned = lengthText(g)
   if (!halves.length) return planned ? `Set for ${planned}` : ''
-  const played = halves.length > 1 ? `${halves.map(clockText).join(' + ')} = ${clockText(gameMs(g.clock))}` : clockText(halves[0])
+  const played = halves.length > 1 ? `${halves.map(clockText).join(' + ')} = ${clockText(playedGameMs(g))}` : clockText(halves[0])
   return `Played ${played}${planned ? ` (set for ${planned})` : ''}`
 }
 

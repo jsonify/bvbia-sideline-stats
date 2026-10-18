@@ -33,39 +33,32 @@ describe('onboarding redirect', () => {
   })
 })
 
-describe('game form: half lengths', () => {
-  it('takes the minutes for each half, shows the full game, and saves them on the game', async () => {
+describe('game form: half length', () => {
+  it('picks one length from 30, 35 or 45 minutes, used for both halves, and shows the full game', async () => {
+    const repo = makeFakeRepo({ id: 't', name: 'T', joinCode: 'X' })
+    wrap(repo, '/games/new')
+    const pick = screen.getByLabelText('Half length') as HTMLSelectElement
+    expect([...pick.options].map((o) => o.textContent)).toEqual(['Not set', '30 minutes', '35 minutes', '45 minutes'])
+    expect(screen.queryByLabelText('2nd half')).toBeNull()
+    fireEvent.change(screen.getByLabelText('Opponent'), { target: { value: 'Rapids' } })
+    fireEvent.change(pick, { target: { value: '35' } })
+    expect(screen.getByText('70 min')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(repo.games[0]).toMatchObject({ opponent: 'Rapids', halfMinutes: [35, 35] }))
+  })
+
+  it('starts a new game with the half length of the last one', async () => {
+    const repo = makeFakeRepo({ id: 't', name: 'T', joinCode: 'X' })
+    await repo.saveGame({ opponent: 'Bears', date: '2026-09-01', home: true, periods: 2, status: 'final', halfMinutes: [45, 45] })
+    wrap(repo, '/games/new')
+    await waitFor(() => expect((screen.getByLabelText('Half length') as HTMLSelectElement).value).toBe('45'))
+    expect(screen.getByText('90 min')).toBeTruthy()
+  })
+
+  it('is optional', async () => {
     const repo = makeFakeRepo({ id: 't', name: 'T', joinCode: 'X' })
     wrap(repo, '/games/new')
     fireEvent.change(screen.getByLabelText('Opponent'), { target: { value: 'Rapids' } })
-    fireEvent.change(screen.getByLabelText('1st half'), { target: { value: '30' } })
-    // The 2nd half follows the 1st until it is changed on its own.
-    expect((screen.getByLabelText('2nd half') as HTMLInputElement).value).toBe('30')
-    expect(screen.getByText('60 min')).toBeTruthy()
-    fireEvent.change(screen.getByLabelText('2nd half'), { target: { value: '35' } })
-    expect(screen.getByText('65 min')).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(repo.games[0]).toMatchObject({ opponent: 'Rapids', halfMinutes: [30, 35] }))
-  })
-
-  it('starts a new game with the half lengths of the last one', async () => {
-    const repo = makeFakeRepo({ id: 't', name: 'T', joinCode: 'X' })
-    await repo.saveGame({ opponent: 'Bears', date: '2026-09-01', home: true, periods: 2, status: 'final', halfMinutes: [25, 25] })
-    wrap(repo, '/games/new')
-    await waitFor(() => expect((screen.getByLabelText('1st half') as HTMLInputElement).value).toBe('25'))
-    expect(screen.getByText('50 min')).toBeTruthy()
-  })
-
-  it('is optional, but a half without a sensible length blocks save', async () => {
-    const repo = makeFakeRepo({ id: 't', name: 'T', joinCode: 'X' })
-    wrap(repo, '/games/new')
-    fireEvent.change(screen.getByLabelText('Opponent'), { target: { value: 'Rapids' } })
-    fireEvent.change(screen.getByLabelText('1st half'), { target: { value: '25' } })
-    fireEvent.change(screen.getByLabelText('2nd half'), { target: { value: '' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    expect((await screen.findByRole('alert')).textContent).toMatch(/minutes for each half/)
-    expect(repo.games).toHaveLength(0)
-    fireEvent.change(screen.getByLabelText('1st half'), { target: { value: '' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(repo.games).toHaveLength(1))
     expect(repo.games[0].halfMinutes).toBeUndefined()

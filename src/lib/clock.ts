@@ -1,5 +1,8 @@
 import type { Game, GameClock, HalfClock } from '../types'
 
+/** The half lengths the game form offers, in minutes. Both halves are always the same length. */
+export const HALF_LENGTHS = [30, 35, 45]
+
 /** Longest half anyone would set; anything bigger is a typo. */
 export const MAX_HALF_MINUTES = 60
 
@@ -38,6 +41,24 @@ export function gameMs(c: GameClock | null | undefined, at = Date.now()): number
   return (cleanClock(c) ?? []).reduce((sum, _, i) => sum + halfMs(c, i + 1, at), 0)
 }
 
+/** One half's length in ms, when the game has half lengths. */
+export function lengthMs(g: Pick<Game, 'halfMinutes' | 'periods'>, period: number): number | null {
+  const m = cleanMinutes(g.halfMinutes, g.periods)?.[period - 1]
+  return m ? m * 60_000 : null
+}
+
+/** Time played in one half. It is a running clock that stops by itself at the half's length (halftime, then full time). */
+export function playedMs(g: Pick<Game, 'halfMinutes' | 'periods' | 'clock'>, period: number, at = Date.now()): number {
+  const ms = halfMs(g.clock, period, at)
+  const len = lengthMs(g, period)
+  return len === null ? ms : Math.min(ms, len)
+}
+
+/** The whole game: every half played, added up. */
+export function playedGameMs(g: Pick<Game, 'halfMinutes' | 'periods' | 'clock'>, at = Date.now()): number {
+  return (cleanClock(g.clock) ?? []).reduce((sum, _, i) => sum + playedMs(g, i + 1, at), 0)
+}
+
 /** The half whose clock is running, if any. */
 export function runningHalf(c: GameClock | null | undefined): number | null {
   const i = (cleanClock(c) ?? []).findIndex((h) => h.since)
@@ -53,20 +74,11 @@ export function stopClock(c: GameClock | null | undefined, at = now()): GameCloc
   return (cleanClock(c) ?? []).map((h) => (h.since ? { ms: h.ms + Math.max(0, t - Date.parse(h.since)), since: null } : h))
 }
 
-/** Start (or resume) one half. Only one half runs at a time, so kicking off the 2nd half stops the 1st. */
+/** Start one half. Only one half runs at a time, so kicking off the 2nd half stops the 1st. */
 export function startHalf(c: GameClock | null | undefined, period: number, at = now()): GameClock {
   const next = stopClock(c, at)
   while (next.length < period) next.push({ ms: 0, since: null })
   next[period - 1] = { ...next[period - 1], since: at }
-  return next
-}
-
-/** Pause one half (an injury, or it was started too early). */
-export function pauseHalf(c: GameClock | null | undefined, period: number, at = now()): GameClock {
-  const next = cleanClock(c) ?? []
-  const h = next[period - 1]
-  if (!h?.since) return next
-  next[period - 1] = { ms: h.ms + Math.max(0, Date.parse(at) - Date.parse(h.since)), since: null }
   return next
 }
 

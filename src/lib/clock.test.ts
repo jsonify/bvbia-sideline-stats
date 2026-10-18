@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cleanClock, cleanMinutes, clockText, gameMs, halfMs, halfStarted, lengthText, pauseHalf, resetHalf, runningHalf, startHalf, stopClock } from './clock'
+import { cleanClock, cleanMinutes, clockText, gameMs, halfMs, halfStarted, lengthText, playedGameMs, playedMs, resetHalf, runningHalf, startHalf, stopClock } from './clock'
 
 const at = (min: number, sec = 0) => new Date(Date.UTC(2026, 9, 18, 10, min, sec)).toISOString()
 const t = (min: number, sec = 0) => Date.parse(at(min, sec))
@@ -23,28 +23,23 @@ describe('half lengths', () => {
 })
 
 describe('game clock', () => {
-  it('runs one half at a time and adds the halves up into the game', () => {
-    let c = startHalf(null, 1, at(0))
-    expect(runningHalf(c)).toBe(1)
-    expect(halfMs(c, 1, t(12, 30))).toBe(12.5 * 60_000)
-    // Halftime: the 1st half stops at 26:10 (added time), then the 2nd half kicks off.
-    c = pauseHalf(c, 1, at(26, 10))
-    expect(runningHalf(c)).toBeNull()
-    expect(halfMs(c, 1, t(40))).toBe((26 * 60 + 10) * 1000)
-    c = startHalf(c, 2, at(35))
-    expect(runningHalf(c)).toBe(2)
-    expect(halfMs(c, 2, t(45))).toBe(10 * 60_000)
-    expect(gameMs(c, t(45))).toBe((36 * 60 + 10) * 1000)
-    expect(clockText(gameMs(c, t(45)))).toBe('36:10')
+  it('runs one half at a time, stops by itself at each half\'s length, and adds the halves up into the game', () => {
+    const g = { periods: 2 as const, halfMinutes: [30, 30], clock: startHalf(null, 1, at(0)) }
+    expect(runningHalf(g.clock)).toBe(1)
+    expect(playedMs(g, 1, t(12, 30))).toBe(12.5 * 60_000)
+    expect(playedMs(g, 1, t(41))).toBe(30 * 60_000) // halftime: it stops at 30:00
+    g.clock = startHalf(g.clock, 2, at(45))
+    expect(runningHalf(g.clock)).toBe(2)
+    expect(playedMs(g, 1, t(59))).toBe(30 * 60_000)
+    expect(playedMs(g, 2, t(55))).toBe(10 * 60_000)
+    expect(clockText(playedGameMs(g, t(55)))).toBe('40:00')
+    expect(clockText(playedGameMs(g, t(99)))).toBe('60:00') // full time
   })
 
-  it('kicking off the 2nd half stops the 1st, and pausing then resuming keeps the time', () => {
-    let c = startHalf(null, 1, at(0))
-    c = startHalf(c, 2, at(25))
-    expect(halfMs(c, 1, t(50))).toBe(25 * 60_000)
-    c = pauseHalf(c, 2, at(30)) // an injury
-    c = startHalf(c, 2, at(33))
-    expect(halfMs(c, 2, t(35))).toBe(7 * 60_000)
+  it('without half lengths it just keeps counting until the next half or the end', () => {
+    const g = { periods: 2 as const, clock: startHalf(null, 1, at(0)) }
+    expect(playedMs(g, 1, t(41))).toBe(41 * 60_000)
+    expect(halfMs(startHalf(g.clock, 2, at(42)), 1, t(50))).toBe(42 * 60_000)
   })
 
   it('stops for good when the game ends, and a half can be reset', () => {

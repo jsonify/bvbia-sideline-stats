@@ -17,9 +17,9 @@ export function ScoreBar({ game, teamName, canEdit, onChange }: {
   const label = `Score: ${us} ${s.us}, ${them} ${s.them}`
   const board = (
     <>
-      <span className="tk-sc-team">{us}</span>
+      <span className="tk-sc-team us">{us}</span>
+      <span className="tk-sc-team them">{them}</span>
       <b className="tk-sc-n">{s.us}<span aria-hidden="true">–</span>{s.them}</b>
-      <span className="tk-sc-team">{them}</span>
     </>
   )
   if (!canEdit) return <div className="tk-score" role="status" aria-label={label}>{board}</div>
