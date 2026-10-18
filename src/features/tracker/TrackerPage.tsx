@@ -16,6 +16,8 @@ import './tracker.css'
 import { PillGroup, PillItem } from '../../ui/PillGroup'
 import { HalftimeSheet } from '../stats/HalftimeSheet'
 import { ScoreBar } from './ScoreBar'
+import { ClockBar } from './ClockBar'
+import { gameMs } from '../../lib/clock'
 import { scoreText } from '../../lib/score'
 import { useTeam } from '../shell/useTeam'
 
@@ -91,6 +93,7 @@ export default function TrackerPage() {
           </span>
         </div>
         {game.status !== 'scheduled' && <ScoreBar game={game} teamName={team?.name ?? ''} canEdit={t.canTrack} onChange={t.changeScore} />}
+        {(!locked || gameMs(game.clock) > 0) && <ClockBar game={game} period={t.period} canEdit={t.canTrack} onChange={t.changeClock} />}
         <div className="tk-periods" role="group" aria-label="Period">
           <PillGroup value={String(t.period)} pillClassName="tk-period-pill">
             {Array.from({ length: game.periods }, (_, i) => i + 1).map((n) => (

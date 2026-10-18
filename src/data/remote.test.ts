@@ -55,3 +55,27 @@ describe('scores on the server', () => {
     expect(upserts[1]).toMatchObject({ id: 'g1', status: 'final' })
   })
 })
+
+describe('half lengths and the clock on the server', () => {
+  const clock = [{ ms: 60_000, since: null }]
+  it('sends them once set, and leaves them out of games that never had them', () => {
+    expect('half_minutes' in toGameRow(game as any)).toBe(false)
+    expect(toGameRow({ ...game, halfMinutes: [25, 25], clock } as any)).toMatchObject({ half_minutes: [25, 25], clock })
+  })
+
+  it('keeps leaving out what the server has no columns for, one column at a time', async () => {
+    upserts.length = 0
+    answers.push(
+      { code: 'PGRST204', message: "Could not find the 'clock' column of 'games' in the schema cache" },
+      { code: 'PGRST204', message: "Could not find the 'score_us' column of 'games' in the schema cache" },
+    )
+    const remote = createSupabaseRemote('http://x', 'k')
+    await remote.push({ table: 'games', row: { ...game, score: { us: 1, them: 0 }, halfMinutes: [25, 25], clock } as any })
+    expect(upserts).toHaveLength(3)
+    expect(upserts[1]).not.toHaveProperty('clock')
+    expect(upserts[1]).toHaveProperty('score_us', 1)
+    expect(upserts[2]).not.toHaveProperty('score_us')
+    expect(upserts[2]).not.toHaveProperty('half_minutes')
+    expect(upserts[2]).toMatchObject({ id: 'g1', status: 'final' })
+  })
+})

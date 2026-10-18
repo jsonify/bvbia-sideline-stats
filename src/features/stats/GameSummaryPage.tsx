@@ -18,12 +18,22 @@ import { ShareImage } from './ShareImage'
 import { ScoreCard } from './ScoreCard'
 import { COUNT_OF, opponentKey, pctOf } from './trends'
 import { useTeam } from '../shell/useTeam'
+import { cleanClock, clockText, gameMs, halfMs, lengthText } from '../../lib/clock'
 import './stats.css'
 
 const LETTER = { duel: 'D', first_contact: 'F', box_entry: 'B' } as const
 const cell = (n: number, d: number) => (d === 0 ? '—' : <>{n}/{d} <small>{fmtPct((n / d) * 100)}</small></>)
 const CATS = ['duel', 'first_contact', 'box_entry'] as const
 const shortDate = (d: string) => new Date(d + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+
+/** "Played 25:40 + 26:02 = 51:42 (set for 2 × 25 = 50 min)": the clock from the tracker, and the half lengths from the form. */
+function timeText(g: Game) {
+  const halves = cleanClock(g.clock)?.map((_, i) => halfMs(g.clock, i + 1)).filter((ms) => ms > 0) ?? []
+  const planned = lengthText(g)
+  if (!halves.length) return planned ? `Set for ${planned}` : ''
+  const played = halves.length > 1 ? `${halves.map(clockText).join(' + ')} = ${clockText(gameMs(g.clock))}` : clockText(halves[0])
+  return `Played ${played}${planned ? ` (set for ${planned})` : ''}`
+}
 
 /** Earlier games against the same opponent that have stats, most recent first. */
 function meetings(game: Game, games: Game[], all: StatEvent[]) {
@@ -129,6 +139,7 @@ export default function GameSummaryPage() {
 
       <section className="card" aria-labelledby="per">
         <h2 id="per">By half</h2>
+        {timeText(game) && <p className="sub">{timeText(game)}</p>}
         <PeriodTable events={live} periods={periodBreakdown(live, game.periods)} count={game.periods} goals={goals} />
       </section>
 

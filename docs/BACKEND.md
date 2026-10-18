@@ -92,3 +92,7 @@ The app only sends `zone` when a tap has one. If the column is missing, the serv
 ## Game score: run `0009_game_score.sql`
 
 After `0008`, run `supabase/migrations/0009_game_score.sql`. It adds two nullable `smallint` columns to `games`, `score_us` and `score_them` (both null, or both 0 to 99). The app only sends them once a score has been entered on a game's summary, and if the server doesn't have them yet it re-sends the game without them, so the score stays on that phone and nothing else breaks.
+
+## Half lengths and the game clock: run `0010_game_clock.sql`
+
+After `0009`, run `supabase/migrations/0010_game_clock.sql`. It adds two nullable columns to `games`: `half_minutes` (`smallint[]`, one length per half, 1 to 60 minutes) and `clock` (`jsonb`, one `{"ms": played, "since": ISO timestamp or null}` per half that has been started). The app only sends them once a game has them, and if the server doesn't have them yet it re-sends the game without them, so they stay on that phone and nothing else breaks.
