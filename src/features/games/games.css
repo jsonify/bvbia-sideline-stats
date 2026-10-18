@@ -38,3 +38,4 @@
 .gm-path{text-align:left;padding:18px;display:block;width:100%;font:inherit;color:inherit;cursor:pointer}
 .gm-path strong{display:block;font-size:20px;margin-bottom:2px}
 .gm-path span{color:var(--muted)}
+.gm-score{color:var(--text);font-variant-numeric:tabular-nums} .gm-score.r-W{color:var(--good)} .gm-score.r-L{color:var(--bad)}

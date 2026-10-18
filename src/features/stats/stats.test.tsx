@@ -40,6 +40,25 @@ const renderGame = (repo: Repository, id: string) => render(
     <Routes><Route path="/games/:id" element={<GameSummaryPage />} /></Routes></MemoryRouter></RepoContext.Provider>)
 
 describe('GameSummaryPage', () => {
+  it('asks for the final score and saves it from the summary', async () => {
+    const repo = fakeRepo([mkGame('g1', 'Bears', '2026-01-01')], [], [], { id: 't', name: 'Lions', joinCode: 'ABC234' })
+    const saved: Game[] = []
+    repo.saveGame = async (g) => { const out = { ...g, teamId: 't', createdAt: '', updatedAt: '' } as Game; saved.push(out); return out }
+    renderGame(repo, 'g1')
+    const ask = await screen.findByRole('region', { name: 'What was the final score?' })
+    fireEvent.click(within(ask).getByRole('button', { name: 'Add score' }))
+    const edit = screen.getByRole('region', { name: 'Final score' })
+    fireEvent.click(within(edit).getByRole('button', { name: 'One more for Bears' }))
+    fireEvent.click(within(edit).getByRole('button', { name: 'One more for Bears' }))
+    fireEvent.click(within(edit).getByRole('button', { name: /One more for (Lions|Us)/ }))
+    fireEvent.click(within(edit).getByRole('button', { name: 'Save score' }))
+    await waitFor(() => expect(saved).toHaveLength(1))
+    expect(saved[0]).toMatchObject({ id: 'g1', opponent: 'Bears', status: 'final', score: { us: 1, them: 2 } })
+    const card = await screen.findByRole('region', { name: 'Final score' })
+    expect(within(card).getByText('Loss')).toBeTruthy()
+    expect(within(card).getByRole('button', { name: 'Edit score' })).toBeTruthy()
+  })
+
   it('explains each key stat from an ⓘ on its card', async () => {
     renderGame(fakeRepo([mkGame('g1', 'Bears', '2026-01-01')], [ev('g1', 'duel', 'won')]), 'g1')
     const hero = await screen.findByRole('region', { name: 'Key stats' })
@@ -278,5 +297,23 @@ describe('SeasonPage', () => {
     const opp = screen.getByRole('region', { name: 'By opponent' })
     const rows = within(opp).getAllByRole('row').map((r) => r.textContent)
     expect(rows.slice(1)).toEqual(['Bears250% 5/10— — ', 'Hawks270% 7/10— — ', 'Owls180% 4/5— — '])
+  })
+  it('asks for scores, then shows the record and the stats in wins and losses', async () => {
+    const games = [mkGame('g1', 'Bears', '2026-01-01'), mkGame('g2', 'Hawks', '2026-01-08')]
+    const events = [...Array.from({ length: 6 }, (_, k) => ev('g1', 'duel', k < 5 ? 'won' : 'lost')), ...Array.from({ length: 6 }, (_, k) => ev('g2', 'duel', k < 2 ? 'won' : 'lost'))]
+    renderSeason(fakeRepo(games, events))
+    const empty = await screen.findByRole('region', { name: 'Results' })
+    expect(empty.textContent).toMatch(/Add the final score on a game's summary page/)
+    cleanup()
+
+    const scored = [{ ...games[0], score: { us: 3, them: 1 } }, { ...games[1], score: { us: 0, them: 2 } }]
+    renderSeason(fakeRepo(scored, events))
+    const res = await screen.findByRole('region', { name: 'Results' })
+    expect(within(res).getByText('1W 0D 1L')).toBeTruthy()
+    expect(res.textContent).toMatch(/Scored 3 · Conceded 3 \(0\)/)
+    const defense = within(res).getAllByRole('table')[1]
+    expect(within(defense).getAllByRole('row').slice(1).map((r) => r.textContent)).toEqual(['Wins (1)183%—', 'Losses (1)233%—'])
+    expect(within(res).getByText('1v1s won: 83% in wins, 50 pts higher than in losses (33%).')).toBeTruthy()
+    expect(screen.getByText('3–1 W')).toBeTruthy() // the All games table
   })
 })

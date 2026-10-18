@@ -88,3 +88,7 @@ It also adds `teams` to the realtime publication if `0002` didn't already, so ot
 After `0007`, run `supabase/migrations/0008_event_zones.sql`. It adds a nullable `zone` text column to `stat_events`, with a check that a box entry's zone is one of the six box zones (`edge_l|c|r`, `near_l|c|r`) and a 1v1's or first contact's is one of the six zones of our half (`def_l|c|r`, `mid_l|c|r`). Zones are relative to the goal we attack (left = our left as we attack), so they need no flipping between halves. Buttons-mode taps, and every tap from before, have no zone.
 
 The app only sends `zone` when a tap has one. If the column is missing, the server answers `PGRST204` and the app sends the same tap again without its zone, so an un-migrated server never blocks the write queue; it just doesn't keep where the play happened.
+
+## Game score: run `0009_game_score.sql`
+
+After `0008`, run `supabase/migrations/0009_game_score.sql`. It adds two nullable `smallint` columns to `games`, `score_us` and `score_them` (both null, or both 0 to 99). The app only sends them once a score has been entered on a game's summary, and if the server doesn't have them yet it re-sends the game without them, so the score stays on that phone and nothing else breaks.

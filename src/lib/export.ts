@@ -1,5 +1,6 @@
 import type { Game, StatEvent, StatSummary } from '../types'
 import { summarize } from './summary'
+import { cleanScore, resultOf, RESULT_WORD, scoreText } from './score'
 
 /** RFC 4180 escaping; also neutralises spreadsheet formula injection for text cells. */
 export function csvCell(v: string | number | null | undefined, opts: { text?: boolean } = {}): string {
@@ -46,7 +47,7 @@ export const fmtPct = (p: number | null | undefined) => (p === null || p === und
 export function seasonToCsv(games: Game[], events: StatEvent[]): string {
   const sorted = games.slice().sort((a, b) => a.date.localeCompare(b.date))
   const out = [csvRow([
-    'date', 'opponent', 'status', 'duels_won', 'duels_total', 'duel_win_pct',
+    'date', 'opponent', 'status', 'score_us', 'score_them', 'result', 'duels_won', 'duels_total', 'duel_win_pct',
     'first_contact_clean', 'first_contact_total', 'first_contact_clean_pct',
     'box_entries_shot', 'box_entries_total', 'box_entry_shot_pct',
   ])]
@@ -54,6 +55,7 @@ export function seasonToCsv(games: Game[], events: StatEvent[]): string {
     const s = summarize(events.filter((e) => e.gameId === g.id))
     out.push([
       csvCell(g.date), csvCell(g.opponent, { text: true }), csvCell(g.status),
+      cleanScore(g.score)?.us ?? '', cleanScore(g.score)?.them ?? '', resultOf(g) ?? '',
       s.duels.won, s.duels.total, s.duels.winPct ?? '',
       s.firstContact.clean, s.firstContact.total, s.firstContact.cleanPct ?? '',
       s.boxEntries.shot, s.boxEntries.total, s.boxEntries.shotPct ?? '',
@@ -63,11 +65,12 @@ export function seasonToCsv(games: Game[], events: StatEvent[]): string {
 }
 
 /** Plain-text summary suitable for sharing in a team chat. */
-export function gameSummaryToText(game: Pick<Game, 'opponent' | 'date'>, s: StatSummary, takeaways: string[] = []): string {
+export function gameSummaryToText(game: Pick<Game, 'opponent' | 'date' | 'score'>, s: StatSummary, takeaways: string[] = []): string {
   const line = (label: string, n: number, d: number, p: number | null) =>
     `${label}: ${d === 0 ? 'no events' : `${fmtPct(p)} (${n} of ${d})`}`
   const lines = [
     `Game summary vs ${game.opponent} (${game.date})`,
+    ...(scoreText(game) ? [`Score: ${scoreText(game)} (${RESULT_WORD[resultOf(game)!]})`] : []),
     line('Defensive 1v1s won', s.duels.won, s.duels.total, s.duels.winPct),
     line('Clean first contact', s.firstContact.clean, s.firstContact.total, s.firstContact.cleanPct),
     `  Through balls: ${s.firstContact.throughBall.clean} of ${s.firstContact.throughBall.clean + s.firstContact.throughBall.miss} clean`,

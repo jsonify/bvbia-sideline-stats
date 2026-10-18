@@ -10,6 +10,8 @@ import { download } from './insights'
 import { InfoButton } from '../guide/InfoButton'
 import { StatHero } from './StatHero'
 import { useTeam } from '../shell/useTeam'
+import { Results } from './Results'
+import { resultOf, scoreText } from '../../lib/score'
 import { byOpponent, COUNT_OF, deltaText, pctOf, recentForm, rollingPct, RECENT } from './trends'
 import './stats.css'
 
@@ -71,6 +73,8 @@ export default function SeasonPage() {
             <StatHero cls="f" label="Clean first contact" pct={total.firstContact.cleanPct} n={total.firstContact.clean} d={total.firstContact.total} unit="balls" info={<InfoButton topic="first_contact" />} goal={goals.first_contact} />
             <StatHero cls="b" label="Box entries with a shot" pct={total.boxEntries.shotPct} n={total.boxEntries.shot} d={total.boxEntries.total} unit="entries" info={<InfoButton topic="box_entry" />} goal={goals.box_entry} />
           </section>
+
+          <Results games={games} played={played} goals={goals} />
 
           {STATS.map((st) => {
             const counts = played.map((r) => COUNT_OF[st.cat](r.s))
@@ -159,12 +163,13 @@ export default function SeasonPage() {
           <section className="card" aria-labelledby="gt">
             <h2 id="gt">All games</h2>
             <div className="scroll"><table>
-              <thead><tr><th scope="col">Date</th><th scope="col">Opponent</th><th scope="col">1v1s</th><th scope="col">Contact</th><th scope="col">Box</th></tr></thead>
+              <thead><tr><th scope="col">Date</th><th scope="col">Opponent</th><th scope="col">Score</th><th scope="col">1v1s</th><th scope="col">Contact</th><th scope="col">Box</th></tr></thead>
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.game.id}>
                     <td>{shortDate(r.game.date)}</td>
                     <td><Link to={`/games/${r.game.id}`}>{r.game.opponent}</Link></td>
+                    <td>{scoreText(r.game) ? <span className={`res r-${resultOf(r.game)}`}>{scoreText(r.game)} {resultOf(r.game)}</span> : '—'}</td>
                     {STATS.map((st) => { const v = st.get(r); return <td key={st.key}>{fmtPct(v.pct)} <small>{v.d ? `${v.n}/${v.d}` : ''}</small></td> })}
                   </tr>
                 ))}

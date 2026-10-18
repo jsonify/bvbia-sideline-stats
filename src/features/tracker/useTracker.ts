@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRepo } from '../../data/context'
 import type { GameLanes, SyncState } from '../../data/repository'
-import type { BallType, Game, NewStatEvent, StatEvent } from '../../types'
+import type { BallType, Game, GameScore, NewStatEvent, StatEvent } from '../../types'
+import { cleanScore, MAX_GOALS } from '../../lib/score'
 import { summarize } from '../../lib/summary'
 import { LANES, LANE_OF, ROLE_LANES, lanesText, roleOf, type Lane, type Role } from '../../lib/lanes'
 import { eventLabel } from './labels'
@@ -202,12 +203,38 @@ export function useTracker(gameId: string) {
   const summary = useMemo(() => summarize(events), [events])
   const periodSummary = useMemo(() => summarize(events.filter((e) => e.period === period)), [events, period])
 
-  const setStatus = useCallback(async (status: Game['status']) => {
-    if (!game || !heldRef.current.length) return
-    const { id, teamId: _t, createdAt: _c, updatedAt: _u, ...rest } = game
-    setGame({ ...game, status })
-    try { setGame(await repo.saveGame({ ...rest, id, status })) } catch { setGame(game); say('Could not update game') }
+  /**
+   * Save a change to the game on top of the latest copy this phone has, not the one on screen, so ending the game never
+   * wipes a goal another phone logged a moment ago.
+   */
+  const changeGame = useCallback(async (change: (g: Game) => Partial<Game>, failed: string) => {
+    if (!game) return
+    setGame({ ...game, ...change(game) })
+    try {
+      const latest = (await repo.getGame(game.id)) ?? game
+      const { id, teamId: _t, createdAt: _c, updatedAt: _u, ...rest } = latest
+      setGame(await repo.saveGame({ ...rest, ...change(latest), id }))
+    } catch { setGame(game); say(failed) }
   }, [game, repo, say])
+
+  const setStatus = useCallback(async (status: Game['status']) => {
+    if (!heldRef.current.length) return
+    await changeGame(() => ({ status }), 'Could not update game')
+  }, [changeGame])
+
+  /**
+   * Log a goal (or take one back) the moment it happens, so nobody has to remember the score at the end. Any phone that
+   * is tracking can do it; it is part of the game, not a stat, so it is never in Undo and never in the percentages.
+   */
+  const changeScore = useCallback(async (side: keyof GameScore, delta: 1 | -1) => {
+    if (!game || game.status === 'final' || !heldRef.current.length) return
+    if (delta > 0) haptic([20, 40, 20])
+    await changeGame((g) => {
+      const cur = cleanScore(g.score) ?? { us: 0, them: 0 }
+      const score = { ...cur, [side]: Math.min(MAX_GOALS, Math.max(0, cur[side] + delta)) }
+      return g.status === 'scheduled' ? { score, status: 'live' as const } : { score }
+    }, 'Could not save the score')
+  }, [game, changeGame])
 
   const record = useCallback((e: NewStatEvent) => {
     if (!game || game.status === 'final' || !held.includes(LANE_OF[e.category])) return
@@ -263,7 +290,7 @@ export function useTracker(gameId: string) {
   return {
     game, loaded, events, summary, periodSummary, period, setPeriod: choosePeriod, ballType, setBallType, sync, toast,
     checking, held, role: roleOf(held), lanes, lost, canTrack, canTap, watching, pickRole, blockersFor,
-    recordDuel, recordContact, recordBox, undo, setStatus, last: mine[mine.length - 1] as StatEvent | undefined,
+    recordDuel, recordContact, recordBox, undo, setStatus, changeScore, last: mine[mine.length - 1] as StatEvent | undefined,
   }
 }
 

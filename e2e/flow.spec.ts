@@ -71,6 +71,22 @@ test('team -> game -> track -> undo -> end -> summary -> season', async ({ page 
   await expect(page.getByRole('button', { name: /^Undo last: .*/ })).toBeVisible()
   await shot(page, '06-tracker-after-undo')
 
+  // Goals are logged as they go in, from the score in the header: tap it, then tap who scored
+  const goal = async (team: RegExp) => {
+    await page.getByRole('button', { name: /Log a goal$/ }).click()
+    const sheet = page.getByRole('dialog', { name: 'Who scored?' })
+    await sheet.getByRole('button', { name: team }).click()
+    await expect(sheet).toHaveCount(0)
+  }
+  await goal(/^⚽ (?!Rapids)/)
+  await page.getByRole('button', { name: /Log a goal$/ }).click()
+  await page.waitForTimeout(600) // let the sheet slide up
+  await shot(page, '06b-goal-sheet')
+  await page.getByRole('dialog', { name: 'Who scored?' }).getByRole('button', { name: /^⚽ Rapids/ }).click()
+  await goal(/^⚽ (?!Rapids)/)
+  await expect(page.getByRole('button', { name: /^Score: .* 2, Rapids U10 1\. Log a goal$/ })).toBeVisible()
+  await shot(page, '06c-tracker-score')
+
   // End the game
   await page.getByRole('button', { name: 'End game', exact: true }).click()
   await shot(page, '07-end-confirm')
@@ -110,12 +126,24 @@ test('team -> game -> track -> undo -> end -> summary -> season', async ({ page 
   await expect(hero.getByRole('group', { name: 'Defensive 1v1s won' })).toContainText('75%')
   await shot(page, '08-summary')
 
+  // The score logged during the game is already there; it can still be fixed on the summary
+  const final = page.getByRole('region', { name: 'Final score' })
+  await expect(final).toContainText('Win')
+  await final.getByRole('button', { name: 'Edit score' }).click()
+  await shot(page, '08b-score-edit')
+  await page.getByRole('button', { name: 'Cancel' }).click()
+
   // Season page
   await page.goto('/season')
   await expect(page.getByRole('heading', { name: 'Season', exact: true })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Season totals' })).toContainText('75%')
   await page.waitForTimeout(800) // let charts animate
   await shot(page, '09-season')
+  const results = page.getByRole('region', { name: 'Results' })
+  await expect(results).toContainText('1W 0D 0L')
+  await expect(results).toContainText('Scored 2 · Conceded 1 (+1)')
+  await results.scrollIntoViewIfNeeded()
+  await shot(page, '09b-season-results')
 
   // Games list now has the game
   await page.goto('/')

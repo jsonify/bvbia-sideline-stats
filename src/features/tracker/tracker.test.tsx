@@ -711,3 +711,47 @@ describe('tapping on the field', () => {
     expect(localStorage.getItem(TAP_STYLE_KEY)).toBe('buttons')
   })
 })
+
+describe('score: goals logged as they happen', () => {
+  it('logs a goal for either side in two taps, never as a stat tap, and can take one back', async () => {
+    const f = await setup()
+    fireEvent.click(await screen.findByRole('button', { name: 'Score: Lions 0, Rovers 0. Log a goal' }))
+    let sheet = screen.getByRole('dialog', { name: 'Who scored?' })
+    fireEvent.click(within(sheet).getByRole('button', { name: '⚽ Lions' }))
+    await waitFor(() => expect(f.getGame().score).toEqual({ us: 1, them: 0 }))
+    await screen.findByRole('button', { name: 'Score: Lions 1, Rovers 0. Log a goal' })
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Who scored?' })).toBeNull())
+
+    fireEvent.click(screen.getByRole('button', { name: /Log a goal/ }))
+    sheet = screen.getByRole('dialog', { name: 'Who scored?' })
+    fireEvent.click(within(sheet).getByRole('button', { name: '⚽ Rovers' }))
+    await waitFor(() => expect(f.getGame().score).toEqual({ us: 1, them: 1 }))
+    fireEvent.click(await screen.findByRole('button', { name: /Log a goal/ }))
+    sheet = screen.getByRole('dialog', { name: 'Who scored?' })
+    fireEvent.click(within(sheet).getByRole('button', { name: '− Take one off Rovers' }))
+    await waitFor(() => expect(f.getGame().score).toEqual({ us: 1, them: 0 }))
+    expect(f.events).toHaveLength(0) // goals are not stat taps
+  })
+
+  it('builds on the latest score, so a goal from another phone is not lost, and ending the game keeps it', async () => {
+    const f = await setup()
+    // Another phone logged two goals for them; this phone's screen hasn't caught up yet.
+    ;(await f.repo.saveGame({ ...f.getGame(), score: { us: 0, them: 2 } }))
+    fireEvent.click(await screen.findByRole('button', { name: /Log a goal/ }))
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Who scored?' })).getByRole('button', { name: '⚽ Lions' }))
+    await waitFor(() => expect(f.getGame().score).toEqual({ us: 1, them: 2 }))
+    fireEvent.click(await screen.findByText('End game'))
+    expect(screen.getByRole('alertdialog').textContent).toMatch(/final score 1–2/)
+    fireEvent.click(screen.getAllByText('End game')[1])
+    await screen.findByText('SUMMARY')
+    expect(f.getGame()).toMatchObject({ status: 'final', score: { us: 1, them: 2 } })
+  })
+
+  it('a phone that is only watching sees the score but cannot change it', async () => {
+    const f = await setup('live', OTHER)
+    await f.repo.saveGame({ ...f.getGame(), score: { us: 3, them: 1 } })
+    act(() => f.notify())
+    expect(await screen.findByRole('status', { name: 'Score: Lions 3, Rovers 1' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Log a goal/ })).toBeNull()
+  })
+})
