@@ -132,6 +132,9 @@ describe('games list: full season', () => {
     expect(nextCard.textContent).toContain('Lions')
     expect(nextCard.textContent).toContain('Magnuson 7')
     expect(nextCard.textContent).toMatch(/10:30/)
+    // An upcoming game opens the tracker (locked until game day); a finished one opens its summary.
+    expect(nextCard.querySelector('a')!.getAttribute('href')).toBe('/games/g2/track')
+    expect(screen.getByText('vs Bears').closest('a')!.getAttribute('href')).toBe('/games/g1')
     expect(screen.getByRole('region', { name: /November 2099/ })).toBeTruthy()
   })
 })

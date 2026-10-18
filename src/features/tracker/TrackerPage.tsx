@@ -20,8 +20,13 @@ import { ClockBar } from './ClockBar'
 import { gameMs } from '../../lib/clock'
 import { scoreText } from '../../lib/score'
 import { useTeam } from '../shell/useTeam'
+import { Icon } from '../../ui/Icon'
+import { kickoffText } from '../../lib/schedule'
 
 const SYNC_TEXT = { synced: 'Synced', syncing: 'Syncing', offline: 'Offline', error: 'Sync error' } as const
+
+const shortDate = (iso: string) =>
+  new Date(iso + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
 
 export default function TrackerPage() {
   const { id = '' } = useParams()
@@ -76,12 +81,14 @@ export default function TrackerPage() {
   }
 
   return (
-    <main className="tk">
+    <div className="tk-lockwrap">
+    {/* Before game day the tracker is shown as it will look, under a lock: nothing behind it can be reached. */}
+    <main className="tk" inert={t.early || undefined} aria-hidden={t.early || undefined}>
       <header className="tk-top">
         <div className="tk-top-row">
           <Link to="/" className="tk-back" aria-label="Back to games">‹</Link>
           <div className="tk-title">
-            <h1>vs {game.opponent}</h1>
+            <h1>{game.home ? 'vs' : '@'} {game.opponent}</h1>
             <span className={`tk-status ${game.status}`}>
               {game.status === 'live' ? '● Live' : game.status === 'final' ? 'Final' : 'Not started'}
               {t.canTrack && ` · Tracking ${lanesText(t.held)}`}{t.watching && ' · Watching'}
@@ -279,5 +286,20 @@ export default function TrackerPage() {
         </div>
       )}
     </main>
+    {t.early && (
+      <section className="tk-lock" role="status" aria-label="Tracking is locked">
+        <div className="tk-lock-card">
+          <div className="tk-lock-eyebrow"><Icon name="lock" size={18} /> Tracking opens on game day</div>
+          <h2 className="tk-lock-opp">{game.home ? 'vs' : '@'} {game.opponent}</h2>
+          <dl className="tk-lock-when">
+            <div><dt>Date</dt><dd>{shortDate(game.date)}</dd></div>
+            {kickoffText(game.kickoff) && <div><dt>Kick-off</dt><dd>{kickoffText(game.kickoff)}</dd></div>}
+          </dl>
+          {game.location && <p className="tk-lock-where">{game.location}</p>}
+          <Link to="/" className="tk-lock-back">‹ Back to games</Link>
+        </div>
+      </section>
+    )}
+    </div>
   )
 }

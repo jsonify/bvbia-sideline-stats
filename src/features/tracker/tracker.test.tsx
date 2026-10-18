@@ -108,6 +108,20 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe('TrackerPage', () => {
+  it('before game day it shows the tracker locked: nothing claimed, nothing tappable', async () => {
+    const f = setupNoWait('scheduled', NOBODY, (x) => {
+      const g = x.repo.getGame
+      x.repo.getGame = async (id: string) => ({ ...(await g(id))!, date: '2099-10-24', kickoff: '10:30' })
+    })
+    const lock = await screen.findByRole('status', { name: 'Tracking is locked' })
+    expect(lock.textContent).toMatch(/Tracking opens on game day.*vs Rovers.*Oct 24.*Kick-off.*10:30/)
+    const main = document.querySelector('main.tk') as HTMLElement
+    expect(main.hasAttribute('inert')).toBe(true)
+    expect((screen.getByLabelText('Duel won', { selector: 'button' }) as HTMLButtonElement).disabled).toBe(true)
+    expect(screen.queryByText(/Start game/)).toBeNull()
+    expect(f.claimLanes).not.toHaveBeenCalled()
+  })
+
   it('creates events and updates tallies', async () => {
     const f = await setup()
     fireEvent.click(screen.getByLabelText('Duel won'))
@@ -617,6 +631,7 @@ describe('stat guide', () => {
     setupNoWait(undefined, undefined, (f) => { f.team.goals = { duel: 60 } })
     await screen.findByText('vs Rovers')
     expect(await screen.findByText('Target 60%')).toBeTruthy()
+    await waitFor(() => expect((screen.getByLabelText('Duel won', { selector: 'button' }) as HTMLButtonElement).disabled).toBe(false))
     fireEvent.click(screen.getByLabelText('Duel won'))
     fireEvent.click(screen.getByRole('button', { name: /Halftime numbers/ }))
     expect(within(screen.getByRole('dialog', { name: 'Halftime numbers' })).getByText(/Target 60% · met/)).toBeTruthy()
