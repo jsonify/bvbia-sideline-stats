@@ -15,6 +15,7 @@ import { zonedEvents, zoneNotes } from './zoneStats'
 import { StatHero } from './StatHero'
 import { PeriodTable } from './PeriodTable'
 import { ShareImage } from './ShareImage'
+import { ScoreCard } from './ScoreCard'
 import { COUNT_OF, opponentKey, pctOf } from './trends'
 import { useTeam } from '../shell/useTeam'
 import './stats.css'
@@ -89,6 +90,8 @@ export default function GameSummaryPage() {
         <p className="sub">{dateLabel}{game.location ? ` · ${game.location}` : ''} · {game.status === 'final' ? 'Final' : game.status === 'live' ? 'In progress' : 'Scheduled'}</p>
         {canThank(game.status) && <ThanksHeart gameId={game.id} />}
       </header>
+
+      <ScoreCard game={game} teamName={team?.name ?? ''} onSaved={setGame} />
 
       <div className="actions">
         {game.status !== 'final' && <Link className="btn primary" to={`/games/${game.id}/track`}>Continue tracking</Link>}

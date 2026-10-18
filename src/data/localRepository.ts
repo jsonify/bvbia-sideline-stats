@@ -175,7 +175,11 @@ export class LocalRepository implements Repository {
         let changed = false
         for (const g of games) {
           const cur = await tx.objectStore('games').get(g.id)
-          if (!cur || g.updatedAt > cur.updatedAt) { await tx.objectStore('games').put(g); changed = true }
+          // A server without the score columns sends none: keep the score this phone has.
+          if (!cur || g.updatedAt > cur.updatedAt) {
+            await tx.objectStore('games').put(g.score === undefined && cur?.score !== undefined ? { ...g, score: cur.score } : g)
+            changed = true
+          }
         }
         for (const e of events) {
           const cur = await tx.objectStore('events').get(e.id)

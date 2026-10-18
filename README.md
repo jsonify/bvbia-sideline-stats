@@ -26,6 +26,8 @@ The game summary includes a **game map**: a line drawing of the field with every
 
 **Trends and opponents.** Each season chart has a dashed 3-game average line, and a "Last 3 games" line above it that pools those games against all the games before them ("76%, up 39 pts on the games before"). It only appears once there are earlier games and 5+ events on each side. Once you've played a team twice, the season page adds a **By opponent** table, and a game summary shows **Against <opponent> before**: this game next to every earlier game against them, with ▲▼ against the last meeting. Names match however they were typed ("Bears" and " bears").
 
+**Score and results.** The score goes in on a game's **summary page**, never on the tracker, so tracking stays about the stats. When a game ends, its summary asks **What was the final score?** (− / + for each side, Save); anyone on the team can add or fix it later with **Edit**. The games list and the season's All games table show it (green for a win, red for a loss), and the shared text summary and season CSV include it. The season page then has a **Results** card: the record (W D L, goals for and against) and two small tables that put the stats next to the result. **Attack and goals scored** shows goals, box entries, shots and entries with a shot per game in wins, draws and losses; **Defense and goals conceded** shows goals conceded, 1v1s won and clean contact. Below them, plain sentences say what was most different in wins than in losses ("1v1s won: 66% in wins, 18 pts higher than in losses"), and, for each team target, the record when it was reached and when it wasn't. Only games with both a score and tracked stats count in the tables. It needs the `0009_game_score.sql` migration to be shared; without it the score stays on the phone that entered it and nothing else is affected.
+
 **Share image.** **Share image** on the game summary draws the summary as a picture (1080 × 1350, always light): the three gauges with targets, each half, and the game map. It opens a preview, then the phone's share sheet (WhatsApp, Messages, …), or **Save image** where a browser can't share files. **Share summary** still sends it as text.
 
 ## Quickstart (no accounts, no backend)
@@ -86,7 +88,7 @@ Schema, row-level security and setup steps are in [docs/BACKEND.md](docs/BACKEND
 
 ## Deploy in 5 steps (Vercel or Netlify)
 
-1. Create a free Supabase project and run the SQL in `supabase/migrations/`, in order (`0001`, then `0003` to `0008`; `0002` is no longer needed; see [docs/BACKEND.md](docs/BACKEND.md)). Enable **Anonymous sign-ins** under Authentication.
+1. Create a free Supabase project and run the SQL in `supabase/migrations/`, in order (`0001`, then `0003` to `0009`; `0002` is no longer needed; see [docs/BACKEND.md](docs/BACKEND.md)). Enable **Anonymous sign-ins** under Authentication.
 2. Push this repo to GitHub.
 3. Import it in Vercel (or Netlify). Framework preset: **Vite**. Build command `npm run build`, output `dist`. `vercel.json` already contains the SPA rewrites.
 4. Add environment variables `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.

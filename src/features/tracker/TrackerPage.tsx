@@ -258,7 +258,7 @@ export default function TrackerPage() {
           <div className="tk-dialog" role="alertdialog" aria-modal="true" aria-labelledby="end-h" onClick={(e) => e.stopPropagation()}>
             <h2 id="end-h">End game?</h2>
             <p>
-              {summarize(t.events).duels.total + ft.total + s.boxEntries.total} taps recorded. You will see the summary next.
+              {summarize(t.events).duels.total + ft.total + s.boxEntries.total} taps recorded. You will see the summary next, where anyone can add the final score.
               {others.length > 0 && ` ${trackingText(others)} too, and ending the game ends it for them.`}
             </p>
             <div>

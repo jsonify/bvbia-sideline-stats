@@ -110,12 +110,28 @@ test('team -> game -> track -> undo -> end -> summary -> season', async ({ page 
   await expect(hero.getByRole('group', { name: 'Defensive 1v1s won' })).toContainText('75%')
   await shot(page, '08-summary')
 
+  // The final score goes in on the summary (never on the tracker), and the season page lines it up with the stats
+  const ask = page.getByRole('region', { name: 'What was the final score?' })
+  await ask.getByRole('button', { name: 'Add score' }).click()
+  const edit = page.getByRole('region', { name: 'Final score' })
+  for (let i = 0; i < 2; i++) await edit.getByRole('button', { name: /^One more for (?!Rapids)/ }).click()
+  await edit.getByRole('button', { name: /^One more for Rapids/ }).click()
+  await shot(page, '08b-score-edit')
+  await edit.getByRole('button', { name: 'Save score' }).click()
+  await expect(page.getByRole('region', { name: 'Final score' })).toContainText('Win')
+  await shot(page, '08c-score')
+
   // Season page
   await page.goto('/season')
   await expect(page.getByRole('heading', { name: 'Season', exact: true })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Season totals' })).toContainText('75%')
   await page.waitForTimeout(800) // let charts animate
   await shot(page, '09-season')
+  const results = page.getByRole('region', { name: 'Results' })
+  await expect(results).toContainText('1W 0D 0L')
+  await expect(results).toContainText('Scored 2 · Conceded 1 (+1)')
+  await results.scrollIntoViewIfNeeded()
+  await shot(page, '09b-season-results')
 
   // Games list now has the game
   await page.goto('/')

@@ -31,9 +31,14 @@ export interface Game {
   periods: 2 | 4 // halves or quarters
   status: 'scheduled' | 'live' | 'final'
   notes?: string
+  /** Goals for us and for them, once someone enters it (on the game summary). Absent = not entered; null = cleared. */
+  score?: GameScore | null
   createdAt: string // ISO timestamp
   updatedAt: string
 }
+
+/** A game's score, from our side. Kept on the game, not as stat events, so the tracker never has to deal with it. */
+export interface GameScore { us: number; them: number }
 
 /** The three stat categories the coach asked for. */
 export type StatCategory = 'duel' | 'first_contact' | 'box_entry'

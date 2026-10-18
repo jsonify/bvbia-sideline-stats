@@ -1,6 +1,7 @@
 import '../branding/branding.css'
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { resultOf, scoreText } from '../../lib/score'
 import { useRepo } from '../../data/context'
 import { useRemembered } from '../../data/remember'
 import { heartsFor } from '../../lib/thanks'
@@ -49,7 +50,7 @@ function GameCard({ g, s, hearts, open, onMenu, onDelete }: {
       <div className="ss-card">
         <Link to={to} className="ss-card-link">
           <div className="gm-opp">{g.home ? 'vs' : '@'} {g.opponent}</div>
-          <div className="gm-meta">{fmtDate(g.date)} · {g.home ? 'Home' : 'Away'} · {statusLabel[g.status]}{g.location ? ` · ${g.location}` : ''}{hearts > 0 && <> · <ThanksTag n={hearts} /></>}</div>
+          <div className="gm-meta">{fmtDate(g.date)} · {g.home ? 'Home' : 'Away'} · {statusLabel[g.status]}{scoreText(g) && <> <b className={`gm-score r-${resultOf(g)}`}>{scoreText(g)}{g.status === 'final' ? ` ${resultOf(g)}` : ''}</b></>}{g.location ? ` · ${g.location}` : ''}{hearts > 0 && <> · <ThanksTag n={hearts} /></>}</div>
           {g.status === 'final' && s && <Chips s={s} />}
         </Link>
         <button className="ss-icon-btn" aria-label={`Options for ${g.opponent}`} aria-haspopup="menu" aria-expanded={open} onClick={onMenu}>⋮</button>

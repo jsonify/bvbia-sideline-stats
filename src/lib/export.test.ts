@@ -44,12 +44,13 @@ describe('eventsToCsv', () => {
 
 describe('seasonToCsv', () => {
   it('one row per game with blank pct when no events', () => {
-    const games = [game('g1', 'Bears', '2026-01-01'), game('g2', 'Lions', '2026-01-08')]
+    const games = [{ ...game('g1', 'Bears', '2026-01-01'), score: { us: 2, them: 1 } }, game('g2', 'Lions', '2026-01-08')]
     const events = [ev('g1', { category: 'duel', outcome: 'won' }), ev('g1', { category: 'duel', outcome: 'lost' })]
     const lines = seasonToCsv(games, events).trim().split('\r\n')
     expect(lines).toHaveLength(3)
-    expect(lines[1]).toContain('Bears,final,1,2,50,0,0,,0,0,')
-    expect(lines[2]).toBe('2026-01-08,Lions,final,0,0,,0,0,,0,0,')
+    expect(lines[0]).toContain('status,score_us,score_them,result,duels_won')
+    expect(lines[1]).toContain('Bears,final,2,1,W,1,2,50,0,0,,0,0,')
+    expect(lines[2]).toBe('2026-01-08,Lions,final,,,,0,0,,0,0,,0,0,')
   })
 })
 
@@ -61,5 +62,10 @@ describe('gameSummaryToText', () => {
     expect(t).toContain('Defensive 1v1s won: 67% (2 of 3)')
     expect(t).toContain('Clean first contact: no events')
     expect(t.endsWith('Nice.')).toBe(true)
+    expect(t).not.toContain('Score')
+  })
+  it('puts the score under the title once it is in', () => {
+    const t = gameSummaryToText({ opponent: 'Bears', date: '2026-01-01', score: { us: 1, them: 3 } }, summarize([]))
+    expect(t.split('\n')[1]).toBe('Score: 1–3 (Loss)')
   })
 })

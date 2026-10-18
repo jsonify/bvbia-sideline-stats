@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Game, StatEvent, Team, TeamBranding, TeamGoals } from '../types'
 import { cleanGoals, hasGoals } from '../lib/goals'
 import { isZone } from '../lib/zones'
+import { cleanScore } from '../lib/score'
 import type { GameRec } from './db'
 import { PermanentError, type QueueOp } from './queue'
 import type { GameLanes, GameThanks, GameTracker } from './repository'
@@ -38,6 +39,8 @@ const gameFromRow = (r: any): GameRec => ({
   id: r.id, teamId: r.team_id, opponent: r.opponent, date: r.date,
   location: r.location ?? undefined, home: r.home, periods: r.periods, status: r.status,
   notes: r.notes ?? undefined, createdAt: r.created_at, updatedAt: r.updated_at, deletedAt: r.deleted_at,
+  // A server without 0009_game_score.sql has no score columns at all: leave the score out, so the phone keeps its own.
+  ...('score_us' in r ? { score: cleanScore({ us: r.score_us, them: r.score_them }) } : {}),
 })
 const eventFromRow = (r: any): StatEvent => ({
   id: r.id, gameId: r.game_id, category: r.category, outcome: r.outcome,
@@ -51,6 +54,8 @@ export function toGameRow(g: GameRec & Record<string, unknown>) {
     id: g.id, team_id: g.teamId, opponent: g.opponent, date: g.date, location: g.location ?? null,
     home: g.home, periods: g.periods, status: g.status, notes: g.notes ?? null,
     created_at: g.createdAt, updated_at: g.updatedAt, deleted_at: g.deletedAt ?? null,
+    // Only sent once a score was entered (or cleared), so other game saves still sync to a server without 0009_game_score.sql.
+    ...(g.score !== undefined ? { score_us: g.score?.us ?? null, score_them: g.score?.them ?? null } : {}),
   }
 }
 export function toEventRow(e: StatEvent & { teamId?: string }) {
@@ -63,8 +68,8 @@ export function toEventRow(e: StatEvent & { teamId?: string }) {
   }
 }
 
-/** PostgREST's answer when a row names a column the server doesn't have (here: `zone`, before 0008_event_zones.sql). */
-const missingZone = (error: { code?: string; message: string } | null) => !!error && error.code === 'PGRST204' && /zone/.test(error.message)
+/** PostgREST's answer when a row names a column the server doesn't have (`zone` before 0008_event_zones.sql, `score_*` before 0009). */
+const missingColumn = (error: { code?: string; message: string } | null, col: RegExp) => !!error && error.code === 'PGRST204' && col.test(error.message)
 
 const trackerFromRow = (r: any): GameTracker => ({ holder: r.holder, idleSeconds: r.idle_seconds ?? null, name: r.name ?? null })
 /** The tracker functions answer with one row per lane; a lane missing from the answer is simply nobody's. */
@@ -141,7 +146,9 @@ export function createSupabaseRemote(url: string, key: string): RemoteApi {
       let { error } = await sb.from(op.table).upsert(row, { onConflict: 'id' })
       // Without the migration a zoned tap would be refused for ever and block every tap behind it. Send it without the
       // zone instead: the stat is what matters, and this phone still has the zone for its own map.
-      if (missingZone(error)) ({ error } = await sb.from(op.table).upsert({ ...row, zone: undefined }, { onConflict: 'id' }))
+      if (missingColumn(error, /zone/)) ({ error } = await sb.from(op.table).upsert({ ...row, zone: undefined }, { onConflict: 'id' }))
+      // Same for a score: the game itself must still sync. The score stays on this phone.
+      if (missingColumn(error, /score_/)) ({ error } = await sb.from(op.table).upsert({ ...row, score_us: undefined, score_them: undefined }, { onConflict: 'id' }))
       wrap(error)
     },
     async pull(teamId) {

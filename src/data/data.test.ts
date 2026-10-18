@@ -270,6 +270,24 @@ describe('cloud sync across devices', () => {
     expect(await b.listAllEvents()).toHaveLength(1)
   })
 
+  it('shares a game\'s score, and keeps it on the phone when the server has no score columns yet', async () => {
+    const cloud = fakeCloud()
+    const a = new LocalRepository({ dbName: 'cS1', remote: cloud.api(), baseDelayMs: 1 })
+    const team = await a.createTeam('BVB Fans')
+    const g = await a.saveGame({ ...gameInput, status: 'final' })
+    await a.saveGame({ ...g, score: { us: 2, them: 1 } })
+    await vi.waitFor(() => expect(cloud.games.get(g.id)?.score).toEqual({ us: 2, them: 1 }))
+    const b = new LocalRepository({ dbName: 'cS2', remote: cloud.api(), baseDelayMs: 1 })
+    await b.joinTeam(team.joinCode)
+    await vi.waitFor(async () => expect((await b.getGame(g.id))?.score).toEqual({ us: 2, them: 1 }))
+
+    // An old server answers with the game but no score at all, and a later edit from another phone.
+    const { score: _s, ...old } = cloud.games.get(g.id)
+    cloud.games.set(g.id, { ...old, notes: 'muddy', updatedAt: '2999-01-01T00:00:00Z' })
+    await a.pull()
+    expect(await a.getGame(g.id)).toMatchObject({ notes: 'muddy', score: { us: 2, them: 1 } })
+  })
+
   it('moves a team created before the cloud was configured into the cloud, with its games', async () => {
     const cloud = fakeCloud()
     const demo = new LocalRepository({ dbName: 'cD' })

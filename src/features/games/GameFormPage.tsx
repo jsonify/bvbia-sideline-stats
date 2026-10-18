@@ -70,6 +70,7 @@ export default function GameFormPage() {
       const g = await repo.saveGame({
         id: existing?.id, opponent: d.opponent.trim(), date: d.date, home: d.home, periods: 2, // soccer: always two halves
         location: d.location.trim() || undefined, notes: d.notes.trim() || undefined,
+        score: existing?.score, // entered on the summary; editing the game must not lose it
         status: startTracking && existing?.status !== 'final' ? 'live' : existing?.status ?? 'scheduled',
       })
       nav(startTracking ? `/games/${g.id}/track` : '/', { replace: true })

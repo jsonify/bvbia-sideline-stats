@@ -88,3 +88,26 @@
 .stats .zones tr.total th,.stats .zones tr.total td{font-weight:800;border-top:2px solid var(--border)}
 .stats .zone-notes{margin-top:10px}
 .stats .zones th,.stats .zones td{padding:8px 4px}
+.stats h3{margin:16px 0 4px;font-size:.9rem}
+.stats .err{color:var(--bad);font-size:.9rem;margin:8px 0 0}
+.stats .score .board{display:flex;align-items:flex-start;justify-content:center;gap:16px;margin:4px 0 0;text-align:center}
+.stats .score .board>span{display:flex;flex-direction:column;align-items:center;min-width:0;flex:1}
+.stats .score .board b,.stats .score .board .dash,.stats .step-n,.stats .results .record b{font-family:var(--font-display);font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.stats .score .board b{font-size:3rem}
+.stats .score .board .dash{font-size:2.4rem;flex:none;color:var(--muted)}
+.stats .score .board small{color:var(--muted);font-size:.8rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.stats .result{margin:8px 0 0;text-align:center;font-weight:800;text-transform:uppercase;letter-spacing:.04em;font-size:.85rem}
+.stats .r-W.result,.stats .res.r-W{color:var(--good)} .stats .r-L.result,.stats .res.r-L{color:var(--bad)} .stats .r-D.result,.stats .res.r-D{color:var(--muted)}
+.stats .res{font-weight:700}
+.stats .steps{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:4px 0 12px}
+.stats .step{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
+.stats .step-name{font-weight:700;font-size:.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.stats .step-row{display:flex;align-items:center;gap:8px}
+.stats .step-row .btn{min-width:44px;min-height:44px;font-size:1.3rem;padding:0}
+.stats .step-n{font-size:2.6rem;min-width:1.4em;text-align:center}
+.stats .score.ask{border-color:var(--brand)}
+.stats .results .record{margin:0}
+.stats .results .record b{font-size:2.2rem}
+.stats .results tr.r-W th{color:var(--good)} .stats .results tr.r-L th{color:var(--bad)}
+.stats .results .take{margin-top:12px}
+.stats .results .targets{margin-top:12px}
