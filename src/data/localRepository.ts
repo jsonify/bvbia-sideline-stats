@@ -175,12 +175,13 @@ export class LocalRepository implements Repository {
         let changed = false
         for (const g of games) {
           const cur = await tx.objectStore('games').get(g.id)
-          // A server without the score (or clock) columns sends none: keep what this phone has.
+          // A server without the score (or clock, or kick-off) columns sends none: keep what this phone has.
           if (!cur || g.updatedAt > cur.updatedAt) {
             const keep = { ...g }
             if (g.score === undefined && cur?.score !== undefined) keep.score = cur.score
             if (g.halfMinutes === undefined && cur?.halfMinutes !== undefined) keep.halfMinutes = cur.halfMinutes
             if (g.clock === undefined && cur?.clock !== undefined) keep.clock = cur.clock
+            if (g.kickoff === undefined && cur?.kickoff !== undefined) keep.kickoff = cur.kickoff
             await tx.objectStore('games').put(keep)
             changed = true
           }

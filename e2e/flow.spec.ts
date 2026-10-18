@@ -503,3 +503,39 @@ test('half lengths on the game form run the clock on the tracker', async ({ page
   await expect(page.getByRole('button', { name: /Pause/ })).toHaveCount(0) // a running clock: no pause
   await shot(page, '05c-clock-second-half')
 })
+
+test('season schedule: enter games ahead of time, see the full season, edit one', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: /Create my team/ }).click()
+  await page.getByLabel('Team name').fill('U12 Season')
+  await page.getByRole('button', { name: 'Create team' }).click()
+  await page.getByRole('button', { name: /Let's go/ }).click()
+  await giveName(page)
+
+  await page.getByRole('link', { name: /Add your first game/ }).click()
+  await page.getByLabel('Date').fill('2099-10-24')
+  await page.getByLabel(/Kick-off/).fill('10:30')
+  for (const [opp, where] of [['Rapids', 'Magnuson 7'], ['Crossfire', 'Starfire 3'], ['Eastside FC', 'Marymoor 5']]) {
+    await page.getByLabel('Opponent').fill(opp)
+    await page.getByLabel(/Location/).fill(where)
+    await page.getByRole('button', { name: 'Save & add another' }).click()
+    await expect(page.getByRole('status').filter({ hasText: `Added vs ${opp}` })).toBeVisible()
+  }
+  await shot(page, '27-add-another')
+  await page.getByRole('link', { name: /Games/ }).first().click()
+
+  await page.getByText('Full season').click()
+  await expect(page.getByText('Next game')).toBeVisible()
+  await expect(page.getByText(/3 games · 3 to play/)).toBeVisible()
+  await page.waitForTimeout(500) // let the toggle's pill finish sliding
+  await shot(page, '28-full-season')
+
+  // Still editable: move the Crossfire game's kick-off.
+  await page.getByRole('button', { name: 'Options for Crossfire' }).click()
+  await page.getByRole('menuitem', { name: 'Edit' }).click()
+  await expect(page.getByLabel(/Kick-off/)).toHaveValue('10:30')
+  await page.getByLabel(/Kick-off/).fill('13:00')
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Games', exact: true })).toBeVisible()
+  await expect(page.locator('.gm-card', { hasText: 'Crossfire' })).toContainText('1:00')
+})

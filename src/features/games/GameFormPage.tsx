@@ -8,14 +8,15 @@ import { PillGroup, PillItem } from '../../ui/PillGroup'
 import { Icon } from '../../ui/Icon'
 import { locateField } from './locate'
 import { cleanMinutes, HALF_LENGTHS } from '../../lib/clock'
+import { cleanKickoff, nextWeek } from '../../lib/schedule'
 
 export function todayISO(d = new Date()) {
   const p = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
 
-/** `half` is the length of each half in minutes, as picked ('' = not set). Both halves are always the same length. */
-export interface GameDraft { opponent: string; date: string; home: boolean; location: string; notes: string; half: string }
+/** `half` is the length of each half in minutes, as picked ('' = not set). Both halves are always the same length. `kickoff` is "HH:MM" or ''. */
+export interface GameDraft { opponent: string; date: string; kickoff: string; home: boolean; location: string; notes: string; half: string }
 export function validateDraft(d: GameDraft): Partial<Record<'opponent' | 'date', string>> {
   const e: Partial<Record<'opponent' | 'date', string>> = {}
   if (!d.opponent.trim()) e.opponent = 'Who are we playing? Enter the opponent.'
@@ -25,8 +26,10 @@ export function validateDraft(d: GameDraft): Partial<Record<'opponent' | 'date',
 
 /** The half length a game was saved with ('' = none). */
 const halfOf = (g?: Pick<Game, 'halfMinutes' | 'periods'> | null) => String(cleanMinutes(g?.halfMinutes, g?.periods)?.[0] ?? '')
+const fmtDate = (iso: string) =>
+  new Date(iso + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
 
-function Seg<T extends string | number>({ name, legend, value, options, onChange }: {
+export function Seg<T extends string | number>({ name, legend, value, options, onChange }: {
   name: string; legend: string; value: T; options: { v: T; label: string }[]; onChange: (v: T) => void
 }) {
   return (
@@ -52,12 +55,13 @@ export default function GameFormPage() {
   const repo = useRepo()
   const nav = useNavigate()
   const [existing, setExisting] = useState<Game | null>(null)
-  const [d, setD] = useState<GameDraft>({ opponent: '', date: todayISO(), home: true, location: '', notes: '', half: '' })
+  const [d, setD] = useState<GameDraft>({ opponent: '', date: todayISO(), kickoff: '', home: true, location: '', notes: '', half: '' })
   const [errors, setErrors] = useState<ReturnType<typeof validateDraft>>({})
   const [busy, setBusy] = useState(false)
   const [failure, setFailure] = useState('')
   const [locating, setLocating] = useState(false)
   const [locError, setLocError] = useState('')
+  const [added, setAdded] = useState('')
 
   useEffect(() => {
     if (!id) {
@@ -71,7 +75,7 @@ export default function GameFormPage() {
     repo.getGame(id).then((g) => {
       if (!g) return
       setExisting(g)
-      setD({ opponent: g.opponent, date: g.date, home: g.home, location: g.location ?? '', notes: g.notes ?? '', half: halfOf(g) })
+      setD({ opponent: g.opponent, date: g.date, kickoff: cleanKickoff(g.kickoff) ?? '', home: g.home, location: g.location ?? '', notes: g.notes ?? '', half: halfOf(g) })
     })
   }, [id, repo])
 
@@ -80,7 +84,12 @@ export default function GameFormPage() {
   // An older game may have a length that isn't one of the choices any more: keep it on the list so editing doesn't lose it.
   const choices = half && !HALF_LENGTHS.includes(half) ? [...HALF_LENGTHS, half].sort((a, b) => a - b) : HALF_LENGTHS
 
-  async function save(startTracking: boolean) {
+  // A game later in the season isn't tracked yet: saving it (and adding the next one) is what you want.
+  const later = d.date > todayISO()
+
+  /** `then`: open the tracker, go back to the games, or clear the form for the next game of the season. */
+  async function save(then: 'track' | 'list' | 'another') {
+    const startTracking = then === 'track'
     const errs = validateDraft(d)
     setErrors(errs)
     if (Object.keys(errs).length) { document.getElementById(errs.opponent ? 'gf-opp' : 'gf-date')?.focus(); return }
@@ -89,11 +98,20 @@ export default function GameFormPage() {
       const g = await repo.saveGame({
         id: existing?.id, opponent: d.opponent.trim(), date: d.date, home: d.home, periods: 2, // soccer: always two halves
         location: d.location.trim() || undefined, notes: d.notes.trim() || undefined,
+        kickoff: cleanKickoff(d.kickoff) ?? (existing?.kickoff !== undefined ? null : undefined),
         score: existing?.score, // entered on the summary; editing the game must not lose it
         halfMinutes: half ? [half, half] : existing?.halfMinutes !== undefined ? null : undefined,
         clock: existing?.clock, // run from the tracker; same
         status: startTracking && existing?.status !== 'final' ? 'live' : existing?.status ?? 'scheduled',
       })
+      if (then === 'another') {
+        // Most of a season's games are a week apart, at the same time and with the same half length: keep those.
+        setAdded(`Added ${g.home ? 'vs' : '@'} ${g.opponent} on ${fmtDate(g.date)}. Next game:`)
+        setD((p) => ({ ...p, opponent: '', location: '', notes: '', date: nextWeek(p.date) }))
+        setErrors({}); setBusy(false)
+        document.getElementById('gf-opp')?.focus()
+        return
+      }
       nav(startTracking ? `/games/${g.id}/track` : '/', { replace: true })
     } catch (e) {
       setFailure((e as Error).message || 'Could not save. Try again.')
@@ -108,12 +126,13 @@ export default function GameFormPage() {
     finally { setLocating(false) }
   }
 
-  const onSubmit = (e: FormEvent) => { e.preventDefault(); void save(false) }
+  const onSubmit = (e: FormEvent) => { e.preventDefault(); void save('list') }
 
   return (
     <main className="ss-page">
       <Link to="/" className="gm-back">‹ Games</Link>
       <h1 className="ss-h1">{id ? 'Edit game' : 'New game'}</h1>
+      {added && <p className="gm-added" role="status">{added}</p>}
       <form onSubmit={onSubmit} noValidate>
         <div className="ss-field">
           <label className="ss-label" htmlFor="gf-opp">Opponent</label>
@@ -127,6 +146,10 @@ export default function GameFormPage() {
           <input id="gf-date" type="date" className="ss-input" value={d.date} onChange={(e) => set('date', e.target.value)}
             aria-invalid={!!errors.date} aria-describedby={errors.date ? 'gf-date-err' : undefined} />
           {errors.date && <div id="gf-date-err" className="ss-error" role="alert">{errors.date}</div>}
+        </div>
+        <div className="ss-field">
+          <label className="ss-label" htmlFor="gf-time">Kick-off <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(optional)</span></label>
+          <input id="gf-time" type="time" className="ss-input" value={d.kickoff} onChange={(e) => set('kickoff', e.target.value)} />
         </div>
         <Seg name="ha" legend="Home or away" value={d.home ? 'home' : 'away'} onChange={(v) => set('home', v === 'home')}
           options={[{ v: 'home', label: 'Home' }, { v: 'away', label: 'Away' }]} />
@@ -158,8 +181,15 @@ export default function GameFormPage() {
         </div>
         {failure && <div className="ss-error" role="alert">{failure}</div>}
         <div className="gm-actions">
-          <button type="button" className="ss-btn ss-btn-primary ss-btn-big" disabled={busy} onClick={() => save(true)}>Save &amp; start tracking</button>
-          <button type="submit" className="ss-btn" disabled={busy}>Save</button>
+          {later ? (
+            <button type="submit" className="ss-btn ss-btn-primary ss-btn-big" disabled={busy}>Save</button>
+          ) : (
+            <>
+              <button type="button" className="ss-btn ss-btn-primary ss-btn-big" disabled={busy} onClick={() => save('track')}>Save &amp; start tracking</button>
+              <button type="submit" className="ss-btn" disabled={busy}>Save</button>
+            </>
+          )}
+          {!id && <button type="button" className="ss-btn" disabled={busy} onClick={() => save('another')}>Save &amp; add another</button>}
         </div>
       </form>
     </main>

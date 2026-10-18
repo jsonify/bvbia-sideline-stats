@@ -53,3 +53,10 @@
 .gm-half-select{appearance:auto}
 .gm-half-total{margin-top:6px;font-size:13px;color:var(--muted)}
 .gm-half-total b{color:var(--text)}
+/* "Added vs Rapids on Sat Oct 24" after Save & add another */
+.gm-added{margin:0 0 16px;padding:12px 14px;border-radius:14px;background:var(--surface);border:1.5px solid var(--brand);font-weight:600}
+/* Full season view */
+.gm-season-sum{color:var(--muted);margin:0 0 4px}
+.gm-season-sum b{color:var(--text)}
+.gm-next .ss-card{border:2px solid var(--brand)}
+.gm-next-tag{display:inline-block;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;padding:2px 8px;border-radius:6px;background:var(--brand);color:var(--brand-ink);margin-bottom:4px}

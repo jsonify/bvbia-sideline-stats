@@ -90,6 +90,52 @@ describe('game form validation', () => {
   })
 })
 
+describe('game form: entering the season ahead of time', () => {
+  it('saves a kick-off time, and Save & add another clears the form for the game a week later', async () => {
+    const repo = makeFakeRepo({ id: 't', name: 'T', joinCode: 'X' })
+    wrap(repo, '/games/new')
+    fireEvent.change(screen.getByLabelText('Opponent'), { target: { value: 'Rapids' } })
+    fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2099-10-24' } })
+    fireEvent.change(screen.getByLabelText(/Kick-off/), { target: { value: '10:30' } })
+    fireEvent.change(screen.getByLabelText(/Location/, { selector: 'input' }), { target: { value: 'Magnuson 7' } })
+    // A game later on isn't tracked yet, so there's no "start tracking" on it.
+    expect(screen.queryByRole('button', { name: /start tracking/i })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Save & add another' }))
+    await waitFor(() => expect(repo.games[0]).toMatchObject({ opponent: 'Rapids', date: '2099-10-24', kickoff: '10:30', location: 'Magnuson 7', status: 'scheduled' }))
+    expect((await screen.findByRole('status')).textContent).toMatch(/Added vs Rapids/)
+    expect((screen.getByLabelText('Opponent') as HTMLInputElement).value).toBe('')
+    expect((screen.getByLabelText(/Location/, { selector: 'input' }) as HTMLInputElement).value).toBe('')
+    expect((screen.getByLabelText('Date') as HTMLInputElement).value).toBe('2099-10-31')
+    expect((screen.getByLabelText(/Kick-off/) as HTMLInputElement).value).toBe('10:30')
+  })
+})
+
+describe('games list: full season', () => {
+  const game = (id: string, opponent: string, date: string, status: 'scheduled' | 'live' | 'final', extra = {}) =>
+    ({ id, teamId: 't1', opponent, date, home: true, periods: 2 as const, status, createdAt: id, updatedAt: id, ...extra })
+
+  it('shows every game in date order by month, with the record, and marks the next game', async () => {
+    const repo = { ...makeFakeRepo({ id: 't1', name: 'T', joinCode: 'X' }),
+      listGames: async () => [
+        game('g3', 'Owls', '2099-11-07', 'scheduled', { kickoff: '09:00' }),
+        game('g1', 'Bears', '2020-09-05', 'final', { score: { us: 2, them: 1 } }),
+        game('g2', 'Lions', '2099-10-31', 'scheduled', { kickoff: '10:30', location: 'Magnuson 7' }),
+      ],
+    }
+    render(<RepoContext.Provider value={repo}><MemoryRouter><GamesPage /></MemoryRouter></RepoContext.Provider>)
+    await screen.findByText(/vs Owls/)
+    fireEvent.click(screen.getByLabelText('Full season'))
+    const opps = [...document.querySelectorAll('.gm-opp')].map((e) => e.textContent)
+    expect(opps).toEqual(['vs Bears', 'vs Lions', 'vs Owls'])
+    expect(screen.getByText(/3 games · 2 to play/).textContent).toContain('1-0-0')
+    const nextCard = screen.getByText('Next game').closest('li') as HTMLElement
+    expect(nextCard.textContent).toContain('Lions')
+    expect(nextCard.textContent).toContain('Magnuson 7')
+    expect(nextCard.textContent).toMatch(/10:30/)
+    expect(screen.getByRole('region', { name: /November 2099/ })).toBeTruthy()
+  })
+})
+
 describe('joining from an invite', () => {
   const join = (repo: ReturnType<typeof makeFakeRepo>, path: string) =>
     render(

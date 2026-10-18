@@ -5,6 +5,7 @@ import { cleanGoals, hasGoals } from '../lib/goals'
 import { isZone } from '../lib/zones'
 import { cleanScore } from '../lib/score'
 import { cleanClock, cleanMinutes } from '../lib/clock'
+import { cleanKickoff } from '../lib/schedule'
 import type { GameRec } from './db'
 import { PermanentError, type QueueOp } from './queue'
 import type { GameLanes, GameThanks, GameTracker } from './repository'
@@ -44,6 +45,8 @@ const gameFromRow = (r: any): GameRec => ({
   ...('score_us' in r ? { score: cleanScore({ us: r.score_us, them: r.score_them }) } : {}),
   // Same for 0010_game_clock.sql and the half lengths and clock.
   ...('half_minutes' in r ? { halfMinutes: cleanMinutes(r.half_minutes, r.periods), clock: cleanClock(r.clock) } : {}),
+  // And 0011_game_kickoff.sql and the kick-off time.
+  ...('kickoff' in r ? { kickoff: cleanKickoff(r.kickoff) } : {}),
 })
 const eventFromRow = (r: any): StatEvent => ({
   id: r.id, gameId: r.game_id, category: r.category, outcome: r.outcome,
@@ -61,6 +64,8 @@ export function toGameRow(g: GameRec & Record<string, unknown>) {
     ...(g.score !== undefined ? { score_us: g.score?.us ?? null, score_them: g.score?.them ?? null } : {}),
     // Likewise the half lengths and clock, for a server without 0010_game_clock.sql.
     ...(g.halfMinutes !== undefined || g.clock !== undefined ? { half_minutes: g.halfMinutes ?? null, clock: g.clock ?? null } : {}),
+    // And the kick-off time, for a server without 0011_game_kickoff.sql.
+    ...(g.kickoff !== undefined ? { kickoff: g.kickoff ?? null } : {}),
   }
 }
 export function toEventRow(e: StatEvent & { teamId?: string }) {
@@ -80,6 +85,7 @@ const OPTIONAL_COLUMNS: [RegExp, string[]][] = [
   [/zone/, ['zone']],
   [/score_/, ['score_us', 'score_them']],
   [/half_minutes|'clock'/, ['half_minutes', 'clock']],
+  [/kickoff/, ['kickoff']],
 ]
 
 const trackerFromRow = (r: any): GameTracker => ({ holder: r.holder, idleSeconds: r.idle_seconds ?? null, name: r.name ?? null })
@@ -157,7 +163,7 @@ export function createSupabaseRemote(url: string, key: string): RemoteApi {
       let { error } = await sb.from(op.table).upsert(row, { onConflict: 'id' })
       // Without the migration a zoned tap would be refused for ever and block every tap behind it. Send it without the
       // zone instead: the stat is what matters, and this phone still has the zone for its own map. Same for a game's
-      // score, half lengths and clock: the game itself must still sync, and they stay on this phone. The server names one
+      // score, half lengths, clock and kick-off: the game itself must still sync, and they stay on this phone. The server names one
       // missing column at a time, so keep going until it takes the row.
       for (let tries = 0; tries < OPTIONAL_COLUMNS.length; tries++) {
         const drop = OPTIONAL_COLUMNS.find(([col]) => missingColumn(error, col))

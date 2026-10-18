@@ -1,11 +1,13 @@
 import '../branding/branding.css'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { resultOf, scoreText } from '../../lib/score'
 import { useRepo } from '../../data/context'
 import { useRemembered } from '../../data/remember'
 import { heartsFor } from '../../lib/thanks'
 import { summarize } from '../../lib/summary'
+import { bySchedule, byMonth, kickoffText, nextGame } from '../../lib/schedule'
+import { Seg, todayISO } from './GameFormPage'
 import { Sheet } from '../../ui/Sheet'
 import { ThanksTag } from '../thanks/ThanksHeart'
 import { useThanks } from '../thanks/useThanks'
@@ -16,6 +18,10 @@ import './games.css'
 const fmtDate = (iso: string) =>
   new Date(iso + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
 const statusLabel = { scheduled: 'Upcoming', live: 'Live', final: 'Final' } as const
+/** A scheduled game whose day has passed was never tracked; say so rather than "Upcoming". */
+const statusOf = (g: Game, today: string) => (g.status === 'scheduled' && g.date < today ? 'Not tracked' : statusLabel[g.status])
+/** "Sat, Oct 24 · 10:30 AM" */
+const whenOf = (g: Game) => [fmtDate(g.date), kickoffText(g.kickoff)].filter(Boolean).join(' · ')
 
 function EmptyArt() {
   return (
@@ -41,16 +47,17 @@ function Chips({ s }: { s: StatSummary }) {
   )
 }
 
-function GameCard({ g, s, hearts, open, onMenu, onDelete }: {
-  g: Game; s?: StatSummary; hearts: number; open: boolean; onMenu: () => void; onDelete: () => void
+function GameCard({ g, s, hearts, open, next, today, onMenu, onDelete }: {
+  g: Game; s?: StatSummary; hearts: number; open: boolean; next?: boolean; today: string; onMenu: () => void; onDelete: () => void
 }) {
   const to = g.status === 'live' ? `/games/${g.id}/track` : `/games/${g.id}`
   return (
-    <li className="gm-card">
+    <li className={`gm-card${next ? ' gm-next' : ''}`}>
       <div className="ss-card">
         <Link to={to} className="ss-card-link">
+          {next && <div className="gm-next-tag">Next game</div>}
           <div className="gm-opp">{g.home ? 'vs' : '@'} {g.opponent}</div>
-          <div className="gm-meta">{fmtDate(g.date)} · {g.home ? 'Home' : 'Away'} · {statusLabel[g.status]}{scoreText(g) && <> <b className={`gm-score r-${resultOf(g)}`}>{scoreText(g)}{g.status === 'final' ? ` ${resultOf(g)}` : ''}</b></>}{g.location ? ` · ${g.location}` : ''}{hearts > 0 && <> · <ThanksTag n={hearts} /></>}</div>
+          <div className="gm-meta">{whenOf(g)} · {g.home ? 'Home' : 'Away'} · {statusOf(g, today)}{scoreText(g) && <> <b className={`gm-score r-${resultOf(g)}`}>{scoreText(g)}{g.status === 'final' ? ` ${resultOf(g)}` : ''}</b></>}{g.location ? ` · ${g.location}` : ''}{hearts > 0 && <> · <ThanksTag n={hearts} /></>}</div>
           {g.status === 'final' && s && <Chips s={s} />}
         </Link>
         <button className="ss-icon-btn" aria-label={`Options for ${g.opponent}`} aria-haspopup="menu" aria-expanded={open} onClick={onMenu}>⋮</button>
@@ -65,6 +72,26 @@ function GameCard({ g, s, hearts, open, onMenu, onDelete }: {
   )
 }
 
+/** Every game of the season in date order, by month, with the record so far and how many are left. */
+function SeasonSchedule({ games, card }: { games: Game[]; card: (g: Game) => ReactNode }) {
+  const results = games.map(resultOf)
+  const [w, d, l] = (['W', 'D', 'L'] as const).map((r) => results.filter((x) => x === r).length)
+  const left = games.filter((g) => g.status !== 'final').length
+  return (
+    <>
+      <p className="gm-season-sum">
+        {games.length} {games.length === 1 ? 'game' : 'games'} · {left} to play{w + d + l > 0 && <> · Record <b>{w}-{d}-{l}</b></>}
+      </p>
+      {byMonth(games).map((m) => (
+        <section key={m.key} aria-label={m.label}>
+          <h2 className="ss-h2">{m.label}</h2>
+          <ul className="gm-list">{m.games.map(card)}</ul>
+        </section>
+      ))}
+    </>
+  )
+}
+
 export default function GamesPage() {
   const repo = useRepo()
   const [games, setGames] = useRemembered<Game[] | null>(repo, 'games', null)
@@ -72,6 +99,7 @@ export default function GamesPage() {
   const [menu, setMenu] = useState<string | null>(null)
   const [confirm, setConfirm] = useState<Game | null>(null)
   const thanks = useThanks()
+  const [view, setView] = useRemembered<'games' | 'season'>(repo, 'games-view', 'games')
 
   const load = useCallback(async () => {
     const list = await repo.listGames()
@@ -85,17 +113,24 @@ export default function GamesPage() {
 
   if (!games) return <div className="ss-loading" role="status">Loading games…</div>
 
+  const today = todayISO()
   const live = games.filter((g) => g.status === 'live')
-  const upcoming = games.filter((g) => g.status === 'scheduled').sort((a, b) => a.date.localeCompare(b.date))
-  const final = games.filter((g) => g.status === 'final').sort((a, b) => b.date.localeCompare(a.date))
+  const upcoming = games.filter((g) => g.status === 'scheduled').sort(bySchedule)
+  const final = games.filter((g) => g.status === 'final').sort((a, b) => bySchedule(b, a))
+  const next = nextGame(games, today)
   const card = (g: Game) => (
     <GameCard key={g.id} g={g} s={stats[g.id]} hearts={heartsFor(thanks, g.id).length} open={menu === g.id}
+      next={view === 'season' && g.id === next?.id} today={today}
       onMenu={() => setMenu(menu === g.id ? null : g.id)} onDelete={() => { setMenu(null); setConfirm(g) }} />
   )
 
   return (
     <main className="ss-page" onClick={(e) => { if (menu && !(e.target as HTMLElement).closest('.gm-menu,.ss-icon-btn')) setMenu(null) }}>
       <h1 className="ss-h1">Games</h1>
+      {games.length > 0 && (
+        <Seg name="gm-view" legend="Show" value={view} onChange={setView}
+          options={[{ v: 'games', label: 'Games' }, { v: 'season', label: 'Full season' }]} />
+      )}
       {games.length === 0 && (
         <section className="gm-empty">
           <EmptyArt />
@@ -104,19 +139,20 @@ export default function GamesPage() {
           <Link to="/games/new" className="ss-btn ss-btn-primary ss-btn-big">Add your first game</Link>
         </section>
       )}
-      {live.map((g) => {
+      {view === 'season' && games.length > 0 && <SeasonSchedule games={games} card={card} />}
+      {view === 'games' && live.map((g) => {
         const n = heartsFor(thanks, g.id).length
         return (
         <section key={g.id} className="gm-live" aria-label="Live game">
           <div className="ss-eyebrow"><span className="gm-pulse" aria-hidden="true" /> Live now</div>
           <div className="gm-live-title">{g.home ? 'vs' : '@'} {g.opponent}</div>
-          <div className="gm-live-sub">{fmtDate(g.date)} · {g.home ? 'Home' : 'Away'}{n > 0 && <> · <ThanksTag n={n} /></>}</div>
+          <div className="gm-live-sub">{whenOf(g)} · {g.home ? 'Home' : 'Away'}{n > 0 && <> · <ThanksTag n={n} /></>}</div>
           <Link to={`/games/${g.id}/track`} className="ss-btn ss-btn-big">Continue tracking</Link>
         </section>
         )
       })}
-      {upcoming.length > 0 && <><h2 className="ss-h2">Upcoming</h2><ul className="gm-list">{upcoming.map(card)}</ul></>}
-      {final.length > 0 && <><h2 className="ss-h2">Final</h2><ul className="gm-list">{final.map(card)}</ul></>}
+      {view === 'games' && upcoming.length > 0 && <><h2 className="ss-h2">Upcoming</h2><ul className="gm-list">{upcoming.map(card)}</ul></>}
+      {view === 'games' && final.length > 0 && <><h2 className="ss-h2">Final</h2><ul className="gm-list">{final.map(card)}</ul></>}
       {games.length > 0 && <Link to="/games/new" className="ss-fab" aria-label="New game"><span aria-hidden="true">＋</span> New game</Link>}
 
       {/* On the shared Sheet, which is drawn on the body: inside the page it sat under the tab bar and its buttons were off screen. */}

@@ -96,3 +96,7 @@ After `0008`, run `supabase/migrations/0009_game_score.sql`. It adds two nullabl
 ## Half lengths and the game clock: run `0010_game_clock.sql`
 
 After `0009`, run `supabase/migrations/0010_game_clock.sql`. It adds two nullable columns to `games`: `half_minutes` (`smallint[]`, one length per half, 1 to 60 minutes) and `clock` (`jsonb`, one `{"ms": played, "since": ISO timestamp or null}` per half that has been started). The app only sends them once a game has them, and if the server doesn't have them yet it re-sends the game without them, so they stay on that phone and nothing else breaks.
+
+## Kick-off times: run `0011_game_kickoff.sql`
+
+After `0010`, run `supabase/migrations/0011_game_kickoff.sql`. It adds one nullable `time` column to `games`, `kickoff`, so the season's schedule (date, time, place, opponent) can be entered ahead of time. Same fallback as `0010`: the app only sends it once a game has one, and without the column it re-sends the game without it, so the time stays on that phone.
