@@ -26,6 +26,8 @@ export interface Game {
   teamId: Uuid
   opponent: string
   date: string // ISO date YYYY-MM-DD
+  /** Kick-off time, "HH:MM" (24 h), so the season's schedule can be entered ahead of time. Absent = not set; null = cleared. */
+  kickoff?: string | null
   location?: string
   home: boolean
   periods: 2 | 4 // halves or quarters
