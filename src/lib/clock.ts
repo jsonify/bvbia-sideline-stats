@@ -1,5 +1,8 @@
 import type { Game, GameClock, HalfClock } from '../types'
 
+/** The half lengths the game form offers, in minutes. Both halves are always the same length. */
+export const HALF_LENGTHS = [30, 35, 45]
+
 /** Longest half anyone would set; anything bigger is a typo. */
 export const MAX_HALF_MINUTES = 60
 

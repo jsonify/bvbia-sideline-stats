@@ -7,29 +7,24 @@ import './games.css'
 import { PillGroup, PillItem } from '../../ui/PillGroup'
 import { Icon } from '../../ui/Icon'
 import { locateField } from './locate'
-import { cleanMinutes, MAX_HALF_MINUTES } from '../../lib/clock'
+import { cleanMinutes, HALF_LENGTHS } from '../../lib/clock'
 
 export function todayISO(d = new Date()) {
   const p = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
 
-/** `halves` is the minutes typed for each half, as typed: all empty = not set. */
-export interface GameDraft { opponent: string; date: string; home: boolean; location: string; notes: string; halves: string[] }
-export function validateDraft(d: GameDraft): Partial<Record<'opponent' | 'date' | 'halves', string>> {
-  const e: Partial<Record<'opponent' | 'date' | 'halves', string>> = {}
+/** `half` is the length of each half in minutes, as picked ('' = not set). Both halves are always the same length. */
+export interface GameDraft { opponent: string; date: string; home: boolean; location: string; notes: string; half: string }
+export function validateDraft(d: GameDraft): Partial<Record<'opponent' | 'date', string>> {
+  const e: Partial<Record<'opponent' | 'date', string>> = {}
   if (!d.opponent.trim()) e.opponent = 'Who are we playing? Enter the opponent.'
   if (!/^\d{4}-\d{2}-\d{2}$/.test(d.date) || Number.isNaN(Date.parse(d.date))) e.date = 'Pick a valid date.'
-  if (d.halves.some((h) => h.trim()) && !draftMinutes(d.halves)) e.halves = `Enter the minutes for each half, from 1 to ${MAX_HALF_MINUTES}.`
   return e
 }
 
-/** The typed half lengths as minutes, or null when they aren't all there and valid. */
-export const draftMinutes = (halves: string[]) =>
-  cleanMinutes(halves.map((h) => (/^\s*\d+\s*$/.test(h) ? Number(h) : NaN)), halves.length)
-
-const NO_HALVES = ['', '']
-const halvesOf = (g?: Pick<Game, 'halfMinutes' | 'periods'> | null) => cleanMinutes(g?.halfMinutes, g?.periods)?.map(String) ?? NO_HALVES
+/** The half length a game was saved with ('' = none). */
+const halfOf = (g?: Pick<Game, 'halfMinutes' | 'periods'> | null) => String(cleanMinutes(g?.halfMinutes, g?.periods)?.[0] ?? '')
 
 function Seg<T extends string | number>({ name, legend, value, options, onChange }: {
   name: string; legend: string; value: T; options: { v: T; label: string }[]; onChange: (v: T) => void
@@ -57,7 +52,7 @@ export default function GameFormPage() {
   const repo = useRepo()
   const nav = useNavigate()
   const [existing, setExisting] = useState<Game | null>(null)
-  const [d, setD] = useState<GameDraft>({ opponent: '', date: todayISO(), home: true, location: '', notes: '', halves: NO_HALVES })
+  const [d, setD] = useState<GameDraft>({ opponent: '', date: todayISO(), home: true, location: '', notes: '', half: '' })
   const [errors, setErrors] = useState<ReturnType<typeof validateDraft>>({})
   const [busy, setBusy] = useState(false)
   const [failure, setFailure] = useState('')
@@ -69,35 +64,33 @@ export default function GameFormPage() {
       // A new game starts with the half lengths of the team's latest game: they rarely change from week to week.
       repo.listGames().then((gs) => {
         const last = gs.filter((g) => cleanMinutes(g.halfMinutes, g.periods)).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
-        if (last) setD((p) => (p.halves.some((h) => h) ? p : { ...p, halves: halvesOf(last) }))
+        if (last) setD((p) => (p.half ? p : { ...p, half: halfOf(last) }))
       }, () => {})
       return
     }
     repo.getGame(id).then((g) => {
       if (!g) return
       setExisting(g)
-      setD({ opponent: g.opponent, date: g.date, home: g.home, location: g.location ?? '', notes: g.notes ?? '', halves: halvesOf(g) })
+      setD({ opponent: g.opponent, date: g.date, home: g.home, location: g.location ?? '', notes: g.notes ?? '', half: halfOf(g) })
     })
   }, [id, repo])
 
   const set = <K extends keyof GameDraft>(k: K, v: GameDraft[K]) => setD((p) => ({ ...p, [k]: v }))
-  /** Halves are usually the same length, so the 2nd half follows the 1st until it is changed on its own. */
-  const setHalf = (i: number, v: string) => setD((p) => ({
-    ...p, halves: p.halves.map((h, j) => (j === i || (i === 0 && j > 0 && h === p.halves[0]) ? v : h)),
-  }))
-  const minutes = draftMinutes(d.halves)
+  const half = Number(d.half) || 0
+  // An older game may have a length that isn't one of the choices any more: keep it on the list so editing doesn't lose it.
+  const choices = half && !HALF_LENGTHS.includes(half) ? [...HALF_LENGTHS, half].sort((a, b) => a - b) : HALF_LENGTHS
 
   async function save(startTracking: boolean) {
     const errs = validateDraft(d)
     setErrors(errs)
-    if (Object.keys(errs).length) { document.getElementById(errs.opponent ? 'gf-opp' : errs.date ? 'gf-date' : 'gf-half1')?.focus(); return }
+    if (Object.keys(errs).length) { document.getElementById(errs.opponent ? 'gf-opp' : 'gf-date')?.focus(); return }
     setBusy(true); setFailure('')
     try {
       const g = await repo.saveGame({
         id: existing?.id, opponent: d.opponent.trim(), date: d.date, home: d.home, periods: 2, // soccer: always two halves
         location: d.location.trim() || undefined, notes: d.notes.trim() || undefined,
         score: existing?.score, // entered on the summary; editing the game must not lose it
-        halfMinutes: minutes ?? (existing?.halfMinutes !== undefined ? null : undefined),
+        halfMinutes: half ? [half, half] : existing?.halfMinutes !== undefined ? null : undefined,
         clock: existing?.clock, // run from the tracker; same
         status: startTracking && existing?.status !== 'final' ? 'live' : existing?.status ?? 'scheduled',
       })
@@ -137,23 +130,16 @@ export default function GameFormPage() {
         </div>
         <Seg name="ha" legend="Home or away" value={d.home ? 'home' : 'away'} onChange={(v) => set('home', v === 'home')}
           options={[{ v: 'home', label: 'Home' }, { v: 'away', label: 'Away' }]} />
-        <fieldset className="ss-field gm-halves" aria-describedby={errors.halves ? 'gf-half-err' : 'gf-half-total'}>
-          <legend className="ss-label">Half length <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(minutes)</span></legend>
-          <div className="gm-halves-row">
-            {d.halves.map((h, i) => (
-              <label key={i} className="gm-half">
-                <span>{i === 0 ? '1st half' : '2nd half'}</span>
-                <input id={`gf-half${i + 1}`} className="ss-input" type="number" inputMode="numeric" min={1} max={MAX_HALF_MINUTES} step={1}
-                  value={h} onChange={(e) => setHalf(i, e.target.value)} placeholder="e.g. 25" enterKeyHint="next"
-                  aria-invalid={!!errors.halves} />
-              </label>
-            ))}
-          </div>
+        <div className="ss-field">
+          <label className="ss-label" htmlFor="gf-half">Half length</label>
+          <select id="gf-half" className="ss-input gm-half-select" value={d.half} onChange={(e) => set('half', e.target.value)} aria-describedby="gf-half-total">
+            <option value="">Not set</option>
+            {choices.map((m) => <option key={m} value={m}>{m} minutes</option>)}
+          </select>
           <div id="gf-half-total" className="gm-half-total" aria-live="polite">
-            {minutes ? <>Full game: <b>{minutes.reduce((a, b) => a + b, 0)} min</b></> : 'Sets the game clock on the tracker. It varies by age group and tournament.'}
+            {half ? <>Both halves. Full game: <b>{half * 2} min</b></> : 'Used for both halves. Sets the game clock on the tracker.'}
           </div>
-          {errors.halves && <div id="gf-half-err" className="ss-error" role="alert">{errors.halves}</div>}
-        </fieldset>
+        </div>
         <div className="ss-field">
           <label className="ss-label" htmlFor="gf-loc">Location <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(optional)</span></label>
           <div className="gm-loc">
