@@ -211,7 +211,7 @@ export async function drawShareCard(input: CardInput, canvas: HTMLCanvasElement 
   pitch(ctx, mx, top + 36, scale, live)
 
   ctx.textAlign = 'center'; ctx.fillStyle = MUTED; ctx.font = `500 22px ${BODY}`
-  ctx.fillText('Dots show what happened, not where (positions are simulated). Filled = good outcome.', CARD_W / 2, CARD_H - 58)
+  ctx.fillText('Dots show what happened, but positions are estimated. Filled = good outcome.', CARD_W / 2, CARD_H - 58)
   ctx.font = `700 24px ${BODY}`; ctx.fillStyle = INK
   ctx.fillText('Sideline Stats', CARD_W / 2, CARD_H - 24)
   return canvas
