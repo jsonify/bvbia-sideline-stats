@@ -15,6 +15,8 @@ import { useTracker, useWakeLock } from './useTracker'
 import './tracker.css'
 import { PillGroup, PillItem } from '../../ui/PillGroup'
 import { HalftimeSheet } from '../stats/HalftimeSheet'
+import { ScoreBar } from './ScoreBar'
+import { scoreText } from '../../lib/score'
 import { useTeam } from '../shell/useTeam'
 
 const SYNC_TEXT = { synced: 'Synced', syncing: 'Syncing', offline: 'Offline', error: 'Sync error' } as const
@@ -27,7 +29,8 @@ export default function TrackerPage() {
   const [confirmEnd, setConfirmEnd] = useState(false)
   const [confirmRole, setConfirmRole] = useState<Role | null>(null) // asking before taking a lane from someone
   const { game, summary: s, periodSummary: p } = t
-  const goals = useTeam().team?.goals ?? {}
+  const { team } = useTeam()
+  const goals = team?.goals ?? {}
   const [tapStyle, setTapStyle] = usePref(TAP_STYLE_KEY, TAP_STYLES, 'field')
   const [swapped, setSwapped] = usePref(swapKey(id), ['0', '1'] as const, '0')
 
@@ -87,6 +90,7 @@ export default function TrackerPage() {
             {sync.state !== 'synced' && sync.pending > 0 && <b className="tk-sync-n" aria-hidden="true">{sync.pending}</b>}
           </span>
         </div>
+        {game.status !== 'scheduled' && <ScoreBar game={game} teamName={team?.name ?? ''} canEdit={t.canTrack} onChange={t.changeScore} />}
         <div className="tk-periods" role="group" aria-label="Period">
           <PillGroup value={String(t.period)} pillClassName="tk-period-pill">
             {Array.from({ length: game.periods }, (_, i) => i + 1).map((n) => (
@@ -258,7 +262,7 @@ export default function TrackerPage() {
           <div className="tk-dialog" role="alertdialog" aria-modal="true" aria-labelledby="end-h" onClick={(e) => e.stopPropagation()}>
             <h2 id="end-h">End game?</h2>
             <p>
-              {summarize(t.events).duels.total + ft.total + s.boxEntries.total} taps recorded. You will see the summary next, where anyone can add the final score.
+              {summarize(t.events).duels.total + ft.total + s.boxEntries.total} taps recorded{scoreText(game) ? `, final score ${scoreText(game)}` : ''}. You will see the summary next, where anyone can fix the score.
               {others.length > 0 && ` ${trackingText(others)} too, and ending the game ends it for them.`}
             </p>
             <div>

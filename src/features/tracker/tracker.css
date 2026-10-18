@@ -150,3 +150,21 @@
 /* a message must never sit on the buttons of an open choice sheet: it moves to the top of the screen, and never takes a tap */
 .tk-toast{pointer-events:none}
 .tk:has(.fp-pick) .tk-toast{top:calc(12px + env(safe-area-inset-top));bottom:auto}
+.tk-score{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:44px;margin-top:8px;padding:4px 12px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit}
+button.tk-score:active{transform:scale(.97)}
+.tk-sc-team{flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tk-sc-team:first-child{text-align:right}
+.tk-sc-n{flex:none;display:flex;gap:6px;font-family:var(--font-display);font-size:24px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.tk-sc-n span{color:var(--muted)}
+.tk-sc-add{flex:none;font-size:12px;font-weight:700;padding:4px 8px;border-radius:999px;background:var(--brand);color:var(--brand-ink)}
+.tk-goal{padding:0 16px 16px}
+.tk-goal-now{text-align:center;margin:0 0 12px;color:var(--muted);font-weight:600}
+.tk-goal-now b{font-family:var(--font-display);font-size:32px;color:var(--text);margin:0 8px;font-variant-numeric:tabular-nums}
+.tk-goal-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tk-goal-btns button{min-height:72px;border-radius:14px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit;font-weight:800;font-size:17px;padding:8px;overflow:hidden;text-overflow:ellipsis}
+.tk-goal-btns .tk-goal-us{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.tk-goal-btns button:active{transform:scale(.96)}
+.tk-goal-fix-h{margin:18px 0 6px;font-size:13px;color:var(--muted)}
+.tk-goal-fix{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tk-goal-fix button{min-height:44px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--text);font:inherit;font-size:14px;font-weight:600;padding:6px}
+.tk-goal-fix button:disabled{opacity:.4}

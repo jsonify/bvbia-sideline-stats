@@ -71,6 +71,22 @@ test('team -> game -> track -> undo -> end -> summary -> season', async ({ page 
   await expect(page.getByRole('button', { name: /^Undo last: .*/ })).toBeVisible()
   await shot(page, '06-tracker-after-undo')
 
+  // Goals are logged as they go in, from the score in the header: tap it, then tap who scored
+  const goal = async (team: RegExp) => {
+    await page.getByRole('button', { name: /Log a goal$/ }).click()
+    const sheet = page.getByRole('dialog', { name: 'Who scored?' })
+    await sheet.getByRole('button', { name: team }).click()
+    await expect(sheet).toHaveCount(0)
+  }
+  await goal(/^⚽ (?!Rapids)/)
+  await page.getByRole('button', { name: /Log a goal$/ }).click()
+  await page.waitForTimeout(600) // let the sheet slide up
+  await shot(page, '06b-goal-sheet')
+  await page.getByRole('dialog', { name: 'Who scored?' }).getByRole('button', { name: /^⚽ Rapids/ }).click()
+  await goal(/^⚽ (?!Rapids)/)
+  await expect(page.getByRole('button', { name: /^Score: .* 2, Rapids U10 1\. Log a goal$/ })).toBeVisible()
+  await shot(page, '06c-tracker-score')
+
   // End the game
   await page.getByRole('button', { name: 'End game', exact: true }).click()
   await shot(page, '07-end-confirm')
@@ -110,16 +126,12 @@ test('team -> game -> track -> undo -> end -> summary -> season', async ({ page 
   await expect(hero.getByRole('group', { name: 'Defensive 1v1s won' })).toContainText('75%')
   await shot(page, '08-summary')
 
-  // The final score goes in on the summary (never on the tracker), and the season page lines it up with the stats
-  const ask = page.getByRole('region', { name: 'What was the final score?' })
-  await ask.getByRole('button', { name: 'Add score' }).click()
-  const edit = page.getByRole('region', { name: 'Final score' })
-  for (let i = 0; i < 2; i++) await edit.getByRole('button', { name: /^One more for (?!Rapids)/ }).click()
-  await edit.getByRole('button', { name: /^One more for Rapids/ }).click()
+  // The score logged during the game is already there; it can still be fixed on the summary
+  const final = page.getByRole('region', { name: 'Final score' })
+  await expect(final).toContainText('Win')
+  await final.getByRole('button', { name: 'Edit score' }).click()
   await shot(page, '08b-score-edit')
-  await edit.getByRole('button', { name: 'Save score' }).click()
-  await expect(page.getByRole('region', { name: 'Final score' })).toContainText('Win')
-  await shot(page, '08c-score')
+  await page.getByRole('button', { name: 'Cancel' }).click()
 
   // Season page
   await page.goto('/season')
