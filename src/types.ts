@@ -33,12 +33,21 @@ export interface Game {
   notes?: string
   /** Goals for us and for them, once someone enters it (on the game summary). Absent = not entered; null = cleared. */
   score?: GameScore | null
+  /** How long each half is, in minutes, set when the game is made (it varies by age group and tournament). One per half. */
+  halfMinutes?: number[] | null
+  /** The game clock, started and paused from the tracker. Absent = never started. See src/lib/clock.ts. */
+  clock?: GameClock | null
   createdAt: string // ISO timestamp
   updatedAt: string
 }
 
 /** A game's score, from our side. Kept on the game, not as stat events, so the tracker never has to deal with it. */
 export interface GameScore { us: number; them: number }
+
+/** One half's clock: time already played, and when it was last started while it is running (ISO, client time). */
+export interface HalfClock { ms: number; since: string | null }
+/** One entry per half that has been started, in order. Only one half runs at a time. */
+export type GameClock = HalfClock[]
 
 /** The three stat categories the coach asked for. */
 export type StatCategory = 'duel' | 'first_contact' | 'box_entry'

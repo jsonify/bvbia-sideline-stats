@@ -169,3 +169,15 @@ button.tk-score:active{transform:scale(.97)}
 .tk-goal-fix{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .tk-goal-fix button{min-height:44px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--text);font:inherit;font-size:14px;font-weight:600;padding:6px}
 .tk-goal-fix button:disabled{opacity:.4}
+/* game clock: the half on screen against its length, and the whole game */
+.tk-clock{display:flex;align-items:center;gap:10px;min-height:52px;margin-top:8px;padding:6px 8px 6px 14px;border-radius:12px;border:1px solid var(--border);background:var(--surface)}
+.tk-clock-time{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.15}
+.tk-clock-time b{font-family:var(--font-display);font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
+.tk-clock-time small{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.tk-clock.running .tk-clock-time b{color:var(--brand-text)}
+.tk-clock.over .tk-clock-time b{color:var(--bad)}
+.tk-clock-btns{flex:none;display:flex;gap:6px}
+.tk-clock-btns button{min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);font:inherit;font-weight:800;transition:transform .3s var(--tk-spring)}
+.tk-clock-btns button:active{transform:scale(.94)}
+.tk-clock-btns button.primary{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.tk-clock-btns .tk-clock-reset{padding:0 10px;font-weight:600;color:var(--muted)}

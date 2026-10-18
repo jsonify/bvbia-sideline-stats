@@ -4,6 +4,7 @@ import type { Game, StatEvent, Team, TeamBranding, TeamGoals } from '../types'
 import { cleanGoals, hasGoals } from '../lib/goals'
 import { isZone } from '../lib/zones'
 import { cleanScore } from '../lib/score'
+import { cleanClock, cleanMinutes } from '../lib/clock'
 import type { GameRec } from './db'
 import { PermanentError, type QueueOp } from './queue'
 import type { GameLanes, GameThanks, GameTracker } from './repository'
@@ -41,6 +42,8 @@ const gameFromRow = (r: any): GameRec => ({
   notes: r.notes ?? undefined, createdAt: r.created_at, updatedAt: r.updated_at, deletedAt: r.deleted_at,
   // A server without 0009_game_score.sql has no score columns at all: leave the score out, so the phone keeps its own.
   ...('score_us' in r ? { score: cleanScore({ us: r.score_us, them: r.score_them }) } : {}),
+  // Same for 0010_game_clock.sql and the half lengths and clock.
+  ...('half_minutes' in r ? { halfMinutes: cleanMinutes(r.half_minutes, r.periods), clock: cleanClock(r.clock) } : {}),
 })
 const eventFromRow = (r: any): StatEvent => ({
   id: r.id, gameId: r.game_id, category: r.category, outcome: r.outcome,
@@ -56,6 +59,8 @@ export function toGameRow(g: GameRec & Record<string, unknown>) {
     created_at: g.createdAt, updated_at: g.updatedAt, deleted_at: g.deletedAt ?? null,
     // Only sent once a score was entered (or cleared), so other game saves still sync to a server without 0009_game_score.sql.
     ...(g.score !== undefined ? { score_us: g.score?.us ?? null, score_them: g.score?.them ?? null } : {}),
+    // Likewise the half lengths and clock, for a server without 0010_game_clock.sql.
+    ...(g.halfMinutes !== undefined || g.clock !== undefined ? { half_minutes: g.halfMinutes ?? null, clock: g.clock ?? null } : {}),
   }
 }
 export function toEventRow(e: StatEvent & { teamId?: string }) {
@@ -68,8 +73,14 @@ export function toEventRow(e: StatEvent & { teamId?: string }) {
   }
 }
 
-/** PostgREST's answer when a row names a column the server doesn't have (`zone` before 0008_event_zones.sql, `score_*` before 0009). */
+/** PostgREST's answer when a row names a column the server doesn't have (`zone` before 0008_event_zones.sql, `score_*` before 0009, ...). */
 const missingColumn = (error: { code?: string; message: string } | null, col: RegExp) => !!error && error.code === 'PGRST204' && col.test(error.message)
+/** Columns a row can go without when the server hasn't run their migration yet, and what to leave out for each. */
+const OPTIONAL_COLUMNS: [RegExp, string[]][] = [
+  [/zone/, ['zone']],
+  [/score_/, ['score_us', 'score_them']],
+  [/half_minutes|'clock'/, ['half_minutes', 'clock']],
+]
 
 const trackerFromRow = (r: any): GameTracker => ({ holder: r.holder, idleSeconds: r.idle_seconds ?? null, name: r.name ?? null })
 /** The tracker functions answer with one row per lane; a lane missing from the answer is simply nobody's. */
@@ -145,10 +156,15 @@ export function createSupabaseRemote(url: string, key: string): RemoteApi {
       const row: Record<string, unknown> = op.table === 'games' ? toGameRow(op.row as any) : toEventRow(op.row as any)
       let { error } = await sb.from(op.table).upsert(row, { onConflict: 'id' })
       // Without the migration a zoned tap would be refused for ever and block every tap behind it. Send it without the
-      // zone instead: the stat is what matters, and this phone still has the zone for its own map.
-      if (missingColumn(error, /zone/)) ({ error } = await sb.from(op.table).upsert({ ...row, zone: undefined }, { onConflict: 'id' }))
-      // Same for a score: the game itself must still sync. The score stays on this phone.
-      if (missingColumn(error, /score_/)) ({ error } = await sb.from(op.table).upsert({ ...row, score_us: undefined, score_them: undefined }, { onConflict: 'id' }))
+      // zone instead: the stat is what matters, and this phone still has the zone for its own map. Same for a game's
+      // score, half lengths and clock: the game itself must still sync, and they stay on this phone. The server names one
+      // missing column at a time, so keep going until it takes the row.
+      for (let tries = 0; tries < OPTIONAL_COLUMNS.length; tries++) {
+        const drop = OPTIONAL_COLUMNS.find(([col]) => missingColumn(error, col))
+        if (!drop) break
+        for (const c of drop[1]) row[c] = undefined
+        ;({ error } = await sb.from(op.table).upsert({ ...row }, { onConflict: 'id' }))
+      }
       wrap(error)
     },
     async pull(teamId) {

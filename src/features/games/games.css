@@ -49,3 +49,10 @@
 .gm-loc-spin{animation:gm-loc-pulse 1s ease-in-out infinite}
 @keyframes gm-loc-pulse{50%{opacity:.35}}
 @media (prefers-reduced-motion:reduce){.gm-loc-spin{animation:none}}
+/* half lengths on the game form: one box per half, and the full game under them */
+.gm-halves{border:0;padding:0;margin:0 0 16px;min-width:0}
+.gm-halves-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.gm-half{display:flex;flex-direction:column;gap:4px;min-width:0}
+.gm-half span{font-size:13px;color:var(--muted);font-weight:600}
+.gm-half-total{margin-top:6px;font-size:13px;color:var(--muted)}
+.gm-half-total b{color:var(--text)}

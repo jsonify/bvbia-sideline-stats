@@ -288,6 +288,23 @@ describe('cloud sync across devices', () => {
     expect(await a.getGame(g.id)).toMatchObject({ notes: 'muddy', score: { us: 2, them: 1 } })
   })
 
+  it('shares half lengths and the clock, and keeps them on the phone when the server has no clock columns yet', async () => {
+    const cloud = fakeCloud()
+    const a = new LocalRepository({ dbName: 'cK1', remote: cloud.api(), baseDelayMs: 1 })
+    const team = await a.createTeam('BVB Fans')
+    const clock = [{ ms: 0, since: '2026-09-01T10:00:00.000Z' }]
+    const g = await a.saveGame({ ...gameInput, halfMinutes: [30, 30], clock })
+    await vi.waitFor(() => expect(cloud.games.get(g.id)).toMatchObject({ halfMinutes: [30, 30], clock }))
+    const b = new LocalRepository({ dbName: 'cK2', remote: cloud.api(), baseDelayMs: 1 })
+    await b.joinTeam(team.joinCode)
+    await vi.waitFor(async () => expect(await b.getGame(g.id)).toMatchObject({ halfMinutes: [30, 30], clock }))
+
+    const { halfMinutes: _h, clock: _c, ...old } = cloud.games.get(g.id)
+    cloud.games.set(g.id, { ...old, notes: 'windy', updatedAt: '2999-01-01T00:00:00Z' })
+    await a.pull()
+    expect(await a.getGame(g.id)).toMatchObject({ notes: 'windy', halfMinutes: [30, 30], clock })
+  })
+
   it('moves a team created before the cloud was configured into the cloud, with its games', async () => {
     const cloud = fakeCloud()
     const demo = new LocalRepository({ dbName: 'cD' })

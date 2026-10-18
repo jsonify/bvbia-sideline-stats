@@ -3,6 +3,7 @@ import { useRepo } from '../../data/context'
 import type { GameLanes, SyncState } from '../../data/repository'
 import type { BallType, Game, GameScore, NewStatEvent, StatEvent } from '../../types'
 import { cleanScore, MAX_GOALS } from '../../lib/score'
+import { pauseHalf, resetHalf, runningHalf, startHalf, stopClock } from '../../lib/clock'
 import { summarize } from '../../lib/summary'
 import { LANES, LANE_OF, ROLE_LANES, lanesText, roleOf, type Lane, type Role } from '../../lib/lanes'
 import { eventLabel } from './labels'
@@ -219,8 +220,36 @@ export function useTracker(gameId: string) {
 
   const setStatus = useCallback(async (status: Game['status']) => {
     if (!heldRef.current.length) return
-    await changeGame(() => ({ status }), 'Could not update game')
+    // Ending the game stops its clock, so the time played is what it was at the final whistle.
+    await changeGame((g) => (status === 'final' && runningHalf(g.clock) ? { status, clock: stopClock(g.clock) } : { status }), 'Could not update game')
   }, [changeGame])
+
+  /**
+   * Start, pause or reset the clock for one half. The clock lives on the game, so every phone shows the same time; any
+   * phone that is tracking can run it. Kicking off a half also moves this phone to it and makes the game live.
+   */
+  const changeClock = useCallback(async (action: 'start' | 'pause' | 'reset', half: number) => {
+    if (!game || game.status === 'final' || !heldRef.current.length) return
+    if (action === 'start') { haptic(20); choosePeriod(half) }
+    await changeGame((g) => {
+      const clock = action === 'start' ? startHalf(g.clock, half) : action === 'pause' ? pauseHalf(g.clock, half) : resetHalf(g.clock, half)
+      return action === 'start' && g.status === 'scheduled' ? { clock, status: 'live' as const } : { clock }
+    }, 'Could not update the clock')
+  }, [game, changeGame, choosePeriod])
+
+  // When another phone kicks off a later half, move up with it, just like when it records there.
+  // Opening a game whose 2nd half is running just starts there.
+  const running = runningHalf(game?.clock)
+  const clockSeen = useRef(false)
+  useEffect(() => {
+    if (!loaded) return
+    const first = !clockSeen.current
+    clockSeen.current = true
+    if (!running || running <= periodRef.current || running <= topPeriod.current) return
+    topPeriod.current = running
+    choosePeriod(running)
+    if (!first) say(`Moved to the ${periodName(running)}: it has kicked off`)
+  }, [loaded, running, choosePeriod, say])
 
   /**
    * Log a goal (or take one back) the moment it happens, so nobody has to remember the score at the end. Any phone that
@@ -290,7 +319,7 @@ export function useTracker(gameId: string) {
   return {
     game, loaded, events, summary, periodSummary, period, setPeriod: choosePeriod, ballType, setBallType, sync, toast,
     checking, held, role: roleOf(held), lanes, lost, canTrack, canTap, watching, pickRole, blockersFor,
-    recordDuel, recordContact, recordBox, undo, setStatus, changeScore, last: mine[mine.length - 1] as StatEvent | undefined,
+    recordDuel, recordContact, recordBox, undo, setStatus, changeScore, changeClock, last: mine[mine.length - 1] as StatEvent | undefined,
   }
 }
 
