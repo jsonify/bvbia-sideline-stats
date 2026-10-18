@@ -157,11 +157,12 @@ button.tk-score:active{transform:scale(.97)}
 .tk-sc-n{flex:none;display:flex;gap:6px;font-family:var(--font-display);font-size:24px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
 .tk-sc-n span{color:var(--muted)}
 .tk-sc-add{flex:none;font-size:12px;font-weight:700;padding:4px 8px;border-radius:999px;background:var(--brand);color:var(--brand-ink)}
-.tk-goal{padding:0 16px 16px}
+/* not .tk-goal: that is the target marker on the stat bars (above), and it would squash this sheet into a 3px strip */
+.tk-goal-sheet{display:flex;flex-direction:column}
 .tk-goal-now{text-align:center;margin:0 0 12px;color:var(--muted);font-weight:600}
 .tk-goal-now b{font-family:var(--font-display);font-size:32px;color:var(--text);margin:0 8px;font-variant-numeric:tabular-nums}
 .tk-goal-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.tk-goal-btns button{min-height:72px;border-radius:14px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit;font-weight:800;font-size:17px;padding:8px;overflow:hidden;text-overflow:ellipsis}
+.tk-goal-btns button{min-height:72px;border-radius:14px;border:1px solid var(--border);background:var(--bg);color:var(--text);font:inherit;font-weight:800;font-size:17px;padding:8px;overflow:hidden;text-overflow:ellipsis}
 .tk-goal-btns .tk-goal-us{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
 .tk-goal-btns button:active{transform:scale(.96)}
 .tk-goal-fix-h{margin:18px 0 6px;font-size:13px;color:var(--muted)}

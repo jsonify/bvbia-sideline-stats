@@ -31,7 +31,7 @@ export function ScoreBar({ game, teamName, canEdit, onChange }: {
       </button>
       <Sheet open={open} onClose={() => setOpen(false)} title="Who scored?" className="score-sheet">
         {(close) => (
-          <div className="tk-goal">
+          <div className="tk-goal-sheet">
             <p className="tk-goal-now" aria-live="polite">{us} <b>{s.us}–{s.them}</b> {them}</p>
             <div className="tk-goal-btns">
               <button type="button" className="tk-goal-us" onClick={() => { onChange('us', 1); close() }}>⚽ {us}</button>
