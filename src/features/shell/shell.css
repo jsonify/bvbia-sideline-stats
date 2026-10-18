@@ -31,6 +31,9 @@
 .ss-btn-big{min-height:64px;font-size:20px;border-radius:18px}
 .ss-btn[disabled]{opacity:.6}
 .ss-input{width:100%;font:inherit;font-size:17px;min-height:52px;padding:0 14px;border-radius:14px;border:1.5px solid var(--border);background:var(--surface);color:var(--text)}
+/* iOS Safari gives date inputs an intrinsic min-width wider than a phone column, so width:100% alone lets them bleed off the right edge */
+input[type=date].ss-input{-webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;line-height:49px;text-align:left}
+input[type=date].ss-input::-webkit-date-and-time-value{text-align:left;margin:0}
 textarea.ss-input{padding:12px 14px;min-height:88px;resize:vertical}
 .ss-input[aria-invalid=true]{border-color:var(--bad)}
 .ss-field{margin-bottom:16px}

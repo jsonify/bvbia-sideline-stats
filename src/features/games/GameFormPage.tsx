@@ -5,6 +5,8 @@ import type { Game } from '../../types'
 import '../shell/shell.css'
 import './games.css'
 import { PillGroup, PillItem } from '../../ui/PillGroup'
+import { Icon } from '../../ui/Icon'
+import { locateField } from './locate'
 
 export function todayISO(d = new Date()) {
   const p = (n: number) => String(n).padStart(2, '0')
@@ -49,6 +51,8 @@ export default function GameFormPage() {
   const [errors, setErrors] = useState<ReturnType<typeof validateDraft>>({})
   const [busy, setBusy] = useState(false)
   const [failure, setFailure] = useState('')
+  const [locating, setLocating] = useState(false)
+  const [locError, setLocError] = useState('')
 
   useEffect(() => {
     if (!id) return
@@ -80,6 +84,13 @@ export default function GameFormPage() {
     }
   }
 
+  async function useMyLocation() {
+    setLocating(true); setLocError('')
+    try { set('location', await locateField()) }
+    catch (e) { setLocError((e as Error).message) }
+    finally { setLocating(false) }
+  }
+
   const onSubmit = (e: FormEvent) => { e.preventDefault(); void save(false) }
 
   return (
@@ -104,7 +115,15 @@ export default function GameFormPage() {
           options={[{ v: 'home', label: 'Home' }, { v: 'away', label: 'Away' }]} />
         <div className="ss-field">
           <label className="ss-label" htmlFor="gf-loc">Location <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(optional)</span></label>
-          <input id="gf-loc" className="ss-input" value={d.location} onChange={(e) => set('location', e.target.value)} placeholder="Field name or address" autoComplete="off" enterKeyHint="next" />
+          <div className="gm-loc">
+            <input id="gf-loc" className="ss-input" value={d.location} onChange={(e) => set('location', e.target.value)} placeholder="Field name or address" autoComplete="off" enterKeyHint="next"
+              aria-describedby={locError ? 'gf-loc-err' : undefined} />
+            <button type="button" className="gm-loc-btn" onClick={useMyLocation} disabled={locating}
+              aria-label={locating ? 'Finding your location' : 'Use my location'} title="Use my location">
+              <Icon name="pin" size={22} className={locating ? 'icon gm-loc-spin' : 'icon'} />
+            </button>
+          </div>
+          {locError && <div id="gf-loc-err" className="ss-error" role="alert">{locError}</div>}
         </div>
         <div className="ss-field">
           <label className="ss-label" htmlFor="gf-notes">Notes <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(optional)</span></label>

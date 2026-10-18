@@ -39,3 +39,13 @@
 .gm-path strong{display:block;font-size:20px;margin-bottom:2px}
 .gm-path span{color:var(--muted)}
 .gm-score{color:var(--text);font-variant-numeric:tabular-nums} .gm-score.r-W{color:var(--good)} .gm-score.r-L{color:var(--bad)}
+/* location field with a "use my location" button beside it */
+.gm-loc{display:flex;gap:8px}
+.gm-loc .ss-input{flex:1;min-width:0}
+.gm-loc-btn{appearance:none;flex:none;width:52px;min-height:52px;display:grid;place-items:center;border-radius:14px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer}
+.gm-loc-btn:focus-visible{outline:3px solid var(--ring);outline-offset:2px}
+.gm-loc-btn:active{transform:scale(.96)}
+.gm-loc-btn[disabled]{opacity:.6}
+.gm-loc-spin{animation:gm-loc-pulse 1s ease-in-out infinite}
+@keyframes gm-loc-pulse{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.gm-loc-spin{animation:none}}

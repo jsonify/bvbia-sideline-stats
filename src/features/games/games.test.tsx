@@ -170,3 +170,14 @@ describe('games list: hearts', () => {
     expect(card('Lions').querySelector('.th-tag')).toBeNull() // a game nobody has thanked just looks like a game: no "0"
   })
 })
+
+describe('game form: use my location', () => {
+  it('fills the location from GPS', async () => {
+    vi.stubGlobal('navigator', { ...navigator, geolocation: { getCurrentPosition: (ok: PositionCallback) => ok({ coords: { latitude: 47.6, longitude: -122.3 } } as GeolocationPosition) } })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ name: 'Magnuson Park', address: { city: 'Seattle' } }) }))
+    wrap(makeFakeRepo({ id: 't', name: 'T', joinCode: 'X' }), '/games/new')
+    fireEvent.click(screen.getByRole('button', { name: 'Use my location' }))
+    await waitFor(() => expect((screen.getByLabelText(/location/i, { selector: 'input' }) as HTMLInputElement).value).toBe('Magnuson Park, Seattle'))
+    vi.unstubAllGlobals()
+  })
+})
