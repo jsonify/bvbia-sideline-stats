@@ -490,6 +490,13 @@ test('half lengths on the game form run the clock on the tracker', async ({ page
   await page.getByRole('button', { name: 'Kick off' }).click()
   await expect(timer).toHaveAttribute('aria-label', /0:0[1-9] of 30:00, running/, { timeout: 4000 })
   await shot(page, '05b-clock-running')
+  await page.getByRole('button', { name: /Show time left/ }).click()
+  const sheet = page.getByRole('dialog', { name: 'Game clock' })
+  await expect(sheet.getByRole('group', { name: '1st half' })).toContainText(/Time left29:5\d/)
+  await page.waitForTimeout(700) // let the sheet finish springing up
+  await shot(page, '05d-clock-sheet')
+  await page.keyboard.press('Escape')
+  await expect(sheet).toHaveCount(0)
   await page.getByRole('button', { name: '2nd half' }).click()
   await page.getByRole('button', { name: 'Start 2nd half' }).click()
   await expect(timer).toHaveAttribute('aria-label', /2nd half clock: .* running\. Game: 0:0\d of 60:00/)

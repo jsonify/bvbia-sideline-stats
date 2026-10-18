@@ -788,6 +788,19 @@ describe('game clock: each half against its length, adding up to the game', () =
     await waitFor(() => expect(screen.getByRole('timer').textContent).toBe('25:00Full timeGame 50:00 / 50:00'))
   })
 
+  it('tapping the clock shows the time played counting up beside the time left counting down', async () => {
+    const f = await setup('live')
+    await f.repo.saveGame({ ...f.getGame(), halfMinutes: [30, 30], clock: [{ ms: 0, since: new Date(Date.now() - (11 * 60 + 49) * 1000).toISOString() }] })
+    act(() => f.notify())
+    fireEvent.click(await screen.findByRole('button', { name: /1st half clock: 11:4\d of 30:00, running.*Show time left/ }))
+    const sheet = screen.getByRole('dialog', { name: 'Game clock' })
+    expect(within(sheet).getByText('1st half · Running')).toBeTruthy()
+    const half = within(sheet).getByRole('group', { name: '1st half' })
+    expect(half.textContent).toMatch(/^Played11:4\dTime left18:1\d$/)
+    const game = within(sheet).getByRole('group', { name: 'Whole game' })
+    expect(game.textContent).toMatch(/^Game played11:4\dGame left48:1\d$/)
+  })
+
   it('stops when the game ends', async () => {
     const f = await setup('live')
     fireEvent.click(screen.getByRole('button', { name: 'Kick off' }))
