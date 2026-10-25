@@ -1,5 +1,7 @@
-import { useState } from 'react'
-import { INVITE_STEPS, inviteLink, inviteMessage } from '../../lib/invite'
+import { useContext, useEffect, useState } from 'react'
+import { RepoContext } from '../../data/context'
+import { announceMessage, INVITE_STEPS, inviteLink, inviteMessage } from '../../lib/invite'
+import { gameToAnnounce, todayISO } from '../../lib/schedule'
 
 export async function shareOrCopy(title: string, text: string): Promise<'shared' | 'copied' | 'cancelled' | 'failed'> {
   try {
@@ -18,9 +20,25 @@ export async function shareOrCopy(title: string, text: string): Promise<'shared'
   }
 }
 
+/** The opponent in the game to announce (live now, or next up), kept current. Null without a game or a repository. */
+function useOpponentToAnnounce(): string | null {
+  const repo = useContext(RepoContext)
+  const [opponent, setOpponent] = useState<string | null>(null)
+  useEffect(() => {
+    if (!repo) return
+    let live = true
+    const load = () => { repo.listGames().then((gs) => { if (live) setOpponent(gameToAnnounce(gs, todayISO())?.opponent ?? null) }, () => {}) }
+    load()
+    const off = repo.subscribe(load)
+    return () => { live = false; off() }
+  }, [repo])
+  return opponent
+}
+
 export function JoinCodeCard({ teamName, code }: { teamName: string; code: string }) {
   const [msg, setMsg] = useState('')
   const link = inviteLink(code)
+  const opponent = useOpponentToAnnounce()
   const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(''), 3500) }
   return (
     <div className="ss-code-card">
@@ -36,7 +54,14 @@ export function JoinCodeCard({ teamName, code }: { teamName: string; code: strin
           try { await navigator.clipboard.writeText(code); flash('Code copied') } catch { flash('Could not copy') }
         }}>Copy code</button>
       </div>
-      <div className="ss-hint" role="status" aria-live="polite">{msg || 'Share code sends the app link, the code and the steps to join.'}</div>
+      <div className="ss-row">
+        <button type="button" className="ss-btn" onClick={async () => {
+          const r = await shareOrCopy('Sideline Stats', announceMessage(opponent, link))
+          if (r === 'copied') flash('Announcement copied. Paste it into the families\' chat.')
+          else if (r === 'failed') flash('Could not share. Copy the link below by hand instead.')
+        }}>Share announcement</button>
+      </div>
+      <div className="ss-hint" role="status" aria-live="polite">{msg || `Share code sends the app link, the code and the steps to join. Share announcement sends families a short note with the link to follow ${opponent ? `the game against ${opponent}` : 'our games'}.`}</div>
       <div className="ss-invite">
         <div className="ss-eyebrow">How other parents join</div>
         <ol className="ss-invite-steps">{INVITE_STEPS.map((s) => <li key={s}>{s}</li>)}</ol>

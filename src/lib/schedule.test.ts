@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Game } from '../types'
-import { byMonth, bySchedule, cleanKickoff, nextGame, nextWeek } from './schedule'
+import { byMonth, bySchedule, cleanKickoff, gameToAnnounce, nextGame, nextWeek } from './schedule'
 
 const g = (id: string, date: string, kickoff?: string, status: Game['status'] = 'scheduled'): Game =>
   ({ id, teamId: 't', opponent: id, date, kickoff, home: true, periods: 2, status, createdAt: id, updatedAt: id })
@@ -29,5 +29,15 @@ describe('schedule helpers', () => {
       ['2026-10', ['oct1', 'missed', 'oct2']], ['2026-11', ['nov']],
     ])
     expect(nextGame(games, '2026-10-18')?.id).toBe('oct2')
+  })
+})
+
+describe('gameToAnnounce', () => {
+  it('is the game being played now, if there is one', () => {
+    expect(gameToAnnounce([g('next', '2026-10-25'), g('now', '2026-10-24', undefined, 'live')], '2026-10-24')?.id).toBe('now')
+  })
+  it('otherwise the next game on the calendar, or none', () => {
+    expect(gameToAnnounce([g('old', '2026-10-01', undefined, 'final'), g('next', '2026-10-25')], '2026-10-24')?.id).toBe('next')
+    expect(gameToAnnounce([g('old', '2026-10-01', undefined, 'final')], '2026-10-24')).toBeNull()
   })
 })

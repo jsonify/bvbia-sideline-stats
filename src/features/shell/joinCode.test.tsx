@@ -1,6 +1,9 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { JoinCodeCard } from './JoinCodeCard'
+import { RepoProvider } from '../../data/context'
+import { makeFakeRepo } from '../games/fakeRepo'
+import { todayISO } from '../../lib/schedule'
 
 const nav = navigator as any
 const writeText = vi.fn(async () => {})
@@ -77,5 +80,28 @@ describe('JoinCodeCard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Copy code' }))
     await screen.findByText('Code copied')
     expect(writeText).toHaveBeenCalledWith('ABC234')
+  })
+
+  it('Share announcement invites families to follow the next game, with the join link', async () => {
+    nav.share = vi.fn(async () => {})
+    const repo = makeFakeRepo({ id: 't1', name: 'U10 Thunder', joinCode: 'ABC234' })
+    await repo.saveGame({ opponent: 'Rovers', date: todayISO(), home: true, periods: 2, status: 'scheduled' })
+    render(<RepoProvider repo={repo}><JoinCodeCard teamName="U10 Thunder" code="ABC234" /></RepoProvider>)
+    await screen.findByText(/follow the game against Rovers/)
+    fireEvent.click(screen.getByRole('button', { name: 'Share announcement' }))
+    await waitFor(() => expect(nav.share).toHaveBeenCalledTimes(1))
+    const text = nav.share.mock.calls[0][0].text as string
+    expect(text).toContain('Hey families!')
+    expect(text).toContain('our game against Rovers')
+    expect(text).toContain(`${window.location.origin}/welcome?code=ABC234`)
+  })
+
+  it('Share announcement without a game coming up still sends the link, about our games', async () => {
+    card()
+    fireEvent.click(screen.getByRole('button', { name: 'Share announcement' }))
+    await screen.findByText(/Announcement copied/)
+    const copied = (writeText.mock.calls[0] as unknown as [string])[0]
+    expect(copied).toContain('following the stats for our games')
+    expect(copied).toContain(`${window.location.origin}/welcome?code=ABC234`)
   })
 })

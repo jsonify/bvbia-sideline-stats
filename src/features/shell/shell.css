@@ -49,6 +49,7 @@ textarea.ss-input{padding:12px 14px;min-height:88px;resize:vertical}
 .ss-sync-syncing .ss-dot{background:var(--warn)}.ss-sync-offline .ss-dot{background:var(--muted)}.ss-sync-error .ss-dot{background:var(--bad)}
 .ss-code-card{margin-top:16px;text-align:center;background:var(--surface);border:2px dashed var(--brand);border-radius:var(--radius);padding:20px 16px}
 .ss-code{font-family:ui-monospace,Menlo,monospace;font-size:44px;font-weight:800;letter-spacing:.14em;margin:6px 0 14px;color:var(--text);word-break:break-all}
+.ss-code-card .ss-row+.ss-row{margin-top:10px}
 .ss-invite{margin-top:14px;padding-top:14px;border-top:1px solid var(--border);text-align:left}
 .ss-invite-steps{margin:8px 0 0;padding-left:22px;font-size:14px;line-height:1.5;color:var(--text)}
 .ss-invite-steps li+li{margin-top:2px}
