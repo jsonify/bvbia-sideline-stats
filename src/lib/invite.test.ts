@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { inviteLink, inviteMessage, parseJoinCode } from './invite'
+import { announceMessage, inviteLink, inviteMessage, parseJoinCode } from './invite'
 
 describe('inviteLink', () => {
   it('opens the join screen with the code filled in', () => {
@@ -58,5 +58,17 @@ describe('parseJoinCode', () => {
   it('finds the code when the whole invite message was pasted', () => {
     const msg = inviteMessage('U10 Thunder', 'ABC234', 'https://sideline.example.com/welcome?code=ABC234')
     expect(parseJoinCode(msg)).toBe('ABC234')
+  })
+})
+
+describe('announceMessage', () => {
+  const link = 'https://sideline.example.com/welcome?code=ABC234'
+  it('invites families to follow the next game, with the join link', () => {
+    expect(announceMessage(' Rovers ', link)).toBe(
+      `Hey families! If anyone is interested in following the stats for our game against Rovers, here's the link to join the action: ${link} 💛🖤`)
+  })
+  it('without a game on the calendar, talks about our games', () => {
+    expect(announceMessage(null, link)).toContain('following the stats for our games, here')
+    expect(announceMessage('  ', link)).toContain('our games')
   })
 })

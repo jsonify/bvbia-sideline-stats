@@ -31,6 +31,12 @@ export interface GameThanks {
   createdAt: string
 }
 
+/** Parents with a game open: right now (live games only) and everyone who followed it while it was live. */
+export interface GameViewers {
+  watching: number
+  followed: number
+}
+
 export interface Repository {
   /** The active team on this device (null → show onboarding). Games and stats are always scoped to it. */
   getTeam(): Promise<Team | null>
@@ -90,6 +96,13 @@ export interface Repository {
    * mode it needs a connection, and rejects (after undoing what it showed) when the cloud can't be reached.
    */
   setThanks(gameId: Uuid, on: boolean): Promise<void>
+
+  /**
+   * Who's watching a game. With `here` on a live game it also counts this phone in: call it every ~20 s while the game is
+   * open. Null in demo mode (one device, nobody else to count). Rejects when the cloud can't be reached; it is only a
+   * count, so callers keep what they last showed.
+   */
+  watchGame(gameId: Uuid, here: boolean): Promise<GameViewers | null>
 
   /** Subscribe to any change (local or remote) so UIs refresh. Returns unsubscribe. */
   subscribe(cb: () => void): () => void

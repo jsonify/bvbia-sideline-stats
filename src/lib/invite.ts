@@ -28,6 +28,15 @@ export function inviteMessage(teamName: string, code: string, link: string = inv
   ].join('\n')
 }
 
+/**
+ * A short note for the team's families' group chat: "follow our game live", with the same join link.
+ * Names the next opponent when there is one; without a game on the calendar it just says "our games".
+ */
+export function announceMessage(opponent: string | null | undefined, link: string): string {
+  const game = opponent?.trim() ? `our game against ${opponent.trim()}` : 'our games'
+  return `Hey families! If anyone is interested in following the stats for ${game}, here's the link to join the action: ${link} 💛🖤`
+}
+
 /** The same steps for showing on screen next to the code. */
 export const INVITE_STEPS = [
   'They tap the link to open the app.',

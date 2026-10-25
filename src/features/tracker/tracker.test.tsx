@@ -49,6 +49,7 @@ function fakeRepo(status: Game['status'] = 'live', initial: GameTracker | GameLa
       hearts.splice(0, hearts.length, ...hearts.filter((h) => !h.mine), ...(on ? [{ gameId: 'g1', name: null, mine: true, createdAt: 'x' }] : []))
       subs.forEach((f) => f())
     }),
+    watchGame: async () => null,
     getGame: async () => game,
     saveGame: async (g: any) => (game = { ...game, ...g }),
     listEvents: async () => events.filter((e) => !e.deletedAt),

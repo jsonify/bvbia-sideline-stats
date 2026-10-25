@@ -9,6 +9,7 @@ import { CLS, download, periodBreakdown, POSITIVE, slug, takeaways } from './ins
 import { canThank } from '../../lib/thanks'
 import { canStartTracking } from '../../lib/schedule'
 import { ThanksHeart } from '../thanks/ThanksHeart'
+import { Viewers } from '../viewers/Viewers'
 import { InfoButton } from '../guide/InfoButton'
 import { FieldMap } from './FieldMap'
 import { ZoneBreakdown } from './ZoneBreakdown'
@@ -99,6 +100,7 @@ export default function GameSummaryPage() {
       <header>
         <h1>{game.home ? 'vs' : '@'} {game.opponent}</h1>
         <p className="sub">{dateLabel}{game.location ? ` · ${game.location}` : ''} · {game.status === 'final' ? 'Final' : game.status === 'live' ? 'In progress' : 'Scheduled'}</p>
+        <Viewers game={game} />
         {canThank(game.status) && <ThanksHeart gameId={game.id} />}
       </header>
 

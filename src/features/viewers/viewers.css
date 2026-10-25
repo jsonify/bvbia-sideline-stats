@@ -1,0 +1,5 @@
+/* Who's watching a game. Shared by the summary and the tracker. */
+.vw{display:flex;align-items:center;gap:6px;margin:0 0 12px;color:var(--muted);font-size:14px;font-variant-numeric:tabular-nums}
+.vw .icon{flex:none}
+.vw b{color:var(--text);font-weight:700}
+.stats header .vw{margin:8px 0 0}

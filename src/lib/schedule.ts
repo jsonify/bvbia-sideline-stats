@@ -56,3 +56,7 @@ export function byMonth(games: Game[]): { key: string; label: string; games: Gam
 /** The next game still to be played: the first scheduled one from today on. */
 export const nextGame = (games: Game[], today: string) =>
   games.filter((g) => g.status === 'scheduled' && g.date >= today).sort(bySchedule)[0] ?? null
+
+/** The game to tell families about: one being played right now, otherwise the next one on the calendar. */
+export const gameToAnnounce = (games: Game[], today: string) =>
+  games.find((g) => g.status === 'live') ?? nextGame(games, today)
