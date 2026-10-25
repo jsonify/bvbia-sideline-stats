@@ -24,6 +24,7 @@ function fakeRepo(games: Game[], events: StatEvent[], hearts: GameThanks[] = [],
   const subs = new Set<() => void>()
   return {
     listThanks: async () => hearts,
+    watchGame: async () => null,
     setThanks: async (id: string, on: boolean) => {
       hearts = [...hearts.filter((h) => !h.mine), ...(on ? [{ gameId: id, name: null, mine: true, createdAt: 'x' }] : [])]
       subs.forEach((f) => f())

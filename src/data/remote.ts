@@ -8,7 +8,7 @@ import { cleanClock, cleanMinutes } from '../lib/clock'
 import { cleanKickoff } from '../lib/schedule'
 import type { GameRec } from './db'
 import { PermanentError, type QueueOp } from './queue'
-import type { GameLanes, GameThanks, GameTracker } from './repository'
+import type { GameLanes, GameThanks, GameTracker, GameViewers } from './repository'
 import { LANES, type Lane } from '../lib/lanes'
 
 export interface RemoteApi {
@@ -30,6 +30,8 @@ export interface RemoteApi {
   pullThanks(teamId: string): Promise<GameThanks[]>
   setThanks(gameId: string, on: boolean, name: string): Promise<void>
   watchThanks(teamId: string, onChange: () => void): () => void
+  /** Check in on a game (when `here`) and read who's watching it. */
+  watchGame(gameId: string, here: boolean): Promise<GameViewers>
 }
 
 const teamFromRow = (r: any): Team => ({
@@ -240,6 +242,13 @@ export function createSupabaseRemote(url: string, key: string): RemoteApi {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'game_thanks', filter: `team_id=eq.${teamId}` }, onChange)
         .subscribe()
       return () => { void sb.removeChannel(ch) }
+    },
+    async watchGame(gameId, here) {
+      await userId()
+      const { data, error } = await sb.rpc('watch_game', { game: gameId, here })
+      if (error) throw new Error(error.message)
+      const r = Array.isArray(data) ? data[0] : data
+      return { watching: Number(r?.watching) || 0, followed: Number(r?.followed) || 0 }
     },
   }
 }

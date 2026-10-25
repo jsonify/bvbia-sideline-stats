@@ -2,7 +2,7 @@
 // writes are also queued for cloud upsert and remote changes are pulled into the cache.
 import type { Game, NewStatEvent, StatEvent, Team, TeamBranding, TeamGoals, Uuid } from '../types'
 import { cleanGoals, hasGoals } from '../lib/goals'
-import type { GameLanes, GameThanks, GameTracker, Repository, SyncState } from './repository'
+import type { GameLanes, GameThanks, GameTracker, GameViewers, Repository, SyncState } from './repository'
 import { LANES, type Lane } from '../lib/lanes'
 import { openLocalDB, idbQueueStore, uuid, type GameRec, type LocalDB } from './db'
 import { WriteQueue, type QueueStore } from './queue'
@@ -494,6 +494,15 @@ export class LocalRepository implements Repository {
   onTrackerChange(cb: () => void): () => void {
     this.trackerListeners.add(cb)
     return () => { this.trackerListeners.delete(cb) }
+  }
+
+  // --- who's watching ---------------------------------------------------------------------------
+  // Straight to the cloud and never cached or queued: a count from a minute ago is not "watching now".
+
+  async watchGame(gameId: Uuid, here: boolean): Promise<GameViewers | null> {
+    await this.ready
+    if (!this.remote) return null
+    return this.remote.watchGame(gameId, here)
   }
 
   // --- thanks (a heart on a game) ---------------------------------------------------------------

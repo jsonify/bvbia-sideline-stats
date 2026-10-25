@@ -100,3 +100,7 @@ After `0009`, run `supabase/migrations/0010_game_clock.sql`. It adds two nullabl
 ## Kick-off times: run `0011_game_kickoff.sql`
 
 After `0010`, run `supabase/migrations/0011_game_kickoff.sql`. It adds one nullable `time` column to `games`, `kickoff`, so the season's schedule (date, time, place, opponent) can be entered ahead of time. Same fallback as `0010`: the app only sends it once a game has one, and without the column it re-sends the game without it, so the time stays on that phone.
+
+## Who's watching: run `0012_game_viewers.sql`
+
+After `0011`, run `supabase/migrations/0012_game_viewers.sql`. It adds a `game_viewers` table (one row per parent per game, with when they first and last had it open) and one function, `watch_game(game, here)`. A phone with a live game open calls it every 20 s with `here = true`, which counts it in and answers `watching` (checked in within the last 60 s) and `followed` (everyone who had the game open while it was live). A finished game is asked with `here = false`, which only reads. The table has no RLS policies, so it is only reachable through the function, which checks team membership. Without the migration the count just doesn't show; games and stats are not affected.

@@ -20,6 +20,10 @@ The game summary includes a **game map**: a line drawing of the field with every
 
 **Say thanks with a heart.** Tracking is quiet work, so any parent can tap the **♥ Thanks** heart on a game that is live or finished to thank whoever tracked it, and tap again to take it back. One heart per parent per game. The parent tracking sees who thanked them (a small ♥ line under the header, with no button, since they are the one being thanked), and the games list shows a heart count on each game; a game nobody has thanked just shows nothing. Hearts are only an acknowledgement and never touch the stats. A heart is sent straight away rather than queued, so it needs a signal: with none, it un-does itself and says so. It needs the `0006_game_thanks.sql` migration; without it the heart simply doesn't save and nothing else is affected. In demo mode (one device) it works too, on this device only.
 
+**Who's watching.** A live game's summary and tracker show how many parents have it open right now and how many have followed it so far ("3 watching now · 7 so far"); a finished game shows how many followed it live. Each phone with a live game open checks in every 20 seconds (only while its screen is on) and counts as watching for a minute after. It is only a count, never stored on the phone or mixed into the stats. It needs the `0012_game_viewers.sql` migration; without it, and in demo mode, nothing shows.
+
+**Tell the families.** Next to **Share code**, **Share announcement** sends a short note for the families' group chat with the join link, naming the game being played now or the next one on the calendar: "Hey families! If anyone is interested in following the stats for our game against Rovers, here's the link to join the action: … 💛🖤".
+
 **Team targets.** In **Settings → Team targets** the coach sets a target for each stat (say, win 60% of 1v1s), shared with everyone on the team. The gauges on the game summary, the season page and the halftime sheet mark it on the dial and say whether it was met ("Target 60% · 8 pts short"); the tracker's bars carry a small mark, the season charts a dotted line, and the by-half table a ✓ in each cell that reached it. A box left empty means no target. It needs the `0007_team_goals.sql` migration; without it the targets can't be saved (Settings says so) and nothing else is affected.
 
 **Halftime numbers.** Once something has been tapped, the tracker shows a **Halftime numbers** button (**Break numbers** for quarters). It opens a sheet over the tracker with the latest half's three gauges, its takeaways and, from the 2nd half on, every half side by side with a "Game so far" row. It is a sheet, not a page, so the phone keeps tracking.
@@ -90,7 +94,7 @@ Schema, row-level security and setup steps are in [docs/BACKEND.md](docs/BACKEND
 
 ## Deploy in 5 steps (Vercel or Netlify)
 
-1. Create a free Supabase project and run the SQL in `supabase/migrations/`, in order (`0001`, then `0003` to `0010`; `0002` is no longer needed; see [docs/BACKEND.md](docs/BACKEND.md)). Enable **Anonymous sign-ins** under Authentication.
+1. Create a free Supabase project and run the SQL in `supabase/migrations/`, in order (`0001`, then `0003` to `0012`; `0002` is no longer needed; see [docs/BACKEND.md](docs/BACKEND.md)). Enable **Anonymous sign-ins** under Authentication.
 2. Push this repo to GitHub.
 3. Import it in Vercel (or Netlify). Framework preset: **Vite**. Build command `npm run build`, output `dist`. `vercel.json` already contains the SPA rewrites.
 4. Add environment variables `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.

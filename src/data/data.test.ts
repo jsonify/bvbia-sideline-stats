@@ -175,6 +175,8 @@ function fakeCloud() {
   const thanks = new Map<string, { gameId: string; user: string; name: string | null; createdAt: string; deleted: boolean }>()
   const thanksWatchers = new Set<() => void>()
   const thanksGates = new Map<string, Promise<void>>() // holds the next heart a parent sends until the test lets it through
+  // Who's watching, same rules as supabase/migrations/0012_game_viewers.sql: live games only, "now" = checked in within 60 s.
+  const viewers = new Map<string, number>() // `${gameId}:${user}` → last check-in (clock.now)
   const clock = { now: 0, down: false }
   const ping = () => trackerWatchers.forEach((f) => f())
   const reach = () => { if (clock.down) throw new Error('Failed to fetch') }
@@ -229,6 +231,14 @@ function fakeCloud() {
         .filter((t) => !t.deleted && games.get(t.gameId)?.teamId === teamId)
         .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
         .map((t) => ({ gameId: t.gameId, name: t.name, mine: t.user === user, createdAt: t.createdAt }))
+    },
+    watchGame: async (gameId, here) => {
+      reach()
+      const game = games.get(gameId)
+      if (!game || game.deletedAt) throw new Error('game not found')
+      if (here && game.status === 'live') viewers.set(`${gameId}:${user}`, clock.now)
+      const seen = [...viewers].filter(([k]) => k.startsWith(`${gameId}:`)).map(([, at]) => at)
+      return { watching: game.status === 'live' ? seen.filter((at) => clock.now - at < 60).length : 0, followed: seen.length }
     },
     userId: async () => user,
     myTeams: async () => [...teams.values()],
@@ -669,5 +679,35 @@ describe('thanks (a heart on a game)', () => {
     expect(await b.listThanks()).toEqual([])
     await b.joinTeam(team.joinCode)
     await vi.waitFor(async () => expect(await b.listThanks()).toHaveLength(1))
+  })
+})
+
+describe("who's watching", () => {
+  it('demo mode has nobody else to count', async () => {
+    const r = repo()
+    await r.createTeam('A')
+    const g = await r.saveGame({ ...gameInput, status: 'live' })
+    expect(await r.watchGame(g.id, true)).toBeNull()
+  })
+
+  it('counts the phones with a live game open now, and everyone who followed it', async () => {
+    const cloud = fakeCloud()
+    const a = new LocalRepository({ dbName: `wv-a${n++}`, remote: cloud.api('parent-a'), baseDelayMs: 1 })
+    const team = await a.createTeam('Thunder')
+    const game = await a.saveGame({ ...gameInput, status: 'live' })
+    const b = new LocalRepository({ dbName: `wv-b${n++}`, remote: cloud.api('parent-b'), baseDelayMs: 1 })
+    await b.joinTeam(team.joinCode)
+    await vi.waitFor(() => expect(cloud.games.size).toBe(1))
+
+    expect(await a.watchGame(game.id, true)).toEqual({ watching: 1, followed: 1 })
+    expect(await b.watchGame(game.id, true)).toEqual({ watching: 2, followed: 2 })
+    cloud.clock.now = 90 // parent b closed the game; parent a is still checking in
+    expect(await a.watchGame(game.id, true)).toEqual({ watching: 1, followed: 2 })
+
+    cloud.games.set(game.id, { ...cloud.games.get(game.id), status: 'final' })
+    expect(await b.watchGame(game.id, true)).toEqual({ watching: 0, followed: 2 }) // a finished game only reads
+
+    cloud.clock.down = true
+    await expect(a.watchGame(game.id, false)).rejects.toThrow()
   })
 })
