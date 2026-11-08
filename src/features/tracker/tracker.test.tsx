@@ -776,7 +776,7 @@ describe('game clock: each half against its length, adding up to the game', () =
   afterEach(() => vi.useRealTimers())
   const withHalves = (f: ReturnType<typeof fakeRepo>) => { void f.repo.saveGame({ ...f.getGame(), halfMinutes: [25, 25] }) }
 
-  it('kicks off the 1st half, stops by itself at halftime, and the 2nd half adds to the game', async () => {
+  it('kicks off the 1st half, runs on into extra time until stopped at halftime, and the 2nd half adds to the game', async () => {
     const f = setupNoWait('scheduled', ME, withHalves)
     await screen.findByText('vs Rovers')
     await waitFor(() => expect(f.claimLanes).toHaveBeenCalled())
@@ -787,21 +787,31 @@ describe('game clock: each half against its length, adding up to the game', () =
     await waitFor(() => expect(f.getGame().status).toBe('live')) // kicking off makes the game live
     const started = Date.parse(f.getGame().clock![0].since!)
     expect(screen.queryByRole('button', { name: /Pause/ })).toBeNull() // a running clock: no pause
-    // 26 minutes in (the clock runs from when it was started, whatever this phone's timer does): it stopped at 25:00.
+    // 26 minutes in (the clock runs from when it was started, whatever this phone's timer does): the half is up at 25:00
+    // and the extra minute counts on past it.
     await f.repo.saveGame({ ...f.getGame(), clock: [{ ms: 0, since: new Date(started - 26 * 60_000).toISOString() }] })
     act(() => f.notify())
-    await waitFor(() => expect(screen.getByRole('timer').textContent).toBe('25:00HalftimeGame 25:00 / 50:00'))
+    await waitFor(() => expect(screen.getByRole('timer').textContent).toMatch(/^25:00 \+1:0\dExtra timeGame 25:00 \/ 50:00 \+1:0\d$/))
+    expect(f.getGame().clock![0].since).toBeTruthy() // still running
+    fireEvent.click(screen.getByRole('button', { name: 'Stop 1st half (halftime)' }))
+    await waitFor(() => expect(f.getGame().clock![0].since).toBeNull())
+    expect(f.getGame().clock![0].ms).toBeGreaterThanOrEqual(26 * 60_000)
+    await waitFor(() => expect(screen.getByRole('timer').textContent).toMatch(/^25:00 \+1:0\dHalftimeGame 25:00 \/ 50:00 \+1:0\d$/))
+    expect(screen.queryByRole('button', { name: /Stop/ })).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: '2nd half' }))
     fireEvent.click(screen.getByRole('button', { name: 'Start 2nd half' }))
     await waitFor(() => expect(f.getGame().clock?.[1]?.since).toBeTruthy())
     expect(f.getGame().clock![0].since).toBeNull() // the 1st half stopped when the 2nd kicked off
-    expect(screen.getByRole('timer').getAttribute('aria-label')).toMatch(/2nd half clock: 0:0\d of 25:00, running\. Game: 25:0\d of 50:00/)
+    expect(screen.getByRole('timer').getAttribute('aria-label')).toMatch(/2nd half clock: 0:0\d of 25:00, running\. Game: 25:0\d of 50:00, plus 1:0\d extra time/)
 
-    // And the 2nd half stops by itself at full time.
-    await f.repo.saveGame({ ...f.getGame(), clock: [f.getGame().clock![0], { ms: 0, since: new Date(Date.now() - 30 * 60_000).toISOString() }] })
+    // The 2nd half has its own extra time, and stopping it is full time.
+    await f.repo.saveGame({ ...f.getGame(), clock: [f.getGame().clock![0], { ms: 0, since: new Date(Date.now() - 27 * 60_000).toISOString() }] })
     act(() => f.notify())
-    await waitFor(() => expect(screen.getByRole('timer').textContent).toBe('25:00Full timeGame 50:00 / 50:00'))
+    await waitFor(() => expect(screen.getByRole('timer').textContent).toMatch(/^25:00 \+2:0\dExtra timeGame 50:00 \/ 50:00 \+3:0\d$/))
+    fireEvent.click(screen.getByRole('button', { name: 'Stop 2nd half (full time)' }))
+    await waitFor(() => expect(f.getGame().clock![1].since).toBeNull())
+    await waitFor(() => expect(screen.getByRole('timer').textContent).toMatch(/^25:00 \+2:0\dFull timeGame 50:00 \/ 50:00 \+3:0\d$/))
   })
 
   it('tapping the clock shows the time played counting up beside the time left counting down', async () => {
@@ -815,6 +825,16 @@ describe('game clock: each half against its length, adding up to the game', () =
     expect(half.textContent).toMatch(/^Played11:4\dTime left18:1\d$/)
     const game = within(sheet).getByRole('group', { name: 'Whole game' })
     expect(game.textContent).toMatch(/^Game played11:4\dGame left48:1\d$/)
+  })
+
+  it('shows the extra time in the clock sheet', async () => {
+    const f = await setup('live')
+    await f.repo.saveGame({ ...f.getGame(), halfMinutes: [30, 30], clock: [{ ms: 0, since: new Date(Date.now() - (32 * 60 + 15) * 1000).toISOString() }] })
+    act(() => f.notify())
+    fireEvent.click(await screen.findByRole('button', { name: /1st half clock: 30:00 of 30:00, plus 2:1\d extra time, extra time.*Show time left/ }))
+    const sheet = screen.getByRole('dialog', { name: 'Game clock' })
+    expect(within(sheet).getByText('1st half · Extra time')).toBeTruthy()
+    expect(within(sheet).getByRole('group', { name: 'Extra time' }).textContent).toMatch(/^Extra time\+2:1\d/)
   })
 
   it('stops when the game ends', async () => {
@@ -843,6 +863,6 @@ describe('game clock: each half against its length, adding up to the game', () =
     await screen.findByText(/Moved to the 2nd half: it has kicked off/)
     expect(screen.getByRole('button', { name: '2nd half' }).getAttribute('aria-pressed')).toBe('true')
     expect(screen.getByRole('timer').getAttribute('aria-label')).toMatch(/running/)
-    expect(screen.queryByRole('button', { name: /Kick off|Start|Reset/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Kick off|Start|Stop|Reset/ })).toBeNull()
   })
 })

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cleanClock, cleanMinutes, clockText, gameMs, halfMs, halfStarted, lengthText, playedGameMs, playedMs, resetHalf, runningHalf, startHalf, stopClock } from './clock'
+import { cleanClock, cleanMinutes, clockText, extraGameMs, extraMs, gameMs, halfMs, halfStarted, lengthText, playedGameMs, playedMs, resetHalf, runningHalf, startHalf, stopClock, stopHalf } from './clock'
 
 const at = (min: number, sec = 0) => new Date(Date.UTC(2026, 9, 18, 10, min, sec)).toISOString()
 const t = (min: number, sec = 0) => Date.parse(at(min, sec))
@@ -34,6 +34,21 @@ describe('game clock', () => {
     expect(playedMs(g, 2, t(55))).toBe(10 * 60_000)
     expect(clockText(playedGameMs(g, t(55)))).toBe('40:00')
     expect(clockText(playedGameMs(g, t(99)))).toBe('60:00') // full time
+  })
+
+  it('counts extra time past each half\'s length until that half is stopped', () => {
+    const g = { periods: 2 as const, halfMinutes: [30, 30], clock: startHalf(null, 1, at(0)) }
+    expect(extraMs(g, 1, t(29))).toBe(0)
+    expect(extraMs(g, 1, t(32, 15))).toBe(2.25 * 60_000) // still running: it keeps counting
+    g.clock = stopHalf(g.clock, 1, at(33))
+    expect(runningHalf(g.clock)).toBeNull()
+    expect(extraMs(g, 1, t(59))).toBe(3 * 60_000) // stopped: frozen
+    expect(playedMs(g, 1, t(59))).toBe(30 * 60_000)
+    g.clock = startHalf(g.clock, 2, at(45))
+    expect(extraMs(g, 2, t(76))).toBe(1 * 60_000)
+    expect(extraGameMs(g, t(76))).toBe(4 * 60_000)
+    expect(stopHalf(g.clock, 1, at(80))).toEqual(g.clock) // stopping a half that isn't running changes nothing
+    expect(extraMs({ periods: 2, clock: g.clock }, 1, t(59))).toBe(0) // no half length: no extra time
   })
 
   it('without half lengths it just keeps counting until the next half or the end', () => {

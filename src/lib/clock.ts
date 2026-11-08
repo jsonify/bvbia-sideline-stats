@@ -47,7 +47,7 @@ export function lengthMs(g: Pick<Game, 'halfMinutes' | 'periods'>, period: numbe
   return m ? m * 60_000 : null
 }
 
-/** Time played in one half. It is a running clock that stops by itself at the half's length (halftime, then full time). */
+/** Time played in one half, up to its length (halftime, then full time). Anything past the length is extra time: see extraMs. */
 export function playedMs(g: Pick<Game, 'halfMinutes' | 'periods' | 'clock'>, period: number, at = Date.now()): number {
   const ms = halfMs(g.clock, period, at)
   const len = lengthMs(g, period)
@@ -57,6 +57,20 @@ export function playedMs(g: Pick<Game, 'halfMinutes' | 'periods' | 'clock'>, per
 /** The whole game: every half played, added up. */
 export function playedGameMs(g: Pick<Game, 'halfMinutes' | 'periods' | 'clock'>, at = Date.now()): number {
   return (cleanClock(g.clock) ?? []).reduce((sum, _, i) => sum + playedMs(g, i + 1, at), 0)
+}
+
+/**
+ * Extra (stoppage) time in one half: once the half reaches its length the clock keeps counting here, continuously, until
+ * a tracker stops the half (or the next half kicks off, or the game ends). 0 without a half length.
+ */
+export function extraMs(g: Pick<Game, 'halfMinutes' | 'periods' | 'clock'>, period: number, at = Date.now()): number {
+  const len = lengthMs(g, period)
+  return len === null ? 0 : Math.max(0, halfMs(g.clock, period, at) - len)
+}
+
+/** Extra time in every half, added up. */
+export function extraGameMs(g: Pick<Game, 'halfMinutes' | 'periods' | 'clock'>, at = Date.now()): number {
+  return (cleanClock(g.clock) ?? []).reduce((sum, _, i) => sum + extraMs(g, i + 1, at), 0)
 }
 
 /** The half whose clock is running, if any. */
@@ -72,6 +86,14 @@ export const halfStarted = (c: GameClock | null | undefined, period: number) => 
 export function stopClock(c: GameClock | null | undefined, at = now()): GameClock {
   const t = Date.parse(at)
   return (cleanClock(c) ?? []).map((h) => (h.since ? { ms: h.ms + Math.max(0, t - Date.parse(h.since)), since: null } : h))
+}
+
+/** Stop one half (the end of its extra time), keeping the time it ran. Other halves are left alone. */
+export function stopHalf(c: GameClock | null | undefined, period: number, at = now()): GameClock {
+  const next = cleanClock(c) ?? []
+  const h = next[period - 1]
+  if (h?.since) next[period - 1] = { ms: h.ms + Math.max(0, Date.parse(at) - Date.parse(h.since)), since: null }
+  return next
 }
 
 /** Start one half. Only one half runs at a time, so kicking off the 2nd half stops the 1st. */

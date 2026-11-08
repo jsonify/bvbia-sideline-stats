@@ -42,10 +42,10 @@ const renderGame = (repo: Repository, id: string) => render(
     <Routes><Route path="/games/:id" element={<GameSummaryPage />} /></Routes></MemoryRouter></RepoContext.Provider>)
 
 describe('GameSummaryPage', () => {
-  it('shows the time played in each half, added up, next to what the game was set for', async () => {
+  it('shows the time played in each half, with its extra time, added up, next to what the game was set for', async () => {
     const g = { ...mkGame('g1', 'Bears', '2026-01-01'), halfMinutes: [25, 25], clock: [{ ms: (25 * 60 + 40) * 1000, since: null }, { ms: (24 * 60 + 2) * 1000, since: null }] }
     renderGame(fakeRepo([g], []), 'g1')
-    expect(await screen.findByText('Played 25:00 + 24:02 = 49:02 (set for 2 × 25 = 50 min)')).toBeTruthy()
+    expect(await screen.findByText('Played 25:00 (+0:40) + 24:02 = 49:42 (set for 2 × 25 = 50 min)')).toBeTruthy()
   })
 
   it('asks for the final score and saves it from the summary', async () => {

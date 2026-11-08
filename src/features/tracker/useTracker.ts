@@ -3,7 +3,7 @@ import { useRepo } from '../../data/context'
 import type { GameLanes, SyncState } from '../../data/repository'
 import type { BallType, Game, GameScore, NewStatEvent, StatEvent } from '../../types'
 import { cleanScore, MAX_GOALS } from '../../lib/score'
-import { resetHalf, runningHalf, startHalf, stopClock } from '../../lib/clock'
+import { resetHalf, runningHalf, startHalf, stopClock, stopHalf } from '../../lib/clock'
 import { summarize } from '../../lib/summary'
 import { LANES, LANE_OF, ROLE_LANES, lanesText, roleOf, type Lane, type Role } from '../../lib/lanes'
 import { eventLabel } from './labels'
@@ -228,15 +228,15 @@ export function useTracker(gameId: string) {
   }, [changeGame])
 
   /**
-   * Start or reset the clock for one half. It is a running clock: once started a half runs until its length (or until the
-   * next half kicks off, or the game ends), so it has no pause. The clock lives on the game, so every phone shows the same time; any
+   * Start, stop or reset the clock for one half. It is a running clock with no pause: once started a half runs to its
+   * length and then on into extra time until it is stopped (or the next half kicks off, or the game ends). The clock lives on the game, so every phone shows the same time; any
    * phone that is tracking can run it. Kicking off a half also moves this phone to it and makes the game live.
    */
-  const changeClock = useCallback(async (action: 'start' | 'reset', half: number) => {
+  const changeClock = useCallback(async (action: 'start' | 'stop' | 'reset', half: number) => {
     if (!game || game.status === 'final' || !heldRef.current.length) return
     if (action === 'start') { haptic(20); choosePeriod(half) }
     await changeGame((g) => {
-      const clock = action === 'start' ? startHalf(g.clock, half) : resetHalf(g.clock, half)
+      const clock = action === 'start' ? startHalf(g.clock, half) : action === 'stop' ? stopHalf(g.clock, half) : resetHalf(g.clock, half)
       return action === 'start' && g.status === 'scheduled' ? { clock, status: 'live' as const } : { clock }
     }, 'Could not update the clock')
   }, [game, changeGame, choosePeriod])
