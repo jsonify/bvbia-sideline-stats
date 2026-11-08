@@ -182,11 +182,16 @@ button.tk-score:active{transform:scale(.97)}
 .tk-clock-time small{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .tk-clock.running .tk-clock-time b{color:var(--brand-text)}
 .tk-clock.done .tk-clock-time small:nth-of-type(1){color:var(--text);font-weight:700}
+/* extra time: the half's time is up and the clock keeps counting past it until someone taps Stop */
+.tk-clock-time b em{margin-left:4px;font-style:normal;font-size:20px;color:var(--warn)}
+.tk-clock.extra .tk-clock-time b{color:var(--text)}
+.tk-clock.extra .tk-clock-time small:nth-of-type(1){color:var(--warn)}
 /* the button (or Reset) sits in the top corner beside the time, so the lines under the time get the whole width */
 .tk-clock-btns{position:absolute;top:6px;right:6px;display:flex;flex-direction:column;align-items:flex-end}
 .tk-clock-btns .tk-clock-go{width:40px;height:40px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);font:inherit;font-size:16px;font-weight:800;transition:transform .3s var(--tk-spring)}
 .tk-clock-btns .tk-clock-go:active{transform:scale(.94)}
 .tk-clock-btns .tk-clock-go.primary{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.tk-clock-btns .tk-clock-go.stop{background:var(--warn);color:#fff;border-color:var(--warn)}
 .tk-clock-btns .tk-clock-reset{min-height:24px;padding:0 4px;border:0;background:none;font:inherit;font-size:12px;font-weight:600;color:var(--muted);text-decoration:underline}
 /* the clock sheet: time played counting up beside time left counting down, for the half and the whole game */
 .tk-cs{display:flex;flex-direction:column;gap:12px}
@@ -197,6 +202,8 @@ button.tk-score:active{transform:scale(.97)}
 .tk-cs-row b{font-family:var(--font-display);font-size:48px;font-weight:800;line-height:1.05;font-variant-numeric:tabular-nums}
 .tk-cs-row .left b{color:var(--brand-text)}
 .tk-cs-row.game b{font-size:30px}
+.tk-cs-row.extra b{font-size:30px;color:var(--warn)}
+.tk-cs-row.extra .left{justify-content:center}
 .tk-cs-note{margin:0;font-size:13px;color:var(--muted);text-align:center}
 /* Before game day: the tracker shows through a lock, fading to the page colour so the note reads cleanly */
 .tk-lockwrap{position:relative}
